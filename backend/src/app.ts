@@ -25,26 +25,29 @@ export function createApp() {
   app.set("trust proxy", 1);
 
   const localOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+  const fixedOrigins = ["https://adhyay.techmandalae.com"];
+  const originPatterns = [/^https:\/\/[a-z0-9-]+\.vercel\.app$/i];
   const configuredOrigins = env.CORS_ORIGIN.split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
-  const allowAnyOrigin = configuredOrigins.includes("*");
-  const allowedOrigins = Array.from(
-    new Set([
-      ...(configuredOrigins.length > 0 ? configuredOrigins : ["http://localhost:3000"]),
-      ...localOrigins
-    ])
-  );
+  const allowedOrigins = Array.from(new Set([...localOrigins, ...fixedOrigins, ...configuredOrigins]));
   const corsOptions: cors.CorsOptions = {
-    origin: allowAnyOrigin
-      ? true
-      : (origin, callback) => {
-          if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-            return;
-          }
-          callback(new Error(`CORS origin not allowed: ${origin}`));
-        },
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (
+        allowedOrigins.includes(origin) ||
+        originPatterns.some((pattern) => pattern.test(origin))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

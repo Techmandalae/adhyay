@@ -8,12 +8,13 @@ import { prisma } from "./db/prisma";
 
 async function bootstrap() {
   const app = createApp();
+  const port = Number(process.env.PORT ?? env.PORT ?? 5000);
 
   await prisma.$connect();
 
   const server = http.createServer(app);
-  server.listen(env.PORT, "0.0.0.0", () => {
-    console.log(`API listening on http://0.0.0.0:${env.PORT}`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server running on port ${port}`);
   });
 }
 
