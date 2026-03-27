@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon --watch src --ext ts,json --exec \"node --enable-source-maps -r ts-node/register src/server.ts\"",
-    "build": "prisma generate && tsc -p tsconfig.json",
+    "prebuild": "prisma generate",
+    "build": "tsc",
     "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
     "migrate:deploy": "prisma migrate deploy",
