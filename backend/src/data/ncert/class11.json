@@ -1,0 +1,567 @@
+{
+  "Sanskrit": {
+    "books": [
+      {
+        "book": "Bhaswati",
+        "chapters": [
+          "प्रथमः पाठः - कुशलप्रशासनम्",
+          "द्वितीयः पाठः - सूक्तिसुधा",
+          "तृतीयः पाठः - ऋतुचर्या",
+          "चतुर्थः पाठः - वीरः सर्वदमनः",
+          "पञ्चमः पाठः - शुकशावकोदन्तः",
+          "षष्‍ठः पाठः - भव्यः सत्याग्रहाश्रमः",
+          "सप्‍तमः पाठः - सङ्गीतानुरागी सुब्बण्णः",
+          "अष्‍टमः पाठः - वस्त्रविक्रयः",
+          "नवमः पाठः - यद्भूतहितं तत्सत्यम्",
+          "दशमः पाठः - स मे प्रियः",
+          "एकादशः पाठः - अथ शिक्षां प्रवक्ष्यामि"
+        ]
+      },
+      {
+        "book": "Shashwati",
+        "chapters": [
+          "प्रथमः पाठः - वेदामृतम्",
+          "द्वितीयः पाठः - परोपकाराय सतां विभूतयः",
+          "तृतीयः पाठः - मानो हि महतां धनम्",
+          "चतुर्थः पाठः - सौवर्णशकटीका",
+          "पञ्चमः पाठः - आहारविचारः",
+          "षष्‍ठः पाठः - सन्ततिप्रबोधनम्",
+          "सप्‍तमः पाठः - विज्ञाननौका",
+          "अष्‍टमः पाठः - कन्थामणिक्यम्",
+          "नवमः पाठः - ईशः कुत्रास्ति",
+          "दशमः पाठः - सत्त्वमाहो रजस्तमः",
+          "एकादशः पाठः - नवद्रव्याणि"
+        ]
+      }
+    ]
+  },
+  "Accountancy": {
+    "books": [
+      {
+        "book": "Financial Accounting - I",
+        "chapters": [
+          "Chapter 1: Introduction to Accounting",
+          "Chapter 2: Theory Base of Accounting",
+          "Chapter 3: Recording of Transactions - I",
+          "Chapter 4: Recording of Transactions - II",
+          "Chapter 5: Bank Reconciliation Statement",
+          "Chapter 6: Trial Balance and Rectification of Errors",
+          "Chapter 7: Depreciation, Provisions and Reserves"
+        ]
+      },
+      {
+        "book": "Accountancy - II",
+        "chapters": [
+          "Chapter 1: Financial Statements - I",
+          "Chapter 2: Financial Statements - II"
+        ]
+      }
+    ]
+  },
+  "Chemistry": {
+    "books": [
+      {
+        "book": "Chemistry Part-1",
+        "chapters": [
+            "Chapter 1: Some Basic Concepts of Chemistry",
+            "Chapter 2: Structure of Atom",
+            "Chapter 3: Classification of Elements and Periodicity in Properties",
+            "Chapter 4: Chemical Bonding and Molecular Structure",
+            "Chapter 5: Thermodynamics",
+            "Chapter 6: Equilibrium"
+        ]
+      },
+      {
+        "book": "Chemistry Part-2",
+        "chapters": [
+            "Chapter 1: Redox Reactions",
+            "Chapter 2: Organic Chemistry - Some Basic Principles and Techniques",
+            "Chapter 3: Hydrocarbons"
+        ]
+      }
+    ]
+  },
+  "Mathematics": {
+    "book": "Mathematics",
+    "chapters": [
+        "Chapter 1: Sets",
+        "Chapter 2: Relations and Functions",
+        "Chapter 3: Trigonometric Functions",
+        "Chapter 4: Complex Numbers and Quadratic Equations",
+        "Chapter 5: Linear Inequalities",
+        "Chapter 6: Permutations and Combinations",
+        "Chapter 7: Binomial Theorem",
+        "Chapter 8: Sequences and Series",
+        "Chapter 9: Straight Lines",
+        "Chapter 10: Conic Sections",
+        "Chapter 11: Introduction to Three-dimensional Geometry",
+        "Chapter 12: Limits and Derivatives",
+        "Chapter 13: Statistics",
+        "Chapter 14: Probability"
+    ]
+  },
+  "Biology": {
+    "book": "Biology",
+    "chapters": [
+        "Chapter 1: The Living World",
+        "Chapter 2: Biological Classification",
+        "Chapter 3: Plant Kingdom",
+        "Chapter 4: Animal Kingdom",
+        "Chapter 5: Morphology of Flowering Plants",
+        "Chapter 6: Anatomy of Flowering Plants",
+        "Chapter 7: Structural Organisation in Animals",
+        "Chapter 8: Cell : The Unit of Life",
+        "Chapter 9: Biomolecules",
+        "Chapter 10: Cell Cycle and Cell Division",
+        "Chapter 11: Photosynthesis in Higher Plants",
+        "Chapter 12: Respiration in Plants",
+        "Chapter 13: Plant Growth and Development",
+        "Chapter 14: Breathing and Exchange of Gases",
+        "Chapter 15: Body Fluids and Circulation",
+        "Chapter 16: Excretory Products and Their Elimination",
+        "Chapter 17: Locomotion and Movement",
+        "Chapter 18: Neural Control and Coordination",
+        "Chapter 19: Chemical Coordination and Integration"
+    ]
+  },
+  "Psychology": {
+    "book": "Psychology",
+    "chapters": [
+        "Chapter 1: What is Psychology?",
+        "Chapter 2: Methods of Enquiry in Psychology",
+        "Chapter 3: Human Development",
+        "Chapter 4: Sensory, Attentional and Perceptual Processes",
+        "Chapter 5: Learning",
+        "Chapter 6: Human Memory",
+        "Chapter 7: Thinking",
+        "Chapter 8: Motivation and Emotion"
+    ]
+  },
+  "Geography": {
+    "books": [
+      {
+        "book": "Fundamental of Physical Geography",
+        "chapters": [
+            "Chapter 1: Geography as a Discipline",
+            "Chapter 2: The Origin and Evolution of the Earth",
+            "Chapter 3: Interior of the Earth",
+            "Chapter 4: Distribution of Oceans and Continents",
+            "Chapter 5: Geomorphic Processes",
+            "Chapter 6: Landforms and their Evolution",
+            "Chapter 7: Composition and Structure of Atmosphere",
+            "Chapter 8: Solar Radiation, Heat Balance and Temperature",
+            "Chapter 9: Atmospheric Circulation and Weather Systems",
+            "Chapter 10: Water in the Atmosphere",
+            "Chapter 11: World Climate and Climate Change",
+            "Chapter 12: Water (Oceans)",
+            "Chapter 13: Movements of Ocean Water",
+            "Chapter 14: Biodiversity and Conservation"
+        ]
+    },
+      {
+        "book": "Pratical Work in Geography",
+        "chapters": [
+            "Chapter 1: Introduction to Maps",
+            "Chapter 2: Map Scale",
+            "Chapter 3: Latitude, Longitude and Time",
+            "Chapter 4: Map Projections",
+            "Chapter 5: Topographical Maps",
+            "Chapter 6: Introduction to Remote Sensing"
+        ]
+    },
+      {
+        "book": "India - Physical Environment",
+        "chapters": [
+            "Chapter 1: India - Location",
+            "Chapter 2: Structure and Physiography",
+            "Chapter 3: Drainage System",
+            "Chapter 4: Climate",
+            "Chapter 5: Natural Vegetation",
+            "Chapter 6: Natural Hazards and Disasters"
+        ]
+      }
+    ]
+  },
+  "Physics": {
+    "books": [
+      {
+        "book": "Physics Part-1",
+        "chapters": [
+          "Chapter 1: UNITS AND MEASUREMENTS",
+          "Chapter 2: MOTION IN A STRAIGHT LINE",
+          "Chapter 3: MOTION IN A PLANE",
+          "Chapter 4: LAWS OF MOTION",
+          "Chapter 5: WORK, ENERGY AND POWER",
+          "Chapter 6: SYSTEM OF PARTICLES AND ROTATIONAL MOTION",
+          "Chapter 7: GRAVITATION"
+        ]
+      },
+      {
+        "book": "Physics Part-2",
+        "chapters": [
+          "Chapter 1: Mechanical Properties of Solids",
+          "Chapter 2: Mechanical Properties of Fluids",
+          "Chapter 3: Thermal Properties of Matter",
+          "Chapter 4: Thermodynamics",
+          "Chapter 5: Kinetic Theory",
+          "Chapter 6: Oscillations",
+          "Chapter 7: Waves" 
+        ]
+      }
+    ]
+  },
+  "Hindi": {
+    "books": [
+      {
+        "book": "Antra",
+        "chapters": [
+          "पाठ 1 - ईदगाह",
+          "पाठ 2 - दोपहर का भोजन",
+          "पाठ 3 - टॉर्च बेचनेवाले",
+          "पाठ 4 - गूँगे",
+          "पाठ 5 - ज्योतिबा फुले",
+          "पाठ 6 - खानाबदोश",
+          "पाठ 7 - उसकी माँ",
+          "पाठ 8 - भारतवर्ष की उन्नति कैसे हो सकती है?",
+          "पाठ 9 - कबीर",
+          "पाठ 10 - सूरदास",
+          "पाठ 11 - हँसी की चोट, सपना, दरबार",
+          "पाठ 12 - संध्या के बाद",
+          "पाठ 13 - जाग तुझको दूर जाना",
+          "पाठ 14 - बादल को घिरते देखा है",
+          "पाठ 15 - हस्तक्षेप",
+          "पाठ 16 - घर में वापसी"
+        ]
+      },
+      {
+        "book": "Aroh",
+        "chapters": [
+          "पाठ 1 - नमक का दारोगा",
+          "पाठ 2 - मियाँ नसीरुद्दीन",
+          "पाठ 3 - अप्पू के साथ ढाई साल",
+          "पाठ 4 - विदाई-संभाषण",
+          "पाठ 5 - गलता लोहा",
+          "पाठ 6 - रजनी",
+          "पाठ 7 - जामुन का पेड़",
+          "पाठ 8 - भारत माता",
+          "पाठ 9 - हम तौ एक एक करि जांनां",
+          "पाठ 10 - मेरे तो गिरधर गोपाल, दूसरो न कोई",
+          "पाठ 11 - घर की याद",
+          "पाठ 12 - चंपा काले-काले अक्षर नहीं चीन्हती",
+          "पाठ 13 - ग़ज़ल",
+          "पाठ 14 - हे भूख! मत मचल / हे मेरे जूही के फूल जैसे ईश्वर",
+          "पाठ 15 - सबसे खतरनाक",
+          "पाठ 16 - आओ मिलकर बचाएँ"
+        ]
+      },
+      {
+        "book": "Vitan",
+        "chapters": [
+          "पाठ 1 - भारतीय गायिकाओं में बेजोड़: लता मंगेशकर ",
+          "पाठ 2 - राजस्थान की रजत बूँदें",
+          "पाठ 3 - आलो-आँधारि",
+          "पाठ 4 - भारतीय कलाएँ"
+        ]
+       },
+       {
+        "book": "Sanchayan",
+        "chapters": [
+            "पाठ 1 - हुसैन की कहानी अपनी जबानी",
+            "पाठ 2 - आवारा मसीहा"
+            ]
+        }
+    ]
+    },
+    "Sociology": {
+        "books": [
+            {
+                "book": "Introducing Sociology",
+                "chapters": [
+                    "Chapter 1: Sociology and Society",
+                    "Chapter 2: Terms, Concepts and their Use in Sociology",
+                    "Chapter 3: Understanding Social Institutions",
+                    "Chapter 4: Culture and Socialisation",
+                    "Chapter 5: Doing Sociology: Research Methods"
+                ]
+            },
+            {
+                "book": "Understanding Society",
+                "chapters": [
+                    "Chapter 1: SOCIAL STRUCTURE, STRATIFICATION AND SOCIAL PROCESSES IN SOCIETY",
+                    "Chapter 2: SOCIAL CHANGE AND SOCIAL ORDER IN RURAL AND URBAN SOCIETY",
+                    "Chapter 3: ENVIRONMENT AND SOCIETY",
+                    "Chapter 4: INTRODUCING WESTERN SOCIOLOGISTS",
+                    "Chapter 5: INDIAN SOCIOLOGISTS"
+                ]
+            }
+        ]
+    },
+    "English": {
+        "books": [
+            {
+                "book": "Hornbill",
+                "chapters": [
+                    "Chapter 1: The Portrait of a Lady",
+                    "Chapter 2: We're Not Afraid to Die... if We Can All Be Together",
+                    "Chapter 3: Discovering Tut: The Saga Continues",
+                    "Chapter 4: The Ailing Planet: The Green Movement's Role",
+                    "Chapter 5: The Adventure",
+                    "Chapter 6: Silk Road",
+                    "Chapter 8: Note-making",
+                    "Chapter 9: Summarising",
+                    "Chapter 10: Sub-titling",
+                    "Chapter 11: Essay Writing",
+                    "Chapter 12: Letter Writing",
+                    "Chapter 13: Creative Writing"
+                ]
+             },
+             {
+                "book": "Snapshots",
+                "chapters": [
+                    "Chapter 1: The Summer of the Beautiful White Horse",
+                    "Chapter 2: The Address",
+                    "Chapter 3: Mother's Day",
+                    "Chapter 4: Birth",
+                    "Chapter 5: The Tale of Melon City"
+                ]
+             },
+             {
+                "book": "Woven Words",
+                "chapters": [
+                    "Chapter 1: The Lament",
+                    "Chapter 2: A Pair of Mustachios",
+                    "Chapter 3: The Rocking-horse Winner",
+                    "Chapter 4: The Adventure of the Three Garridebs",
+                    "Chapter 5: Pappachi's Moth",
+                    "Chapter 6: The Third and Final Continent",
+                    "Chapter 7: Glory at Twilight",
+                    "Chapter 8: The Luncheon",
+                    "Chapter 9: The Peacock",
+                    "Chapter 10: Let me Not to the Marriage of True Minds",
+                    "Chapter 11: Coming",
+                    "Chapter 12: Telephone Conversation",
+                    "Chapter 13: The World is too Much With Us",
+                    "Chapter 14: Mother Tongue",
+                    "Chapter 15: Hawk Roosting",
+                    "Chapter 16: For Elkana",
+                    "Chapter 17: Refugee Blues",
+                    "Chapter 18: Felling of the Banyan Tree",
+                    "Chapter 19: Ode to a Nightingale",
+                    "Chapter 20: Ajamil and the Tigers",
+                    "Chapter 21: My Watch",
+                    "Chapter 22: My Three Passions",
+                    "Chapter 23: Patterns of Creativity",
+                    "Chapter 24: Tribal Verse",
+                    "Chapter 25: What is a Good Book?",
+                    "Chapter 26: The Story",
+                    "Chapter 27: Bridges"
+                ]
+             }
+         ]
+        },
+    "Political Science": {
+        "books": [
+            {
+                "book": "Political Theory",
+                "chapters": [
+                    "Chapter 1: Political Theory: An Introduction",
+                    "Chapter 2: Freedom",
+                    "Chapter 3: Equality",
+                    "Chapter 4: Social Justice",
+                    "Chapter 5: Rights",
+                    "Chapter 6: Citizenship",
+                    "Chapter 7: Nationalism",
+                    "Chapter 8: Secularism"
+                ]
+            },
+            {
+                "book": "Indian Constitution at Work",
+                "chapters": [
+                    "Chapter 1: CONSTITUTION: WHY AND HOW?",
+                    "Chapter 2: RIGHTS IN THE INDIAN CONSTITUTION",
+                    "Chapter 3: ELECTION AND REPRESENTATION",
+                    "Chapter 4: EXECUTIVE",
+                    "Chapter 5: LEGISLATURE",
+                    "Chapter 6: JUDICIARY",
+                    "Chapter 7: FEDERALISM",
+                    "Chapter 8: LOCAL GOVERNMENTS",
+                    "Chapter 9: CONSTITUTION AS A LIVING DOCUMENT",
+                    "Chapter 10: THE PHILOSOPHY OF THE CONSTITUTION"
+                ]
+            }
+         ]
+        },
+    "History": {
+        "book": "Themes in World History",
+        "chapters": [
+            "Chapter 1: Writing and City Life",
+            "Chapter 2: An Empire Across Three Continents",
+            "Chapter 3: Nomadic Empires",
+            "Chapter 4: The Three Orders",
+            "Chapter 5: Changing Cultural Traditions",
+            "Chapter 6: Displacing Indigenous Peoples",
+            "Chapter 7: Paths to Modernisation"
+         ]
+      },
+    "Economics": {
+        "books": [
+            {
+                "book": "Indian Economic Development",
+                "chapters": [
+                    "Chapter 1: Indian Economy on the Eve of Independence",
+                    "Chapter 2: Indian Economy 1950-1990",
+                    "Chapter 3: Liberalisation, Privatisation and Globalisation: An Appraisal",
+                    "Chapter 4: Human Capital Formation in India",
+                    "Chapter 5: Rural Development",
+                    "Chapter 6: Employment: Growth, Informalisation and Other Issues",
+                    "Chapter 7: Environment and Sustainable Development",
+                    "Chapter 8: Comparative Development Experiences of India and its Neighbours"
+         ]
+      },
+      {
+        "book": "Statistics for Economics",
+        "chapters": [
+            "Chapter 1: Introduction",
+            "Chapter 2: Collection of Data",
+            "Chapter 3: Organisation of Data",
+            "Chapter 4: Presentation of Data",
+            "Chapter 5: Measures of Central Tendency",
+            "Chapter 6: Correlation",
+            "Chapter 7: Index Numbers",
+            "Chapter 8: Use of Statistical Tools"
+         ]
+      }
+    ]
+  },
+    "Business Studies":{
+        "book": "Business Studies",
+        "chapters": [
+            "Chapter 1: Business, Trade and Commerce",
+            "Chapter 2: Forms of Business Organisations",
+            "Chapter 3: Public, Private and Global Enterprises",
+            "Chapter 4: Business Services",
+            "Chapter 5: Emerging Modes of Business",
+            "Chapter 6: Social Responsibilities of Business and Business Ethics",
+            "Chapter 7: Formation of a Company",
+            "Chapter 8: Sources of Business Finance",
+            "Chapter 9: MSME and Business Entrepreneurship",
+            "Chapter 10: Internal Trade",
+            "Chapter 11: International Business"
+        ]
+    },
+  "Home Science": {
+    "books": [
+      {
+        "book": "Human Ecology and Family Sciences Part I",
+        "chapters": [
+            "Chapter 1: Introduction HEFS: Evolution of the Discipline and its Relevance to Quality of Life",
+            "Chapter 2: Understanding the Self",
+            "Chapter 3: Food, Nutrition, Health and Fitness",
+            "Chapter 4: Management of Resources",
+            "Chapter 5: Fabrics Around Us",
+            "Chapter 6: Media and Communication Technology",
+            "Chapter 7: Concerns and Needs in Diverse Contexts"
+        ]
+      },
+      {
+        "book": "Human Ecology and Family Sciences Part II",
+        "chapters": [
+            "Chapter 1: Nutrition, Health and Well-being",
+            "Chapter 2: Our Apparel",
+            "Chapter 3: Financial Management and Planning",
+            "Chapter 4: Care and Maintenance of Fabrics"
+         ]
+      }
+    ]
+  },
+  "Fine Art": {
+    "book": "Fine Art",
+    "chapters": [
+        "Chapter 1: Prehistoric Rock Paintings",
+        "Chapter 2: Arts of the Indus Valley",
+        "Chapter 3: Art of the Mauryan Period",
+        "Chapter 4: Post-Mauryan Trends in Indian Art and Architecture",
+        "Chapter 5: Later Mural Traditions",
+        "Chapter 6: Temple Architecture and Sculpture",
+        "Chapter 7: Indian Bronze Sculpture",
+        "Chapter 8: Some Aspects of Indo-Islamic Architecture"
+    ]
+  },
+    "Informatics Practices" : {
+        "book": "Informatics Practices",
+        "chapters": [
+            "Chapter 1: Computer System",
+            "Chapter 2: Emerging Trends",
+            "Chapter 3: Brief Overview of Python",
+            "Chapter 4: Working with Lists and Dictionaries",
+            "Chapter 5: Understanding Data",
+            "Chapter 6: Introduction to NumPy",
+            "Chapter 7: Database Concepts",
+            "Chapter 8: Introduction to Structured Query Language (SQL)"
+        ]
+    },
+    "Computer Science": {
+        "book": "Computer Science",
+        "chapters": [
+            "Chapter 1: Computer System",
+            "Chapter 2: Encoding Schemes and Number System",
+            "Chapter 3: Emerging Trends",
+            "Chapter 4: Introduction to Problem Solving",
+            "Chapter 5: Getting Started with Python",
+            "Chapter 6: Flow of Control",
+            "Chapter 7: Functions",
+            "Chapter 8: Strings",
+            "Chapter 9: Lists",
+            "Chapter 10: Tuples and Dictionaries",
+            "Chapter 11: Societal Impact"
+        ]
+    },
+    "Health & Physical Education": {
+        "book": "Health & Physical Education",
+        "chapters": [
+            "Chapter 1: Physical Education",
+            "Chapter 2: Understanding Health",
+            "Chapter 3: Physical and Physiological Aspects of Physical Education and Sports",
+            "Chapter 4: Individual Games",
+            "Chapter 5: Team Games",
+            "Chapter 6: Yoga and its Relevance in the Modern Times",
+            "Chapter 7: Safety and Security",
+            "Chapter 8: Health Related Physical Fitness",
+            "Chapter 9: Measurement and Evaluation",
+            "Chapter 10: Tournaments and Competitions",
+            "Chapter 11: Adventure Sports"
+        ]
+    },
+    "Biotechnology": {
+        "book": "Biotechnology",
+        "chapters": [
+            "Chapter 1: Introduction",
+            "Chapter 2: Cellular Organelles",
+            "Chapter 3: Biomolecules",
+            "Chapter 4: Enzymes and Bioenergetics",
+            "Chapter 5: Cellular Processes",
+            "Chapter 6: Basic Principles of Inheritance",
+            "Chapter 7: Basic Processes",
+            "Chapter 8: Genetic Disorder",
+            "Chapter 9: Introduction to Bioinformatics",
+            "Chapter 10: Protein Informatics and Cheminformatics",
+            "Chapter 11: Programming and Systems Biology",
+            "Chapter 12: Tools and Techniques"
+        ]
+    },
+    "Knowledge Traditions and Practices of India": {
+        "book": "Knowledge Traditions and Practices of India",
+        "chapters": [
+            "Chapter 1: Language and Literature of India",
+            "Chapter 2: Indian Philosophical Systems",
+            "Chapter 3: Performing Art Traditions in India ",
+            "Chapter 4: Indian Art and Architecture",
+            "Chapter 5: Science and Technology in Ancient India",
+            "Chapter 6: Astronomy in India",
+            "Chapter 7: Mathematics in India",
+            "Chapter 8: Introducing Ayurveda: the Science of Health and Disease",
+            "Chapter 9: Chemistry and Metallurgy in India",
+            "Chapter 10: Yoga"
+        ]
+    }
+}

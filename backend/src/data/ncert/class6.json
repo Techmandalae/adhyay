@@ -1,0 +1,150 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Unit 1: Fables and Folk Tales",
+      "Unit 2: Friendship",
+      "Unit 3: Nurturing Nature",
+      "Unit 4: Sports and Wellness",
+      "Unit 5: Culture and Tradition"
+    ]
+  },
+  "Hindi": {
+    "book": "Malhar",
+    "chapters": [
+      "अध्याय 1 - मातृभूमि (कविता)",
+      "अध्याय 2 - गोल",
+      "अध्याय 3 - पहली बूँद (कविता)",
+      "अध्याय 4 - हार की जीत (कहानी)",
+      "अध्याय 5 - रहीम के दोहे (कविता)",
+      "अध्याय 6 - मेरी माँ",
+      "अध्याय 7 - जलते चलो",
+      "अध्याय 8 - सत्रिया और बिहू नृत्य",
+      "अध्याय 9 - मैया में नहीं मकना कोयो (कविता)",
+      "अध्याय 10 - परीक्षा",
+      "अध्याय 11 - चेतक की वीरता",
+      "अध्याय 12 - हिंद महासागर में छोटा-सा हिंदुस्तान",
+      "अध्याय 13 - पेड़ की भाटा"
+    ]
+  },
+  "Mathematics": {
+    "book": "Ganita Prakash",
+    "chapters": [
+      "Chapter 1: Patterns in Mathematics",
+      "Chapter 2: Lines and Angles",
+      "Chapter 3: Number Play",
+      "Chapter 4: Data Handling and Presentation ",
+      "Chapter 5: Prime Time",
+      "Chapter 6: Perimeter and Area",
+      "Chapter 7: Fractions",
+      "Chapter 8: Playing with Constructions",
+      "Chapter 9: Symmetry",
+      "Chapter 10: The Other Side of Zero"
+    ]
+  },
+  "Social Science": {
+    "book": "Exploring Society India And Beyond",
+    "chapters": [
+      "Chapter 1: Locating Places on the Earth",
+      "Chapter 2: Oceans and Continents",
+      "Chapter 3: Landforms and Life",
+      "Chapter 4: Timeline and Sources of History",
+      "Chapter 5: India, That Is Bharat",
+      "Chapter 6: The Beginnings of Indian Civilisation",
+      "Chapter 7: India's Cultural Roots",
+      "Chapter 8: Unity in Diversity, or 'Many in the One'",
+      "Chapter 9: Family and Community",
+      "Chapter 10: Grassroots Democracy — Part 1: Governance",
+      "Chapter 11: Grassroots Democracy — Part 2: Local Government in Rural Areas",
+      "Chapter 12: Grassroots Democracy — Part 3: Local Government in Urban Areas",
+      "Chapter 13: The Value of Work",
+      "Chapter 14: Economic Activities Around Us"
+    ]
+  },
+  "Science": {
+    "book": "Curiosity",
+    "chapters": [
+      "Chapter 1: The Wonderful World of Science",
+      "Chapter 2: Diversity in the Living World",
+      "Chapter 3: Mindful Eating: A Path to a Healthy Body",
+      "Chapter 4: Exploring Magnets",
+      "Chapter 5: Measurement of Length and Motion",
+      "Chapter 6: Materials Around Us",
+      "Chapter 7: Temperature and its Measurement",
+      "Chapter 8: A Journey through States of Water",
+      "Chapter 9: Methods of Separation in Everyday Life",
+      "Chapter 10: Living Creatures: Exploring their Characteristics",
+      "Chapter 11: Nature's Treasures",
+      "Chapter 12: Beyond Earth"
+    ]
+  },
+  "Sanskrit": {
+    "book": "Deepakam",
+    "chapters": [
+      "प्रथमः पाठः - वयं वर्णमालां पठामः",
+      "द्वितीयः पाठः - संयुक्‍त-व्‍यञ्जनानि",
+      "तृतीयः पाठः - एषः कः? एषा का? एतत् किम्?",
+      "चतुर्थः पाठः - अहं च त्वं च",
+      "पञ्चमः पाठः - संख्‍यागणना ननुसरला",
+      "षष्‍ठः पाठः - अहं प्रातः उत्तिष्‍ठामि",
+      "सप्‍तमः पाठः - शूराः वयं धीराः वयम",
+      "अष्‍टमः पाठः - सः एव महान् चित्रकारः",
+      "नवमः पाठः - अतिथिदेवो भव",
+      "दशमः पाठः - बुद्धिः सर्वार्थसाधिका",
+      "एकादशः पाठः - यः जानाति सः पण्डितः",
+      "द्वादशः पाठः - त्वम्आपणं गच्छ",
+      "त्रयोदशः पाठः - पृथिव्यां त्रीणि रत्‍नानि",
+      "चतुर्दशः पाठः - आलस्यं हि मनुष्याणां शरीरस्‍थः महान्रिपुः",
+      "पञ्चदशः पाठः - माधवस्य प्रियम्अङ्गम्",
+      "षोडश: पाठः - वृक्षाः सत्पुरुषाः इव"
+    ]
+  },
+  "Arts": {
+    "book": "Kriti-I",
+    "chapters": [
+      "Chapter 1: Objects and Still Life",
+      "Chapter 2: Changing the Typical Picture",
+      "Chapter 3: Portraying People",
+      "Chapter 4: Paper Crafts",
+      "Chapter 5: Seals to Prints",
+      "Chapter 6: Music and your Emotions",
+      "Chapter 7: Musical Instruments",
+      "Chapter 8: Taal or Talam and Raga or Ragam in Indian Music",
+      "Chapter 9: Melodies of Diversity",
+      "Chapter 10: Songwriting",
+      "Chapter 11: Music and Society",
+      "Chapter 12: My Body in Motion",
+      "Chapter 13: Breaking Barriers with Dance",
+      "Chapter 14: Harmony in Motion",
+      "Chapter 15: Dances of Our Land",
+      "Chapter 16: Emotions Unveiled!",
+      "Chapter 17: Let's Design",
+      "Chapter 18: In the Company of Theatre",
+      "Chapter 19: Stories of Shadows and Strings—Puppetry",
+      "Chapter 20: The Grand Finale",
+      "Chapter 21: Integration of All Art Forms",
+      "Chapter 22: Assessment"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yatra",
+    "chapters": [
+      "Unit 1: Importance of Physical Education and Well-being",
+      "Unit 2: Motor Fitness",
+      "Unit 3: Fundamental Skills of Kho-Kho",
+      "Unit 4: Fundamental Skills of Handball",
+      "Unit 5: Yoga"
+    ]
+  },
+  "Vocational Education": {
+    "book": "Kaushal Bodh",
+    "chapters": [
+      "Chapter 1: School Kitchen Garden",
+      "Chapter 2: Biodiversity Register",
+      "Chapter 3: Maker Skills",
+      "Chapter 4: Animation and Games",
+      "Chapter 5: School Museum",
+      "Chapter 6: Cooking without Fire"
+    ]
+  }
+}

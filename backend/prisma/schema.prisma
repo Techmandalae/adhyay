@@ -1,0 +1,605 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SchoolStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+model School {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  location  String   @default("")
+  logoUrl   String?
+  status    SchoolStatus @default(PENDING)
+  isIndependentWorkspace Boolean @default(false)
+  aiMonthlyLimit Int @default(0)
+  domain    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  classStandards AcademicClassStandard[]
+  classes      AcademicClass[]
+  sections     AcademicSection[]
+  subjects     AcademicSubject[]
+  books        AcademicBook[]
+  chapters     AcademicChapter[]
+  exams        Exam[]
+  examPapers   ExamPaper[]
+  answerKeys   AnswerKey[]
+  submissions  ExamSubmission[]
+  evaluations  ExamEvaluation[]
+  usageCounters UsageCounter[]
+  aiUsage      AiUsage[]
+  parentLinks  ParentStudent[]
+  teacherProfiles TeacherProfile[]
+  studentProfiles StudentProfile[]
+  parentProfiles ParentProfile[]
+  adminProfiles  AdminProfile[]
+  templates   ExamTemplate[]
+  teacherClasses TeacherClass[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  publicId     String   @unique
+  schoolId     String
+  email        String
+  passwordHash String
+  emailVerified Boolean @default(false)
+  emailVerificationToken String?
+  emailVerificationExpires DateTime?
+  role         UserRole
+  approvalStatus ApprovalStatus @default(PENDING)
+  name         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherProfile TeacherProfile?
+  studentProfile StudentProfile?
+  parentProfile  ParentProfile?
+  adminProfile   AdminProfile?
+  userProfile    UserProfile?
+
+  @@unique([schoolId, email])
+  @@index([schoolId])
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  name      String
+  age       Int
+  className String?  @map("class")
+  hobbies   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeacherProfile {
+  id        String   @id @default(uuid())
+  schoolId  String
+  userId    String   @unique
+  fullName  String   @default("")
+  email     String   @default("")
+  contact   String   @default("")
+  subject   String   @default("")
+  location  String   @default("")
+  linkedin  String?
+  experience String  @default("")
+  education String   @default("")
+  employeeId String?
+  isIndependent Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exams  Exam[]
+  classes TeacherClass[]
+  templates ExamTemplate[]
+  aiUsage AiUsage[]
+
+  @@index([schoolId])
+}
+
+model StudentProfile {
+  id         String   @id @default(uuid())
+  schoolId   String
+  userId     String   @unique
+  fullName   String   @default("")
+  className  String   @default("")
+  sectionName String  @default("")
+  classId    String
+  classLevel Int
+  sectionId  String?
+  rollNumber String?
+  phoneNumber String  @default("")
+  email      String   @default("")
+  location   String   @default("")
+  dob        DateTime? @map("dateOfBirth")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class  AcademicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  section AcademicSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  submissions ExamSubmission[]
+  evaluations ExamEvaluation[]
+  parentLinks ParentStudent[]
+
+  @@index([schoolId])
+  @@index([classId])
+  @@index([sectionId])
+}
+
+model ParentProfile {
+  id        String   @id @default(uuid())
+  schoolId  String
+  userId    String   @unique
+  fullName  String   @default("")
+  email     String   @default("")
+  contact   String   @default("")
+  location  String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  children ParentStudent[]
+
+  @@index([schoolId])
+}
+
+model AdminProfile {
+  id        String   @id @default(uuid())
+  schoolId  String
+  userId    String   @unique
+  fullName  String   @default("")
+  email     String   @default("")
+  contact   String   @default("")
+  location  String   @default("")
+  title     String?
+  contactNumber String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model ParentStudent {
+  schoolId   String
+  parentId   String
+  studentId  String
+  createdAt  DateTime @default(now())
+
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parent  ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, studentId])
+  @@index([schoolId])
+}
+
+/* ===========================
+   ACADEMIC STRUCTURE
+=========================== */
+
+model AcademicClass {
+  id         String   @id @default(uuid())
+  schoolId   String
+  classStandardId String?
+  classLevel Int
+  name       String
+  isSystem   Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classStandard AcademicClassStandard? @relation(fields: [classStandardId], references: [id], onDelete: SetNull)
+  subjects AcademicSubject[]
+  students StudentProfile[]
+  exams    Exam[]
+  teachers TeacherClass[]
+
+  @@unique([schoolId, classLevel])
+  @@index([schoolId])
+  @@index([classStandardId])
+}
+
+model AcademicClassStandard {
+  id        String   @id @default(uuid())
+  schoolId  String
+  name      String
+  hasStreams Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections AcademicSection[]
+  classes  AcademicClass[]
+  chapters AcademicChapter[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model AcademicSection {
+  id        String   @id @default(uuid())
+  schoolId  String
+  classStandardId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classStandard AcademicClassStandard @relation(fields: [classStandardId], references: [id], onDelete: Cascade)
+  students StudentProfile[]
+  exams    Exam[]
+
+  @@unique([classStandardId, name])
+  @@index([schoolId])
+  @@index([classStandardId])
+}
+
+model AcademicSubject {
+  id        String   @id @default(uuid())
+  schoolId  String
+  name      String
+  classId   String
+  isSystem  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class  AcademicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  books  AcademicBook[]
+  chapters AcademicChapter[]
+  exams  Exam[]
+
+  @@unique([schoolId, classId, name])
+  @@index([schoolId])
+  @@index([classId])
+}
+
+model AcademicBook {
+  id        String   @id @default(uuid())
+  schoolId  String
+  name      String
+  type      BookType
+  subjectId String
+  isSystem  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject AcademicSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chapters AcademicChapter[]
+
+  @@unique([schoolId, subjectId, name])
+  @@index([schoolId])
+  @@index([subjectId])
+}
+
+model AcademicChapter {
+  id        String   @id @default(uuid())
+  schoolId  String
+  title     String
+  chapterNumber Int?
+  summary   String?
+  keywords  String?
+  bookId    String
+  subjectId String?
+  classStandardId String?
+  isSystem  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  book   AcademicBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  subject AcademicSubject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  classStandard AcademicClassStandard? @relation(fields: [classStandardId], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, bookId, title])
+  @@index([schoolId])
+  @@index([bookId])
+  @@index([subjectId])
+  @@index([classStandardId])
+}
+
+enum BookType {
+  NCERT
+  REFERENCE
+}
+
+/* ===========================
+   EXAM SYSTEM
+=========================== */
+
+model Exam {
+  id                 String     @id @default(uuid())
+  schoolId           String
+  teacherId          String?
+  classId            String
+  sectionId          String?
+  subjectId          String
+  templateId         String?
+  meta               Json
+  aiPayload          Json
+  status             ExamStatus @default(DRAFT)
+  assignedClassId    String?
+  assignedClassLevel Int?
+  publishedAt        DateTime?
+  generatedAt        DateTime
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher  TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  class    AcademicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  section  AcademicSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  subject  AcademicSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  template ExamTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  examPaper ExamPaper?
+  submissions ExamSubmission[]
+  evaluations ExamEvaluation[]
+
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([assignedClassId])
+  @@index([sectionId])
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ExamPaper {
+  id        String   @id @default(uuid())
+  schoolId  String
+  examId    String   @unique
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answerKey AnswerKey?
+
+  @@index([schoolId])
+  @@index([examId])
+}
+
+model AnswerKey {
+  id          String   @id @default(uuid())
+  schoolId    String
+  examPaperId String   @unique
+  payload     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  examPaper ExamPaper @relation(fields: [examPaperId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([examPaperId])
+}
+
+model ExamSubmission {
+  id                String   @id @default(uuid())
+  schoolId          String
+  examId            String
+  studentId         String
+  submittedAt       DateTime @default(now())
+  timeTakenSeconds  Int?
+  filePath          String?
+  fileName          String?
+  fileMime          String?
+  fileSize          Int?
+  structuredAnswers Json?
+  rawTextAnswer     String?
+  extractedText     String?
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  evaluation ExamEvaluation?
+
+  @@unique([examId, studentId])
+  @@index([schoolId])
+  @@index([examId])
+  @@index([studentId])
+}
+
+model ExamEvaluation {
+  id              String           @id @default(uuid())
+  schoolId        String
+  submissionId    String           @unique
+  examId          String
+  studentId       String
+  status          EvaluationStatus @default(PENDING)
+  aiScore         Float?
+  aiResult        Json?
+  aiFlags         Json?
+  teacherScore    Float?
+  teacherResult   Json?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  school     School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  submission ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  exam       Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([status])
+}
+
+enum EvaluationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model UsageCounter {
+  id              String   @id @default(uuid())
+  schoolId        String
+  periodKey       String
+  periodStart     DateTime
+  periodEnd       DateTime
+  examCount       Int      @default(0)
+  limitCount      Int?
+  limitNotifiedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, periodKey])
+  @@index([schoolId])
+}
+
+model TeacherClass {
+  id        String   @id @default(uuid())
+  schoolId  String
+  teacherId String
+  classId   String
+  createdAt DateTime @default(now())
+
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   AcademicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId])
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([classId])
+}
+
+model ExamTemplate {
+  id          String   @id @default(uuid())
+  schoolId    String
+  name        String
+  sections    Json
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  createdBy TeacherProfile @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  exams    Exam[]
+
+  @@index([schoolId])
+  @@index([createdById])
+}
+
+model AiUsage {
+  id               String   @id @default(uuid())
+  schoolId         String
+  teacherId        String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  createdAt        DateTime @default(now())
+
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([createdAt])
+}
+
+model SyllabusChapter {
+  id              String   @id @default(uuid())
+  schoolId        String
+  classStandardId String
+  subjectId       String
+  chapterNumber   Int
+  chapterTitle    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([classStandardId])
+  @@index([subjectId])
+  @@unique([schoolId, classStandardId, subjectId, chapterNumber])
+}
+
+model QuestionBank {
+  id              String   @id @default(uuid())
+  schoolId        String
+  classStandardId String
+  subjectId       String
+  chapterId       String?
+  difficulty      String
+  question        String
+  optionA         String?
+  optionB         String?
+  optionC         String?
+  optionD         String?
+  answer          String?
+  type            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([classStandardId])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([difficulty])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  schoolId  String?
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([token])
+  @@index([email])
+  @@index([schoolId])
+  @@index([expiresAt])
+}

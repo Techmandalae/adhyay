@@ -1,0 +1,106 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Chapter 1: Together We Can",
+      "Chapter 2: The Tinkling Bells",
+      "Chapter 3: Be Smart, Be Safe",
+      "Chapter 4: One Thing at a Time",
+      "Chapter 5: The Old Stag",
+      "Chapter 6: Braille",
+      "Chapter 7: Fit Body, Fit Mind, Fit Nation",
+      "Chapter 8: The Lagori Champions",
+      "Chapter 9:  Hekko",
+      "Chapter 10: The Swing",
+      "Chapter 11: A Journey to the Magical Mountains",
+      "Chapter 12: Maheshwar"
+    ]
+  },
+  "Hindi": {
+    "book": "Veena",
+    "chapters": [
+      "अध्याय 1 - चिड़िया का गीत",
+      "अध्याय 2 - बगीचे का घोंघा",
+      "अध्याय 3 - नीम",
+      "अध्याय 4 - हमारा आहार",
+      "अध्याय 5 - आसमान गिरा",
+      "अध्याय 6 - जयपुर से पत्र",
+      "अध्याय 7 - नकली हीरे",
+      "अध्याय 8 - ओणम के रंग",
+      "अध्याय 9 - मिठाइयों का सम्मेलन",
+      "अध्याय 10 - कैमरा",
+      "अध्याय 11 - कविता का कमाल",
+      "अध्याय 12 - शतरंज में मात",
+      "अध्याय 13 - हमारा आदित्य"
+    ]
+  },
+  "Mathematics": {
+    "book": "Maths Mela",
+    "chapters": [
+      "Chapter 1: Shapes Around Us",
+      "Chapter 2: Hide and Seek",
+      "Chapter 3: Pattern Around Us",
+      "Chapter 4: Thousands Around Us",
+      "Chapter 5: Sharing and Measuring",
+      "Chapter 6: Measuring Length",
+      "Chapter 7: The Cleanest Village",
+      "Chapter 8: Weigh it, Pour it",
+      "Chapter 9: Equal Groups",
+      "Chapter 10:  Elephants,Tigers, and Leopards",
+      "Chapter 11: Fun with Symmetry",
+      "Chapter 12: Ticking Clocks and Turning Calendar",
+      "Chapter 13: The Transport Museum",
+      "Chapter 14: Data Handling"
+    ]
+  },
+  "The World Around Us": {
+    "book": "Our Wondrous World",
+    "chapters": [
+      "Chapter 1: Living Together",
+      "Chapter 2: Exploring Our Neighbourhood",
+      "Chapter 3: Nature Trail",
+      "Chapter 4: Growing up with Nature",
+      "Chapter 5: Food for Health",
+      "Chapter 6: Happy and Healthy Living",
+      "Chapter 7: How Things Work",
+      "Chapter 8: How Things are Made",
+      "Chapter 9: Different Lands, Different Lives",
+      "Chapter 10: Our Sky"
+    ]
+  },
+  "Arts": {
+    "book": "Bansuri",
+    "chapters": [
+      "Chapter 1: Arrangements of Objects",
+      "Chapter 2: Textures in Nature",
+      "Chapter 3: Aqua World",
+      "Chapter 4: People in Action",
+      "Chapter 5: Explore!",
+      "Chapter 6: Imagine",
+      "Chapter 7: Let's Create",
+      "Chapter 8: Look Around",
+      "Chapter 9: Sing and Play",
+      "Chapter 10: Making Music",
+      "Chapter 11: Songs and Stories",
+      "Chapter 12: Think, Feel, Create",
+      "Chapter 13: Sounds and Instruments",
+      "Chapter 14: My Body in Dance",
+      "Chapter 15: My Dance Tells Stories",
+      "Chapter 16: Creating My Dance",
+      "Chapter 17: Emotion and Expression in Dance",
+      "Chapter 18: Dances Around Me"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yoga",
+    "chapters": [
+      "Chapter 1: Throwing and Catching",
+      "Chapter 2: Kicking and Receiving",
+      "Chapter 3: Strike the Shuttlecock",
+      "Chapter 4: Little Steps",
+      "Chapter 5: Local and Traditional Games",
+      "Chapter 6: Yoga for Daily Life",
+      "Chapter 7: Yoga Sadhana"
+    ]
+  }
+}

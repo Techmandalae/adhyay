@@ -1,0 +1,18 @@
+Loaded Prisma config from prisma.config.ts.
+
+[36m-[39m  Starting [7m[8m_[28mprisma dev[8m_[28m[27m server [36mdefault[39m...
+
+
+
+
+
+
+
+
+
+[33m‼[39m  Skipped! 😌
+
+   Your [7m[8m_[28mprisma dev[8m_[28m[27m server [36mdefault[39m is already running and listening on ports [36m51213[39m-[36m51215[39m.
+        
+   To start a different server, use the [36m-n[39m/[36m--name[39m flag with another name.
+

@@ -1,0 +1,35 @@
+services:
+  - name: adhyay-api
+    type: web
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npm run migrate:deploy
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    disk:
+      name: uploads
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: NOTIFICATIONS_ENABLED
+        value: "true"
+      - key: NOTIFICATION_EMAIL_ENABLED
+        value: "true"
+      - key: NOTIFICATION_WHATSAPP_ENABLED
+        value: "true"

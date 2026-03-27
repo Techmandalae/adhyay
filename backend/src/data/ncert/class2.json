@@ -1,0 +1,67 @@
+{
+  "English": {
+    "book": "Mridang",
+    "chapters": [
+      "Chapter 1: My Bicycle",
+      "Chapter 2: Picture Reading",
+      "Chapter 3: It is Fun",
+      "Chapter 4: Seeing without Seeing",
+      "Chapter 5: Come Back Soon",
+      "Chapter 6: Between Home and School",
+      "Chapter 7: This is My Town",
+      "Chapter 8: A Show of Clouds",
+      "Chapter 9: My Name",
+      "Chapter 10: The Crow",
+      "Chapter 11: The Smart Monkey",
+      "Chapter 12: Little Drops of Water",
+      "Chapter 13: We are all Indians"
+    ]
+  },
+  "Hindi": {
+    "book": "Sarangi",
+    "chapters": [
+      "अध्याय 1 - नीमा की दादी",
+      "अध्याय 2 - घर",
+      "अध्याय 3 - माला की चाँदी की पायल",
+      "अध्याय 4 - मा",
+      "अध्याय 5 - थाथू और मैं",
+      "अध्याय 6 - चींटा",
+      "अध्याय 7 - टिल्लू जी",
+      "अध्याय 8 - तीन दोस्त",
+      "अध्याय 9 - दुनिया रंग-बिरंगी",
+      "अध्याय 10 - कौन",
+      "अध्याय 11 - बैंगनी जोजो",
+      "अध्याय 12 - तोसिया का सपना",
+      "अध्याय 13 - तालाब",
+      "अध्याय 14 - बीज",
+      "अध्याय 15 - किसान",
+      "अध्याय 16 - मूली",
+      "अध्याय 17 - बरसात और मेंढक",
+      "अध्याय 18 - शेर और चूहे की दोस्ती",
+      "अध्याय 19 - आउट",
+      "अध्याय 20 - छुपन-छुपाई",
+      "अध्याय 21 - हाथी साइकिल चला रहा था",
+      "अध्याय 22 - चार दिशाएँ",
+      "अध्याय 23 - चंदा मामा",
+      "अध्याय 24 - गिरे ताल में चंदा मामा",
+      "अध्याय 25 - सबसे बड़ा छाता",
+      "अध्याय 26 - बादल"
+    ]
+  },
+  "Mathematics": {
+    "book": "Joyful Mathematics",
+    "chapters": [
+      "Chapter 1: A Day at the Beach (Counting in Groups)",
+      "Chapter 2: Shapes Around Us (3D Shapes)",
+      "Chapter 3: Fun with Numbers (Numbers 1 to 100)",
+      "Chapter 4: Shadow Story (Togalu) (2D Shapes)",
+      "Chapter 5: Playing with Lines (Orientations of a line)",
+      "Chapter 6: Decoration for Festival (Addition and Subtraction)",
+      "Chapter 7: Rani's Gift (Measurement)",
+      "Chapter 8: Grouping and Sharing (Multiplication and Division)",
+      "Chapter 9: Which Season is it? (Measurement of Time)",
+      "Chapter 10: Fun at the Fair (Money)",
+      "Chapter 11: Data Handling (Puzzles)"
+    ]
+  }
+}

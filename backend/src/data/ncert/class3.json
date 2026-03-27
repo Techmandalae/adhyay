@@ -1,0 +1,116 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Chapter 1: Colours (Poem)",
+      "Chapter 2: Badal and Moti",
+      "Chapter 3: Best Friends",
+      "Chapter 4: Out in the Garden",
+      "Chapter 5: Talking Toys",
+      "Chapter 6: Paper Boats",
+      "Chapter 7: The Big Laddoo",
+      "Chapter 8: Thank God",
+      "Chapter 9:  Madhu's Wish",
+      "Chapter 10: Night",
+      "Chapter 11: Chanda Mama Counts the Stars",
+      "Chapter 12: Chandrayaan"
+    ]
+  },
+  "Hindi": {
+    "book": "Veena",
+    "chapters": [
+      "अध्याय 1 - सीखो (कविता)",
+      "अध्याय 2 - चींटी (कविता)",
+      "अध्याय 3 - कितने पैर?",
+      "अध्याय 4 - बया हमारी चिड़िया रानी!",
+      "अध्याय 5 - थाथू और मैं",
+      "अध्याय 6 - आम का पेड़",
+      "अध्याय 7 - बीरबल की खिचड़ी",
+      "अध्याय 8 - मित्र को पत्र",
+      "अध्याय 9 - चतुर गीदड़",
+      "अध्याय 10 - प्रकृति पर्व - फूलदेई",
+      "अध्याय 11 - रस्साकशी",
+      "अध्याय 12 - एक जादुई पिटारा",
+      "अध्याय 13 - अपना-अपना काम",
+      "अध्याय 14 - पेड़ों की अम्मा 'थिमक्का'",
+      "अध्याय 15 - किसान की होशियारी",
+      "अध्याय 16 - भारत",
+      "अध्याय 17 - चंद्रयान (संवाद)",
+      "अध्याय 18 - बोलने वाली माँद",
+      "अध्याय 19 - हम अनेक किंतु एक"
+    ]
+  },
+  "Mathematics": {
+    "book": "Maths Mela",
+    "chapters": [
+      "Chapter 1: What's in a Name?",
+      "Chapter 2: Toy Joy",
+      "Chapter 3: Double Century",
+      "Chapter 4: Vacation with My Nani Maa",
+      "Chapter 5: Fun with Shapes",
+      "Chapter 6: House of Hundreds - I",
+      "Chapter 7: Raksha Bandhan",
+      "Chapter 8: Fair Share",
+      "Chapter 9: House of Hundreds - II",
+      "Chapter 10: Fun at Class Party!",
+      "Chapter 11: Filling and Lifting",
+      "Chapter 12: Give and Take",
+      "Chapter 13: Time Goes On",
+      "Chapter 14: The Surajkund Fair"
+    ]
+  },
+  "The World Around Us": {
+    "book": "Our Wondrous World",
+    "chapters": [
+      "Chapter 1: Family and Friends",
+      "Chapter 2: Going to the Mela",
+      "Chapter 3: Celebrating Festivals",
+      "Chapter 4: Getting to Know Plants",
+      "Chapter 5: Plants and Animals Live Together",
+      "Chapter 6: Living in Harmony",
+      "Chapter 7: Water— A Precious Gift",
+      "Chapter 8: Food We Eat",
+      "Chapter 9: Staying Healthy and Happy",
+      "Chapter 10: This World of Things",
+      "Chapter 11: Making Things",
+      "Chapter 12: Taking Charge of Waste"
+    ]
+  },
+  "Arts": {
+    "book": "Bansuri-I",
+    "chapters": [
+      "Chapter 1: Objects in Art",
+      "Chapter 2: Plants in Art",
+      "Chapter 3: Animals in Art",
+      "Chapter 4: People Around Us",
+      "Chapter 5: Festivals, Occasions, and Celebrations",
+      "Chapter 6: Our National Anthem",
+      "Chapter 7: Feel the Rhythm ta ka ta ki Ta",
+      "Chapter 8: Travel Around",
+      "Chapter 9: Musical Instruments",
+      "Chapter 10: Celebratory Notes",
+      "Chapter 11: Let us Dance",
+      "Chapter 12: Dance for Joy",
+      "Chapter 13: I Play and Dance",
+      "Chapter 14: Dance with Nature",
+      "Chapter 15: Explore",
+      "Chapter 16: Imagine",
+      "Chapter 17: Let's Create",
+      "Chapter 18: Look Around",
+      "Chapter 19: Activities",
+      "Chapter 20: Integrating All Art Forms"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yoga",
+    "chapters": [
+      "Chapter 1: Throwing and Catching",
+      "Chapter 2: Kicking and Receiving",
+      "Chapter 3: Strike the Ball",
+      "Chapter 4: Little Steps",
+      "Chapter 5: Local and Traditional Games",
+      "Chapter 6: Yoga for Daily Life",
+      "Chapter 7: Yogic Practices (Yoga Sadhana)"
+    ]
+  }
+}

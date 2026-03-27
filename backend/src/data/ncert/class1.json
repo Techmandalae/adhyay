@@ -1,0 +1,61 @@
+{
+  "English": {
+    "book": "Mridang",
+    "chapters": [
+      "Chapter 1: Two Little Hands (Poem)",
+      "Chapter 2: Greetings (Activity/Topic)",
+      "Chapter 3: Picture Time (Activity/Vocabulary)",
+      "Chapter 4: The Cap-seller and the Monkeys (Story)",
+      "Chapter 5: A Farm (Vocabulary/Story)",
+      "Chapter 6: Fun with Pictures (Activity)",
+      "Chapter 7: The Food we Eat (Topic)",
+      "Chapter 8: The Four Seasons (Topic/Poem)",
+      "Chapter 9: Anandi's Rainbow (Story)"
+    ]
+  },
+  "Hindi": {
+    "book": "Sarangi",
+    "chapters": [
+      "अध्याय 1 - मीना का परिवार",
+      "अध्याय 2 - चंदा मामा दूर के",
+      "अध्याय 3 - दादा-दादी",
+      "अध्याय 4 - रीना का दिन",
+      "अध्याय 5 - रानी भी",
+      "अध्याय 6 - मिठाई",
+      "अध्याय 7 - मुर्गी बोला कुकड़ू-कूँ",
+      "अध्याय 8 - तीन साथी",
+      "अध्याय 9 - वाह, मेरे घोड़े!",
+      "अध्याय 10 - खतरे में साँप",
+      "अध्याय 11 - कबरी जबरी बकरी",
+      "अध्याय 12 - आलू की सड़क",
+      "अध्याय 13 - झूलम-झूली",
+      "अध्याय 14 - भुट्टे",
+      "अध्याय 15 - फूली रोटी",
+      "अध्याय 16 - मेला",
+      "अध्याय 17 - बरखा और मेघा",
+      "अध्याय 18 - होली",
+      "अध्याय 19 - जन्मदिन पर पेड़ लगाओ",
+      "अध्याय 20 - हवा",
+      "अध्याय 21 - कितनी प्यारी है ये दुनिया",
+      "अध्याय 22 - चाँद का बच्चा"
+    ]
+  },
+  "Mathematics": {
+    "book": "Joyful Mathematics",
+    "chapters": [
+      "Chapter 1: Finding the Furry Cat! (Pre-number Concepts)",
+      "Chapter 2: What is Long? What is Round? (Shapes)",
+      "Chapter 3: Mango Treat (Numbers 1 to 9)",
+      "Chapter 4: Making 10 (Numbers 10 to 20)",
+      "Chapter 5: How Many? (Addition and Subtraction of Single Digit Numbers)",
+      "Chapter 6: Vegetable Farm (Addition and Subtraction up to 20)",
+      "Chapter 7: Lina's Family (Measurement)",
+      "Chapter 8: Fun with Numbers (Numbers 21 to 99)",
+      "Chapter 9: Utsav (Patterns)",
+      "Chapter 10: How do I Spend my Day? (Time)",
+      "Chapter 11: How Many Times? (Multiplication)",
+      "Chapter 12: How Much Can We Spend? (Money)",
+      "Chapter 13: So Many Toys (Data Handling)"
+    ]
+  }
+}

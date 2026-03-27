@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f2ed;
+  --foreground: #151412;
+  --surface: #ffffff;
+  --surface-muted: #f2ebe3;
+  --ink-soft: #5c5347;
+  --accent: #ff6b35;
+  --accent-dark: #d95020;
+  --accent-cool: #0f8b8d;
+  --accent-warm: #f7b538;
+  --border: #e4d9cc;
+  --shadow: 0 16px 40px rgba(27, 24, 20, 0.12);
+  --radius: 18px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-ink-soft: var(--ink-soft);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-cool: var(--accent-cool);
+  --color-accent-warm: var(--accent-warm);
+  --color-border: var(--border);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.app-shell {
+  background: radial-gradient(
+      circle at 10% 10%,
+      rgba(255, 107, 53, 0.18),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 80% 0%,
+      rgba(15, 139, 141, 0.2),
+      transparent 45%
+    ),
+    linear-gradient(135deg, #fbf7f2 0%, #f4ede5 45%, #f7efe6 100%);
+}

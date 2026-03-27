@@ -1,0 +1,559 @@
+{
+  "Sanskrit": {
+    "books": [
+      {
+        "book": "Bhaswati",
+        "chapters": [
+          "प्रथमः पाठः - अनुशासनम्",
+          "द्वितीयः पाठः - मातुराज्ञा गरीयसी",
+          "तृतीयः पाठः - प्रजानुरञ्जको नृपः",
+          "चतुर्थः पाठः - दौवारिकस्य निष्ठा",
+          "पञ्चमः पाठः - सूक्ति-सौरभम्",
+          "षष्‍ठः पाठः - नैकेनापि समं गता वसुमती",
+          "सप्‍तमः पाठः - हल्दीघाटी",
+          "अष्‍टमः पाठः - मदालसा",
+          "नवमः पाठः - कार्याकार्यव्यवस्थितिः",
+          "दशमः पाठः - विद्यास्थानानि"
+        ]
+      },
+      {
+        "book": "Shashwati",
+        "chapters": [
+          "प्रथमः पाठः - विद्यायाऽमृतमश्नुते",
+          "द्वितीयः पाठः - रघुकौत्ससंवादः",
+          "तृतीयः पाठः - बालकौतुकम्",
+          "चतुर्थः पाठः - कर्मगौरवम्",
+          "पञ्चमः पाठः - शुकनासोपदेशः",
+          "षष्‍ठः पाठः - सूक्तिसुधा",
+          "सप्‍तमः पाठः - विक्रमस्यौदार्यम्",
+          "अष्‍टमः पाठः - कार्यं वा साधयेयं, देहं वा पातयेयम्",
+          "नवमः पाठः - दीनबन्धुः श्रीनायारः",
+          "दशमः पाठः - योगस्य वैशिष्ट्यम्",
+          "एकादशः पाठः - कथं शब्दानुशासनं कर्तव्यम्"
+        ]
+      }
+    ]
+  },
+  "Accountancy": {
+    "books": [
+      {
+        "book": "Accountancy Part I",
+        "chapters": [
+          "Chapter 1: Accounting for Partnership: Basic Concepts",
+          "Chapter 2: Reconstitution of a Partnership Firm - Admission of a Partner",
+          "Chapter 3: Reconstitution of a Partnership Firm - Retirement/Death of a Partner",
+          "Chapter 4: Dissolution of Partnership Firm"
+        ]
+      },
+      {
+        "book": "Accountancy Part II",
+        "chapters": [
+          "Chapter 1: Accounting for Share Capital",
+          "Chapter 2: Issue and Redemption of Debentures",
+          "Chapter 3: Financial Statements of a Company",
+          "Chapter 4: Analysis of Financial Statements",
+          "Chapter 5: Accounting Ratios",
+          "Chapter 6: Cash Flow Statement"
+        ]
+      }
+    ]
+  },
+  "Chemistry": {
+    "books": [
+      {
+        "book": "Chemistry Part-1",
+        "chapters": [
+            "Chapter 1: Solutions",
+            "Chapter 2: Electrochemistry",
+            "Chapter 3: Chemical Kinetics",
+            "Chapter 4: The d-and f-Block Elements",
+            "Chapter 5: Coordination Compounds"
+        ]
+      },
+      {
+        "book": "Chemistry Part-2",
+        "chapters": [
+            "Chapter 1: Haloalkanes and Haloarenes",
+            "Chapter 2: Alcohols, Phenols and Ethers",
+            "Chapter 3: Aldehydes, Ketones and Carboxylic Acids",
+            "Chapter 4: Amines",
+            "Chapter 5: Biomolecules"
+        ]
+      }
+    ]
+  },
+  "Mathematics": {
+    "books": [
+      {
+        "book": "Mathematics-Part-1",
+        "chapters": [
+            "Chapter 1: Relations and Functions",
+            "Chapter 2: Inverse Trigonometric Functions",
+            "Chapter 3: Matrices",
+            "Chapter 4: Determinants",
+            "Chapter 5: Continuity and Differentiability",
+            "Chapter 6: Application of Derivatives"
+        ]
+      },
+      {
+        "book": "Mathematics-Part-2",
+        "chapters": [
+            "Chapter 1: Integrals",
+            "Chapter 2: Applications of the Integrals",
+            "Chapter 3: Differential Equations",
+            "Chapter 4: Vector Algebra",
+            "Chapter 5: Three Dimensional Geometry",
+            "Chapter 6: Linear Programming",
+            "Chapter 7: Probability"
+        ]
+      }
+    ]
+  },
+  "Biology": {
+    "book": "Biology",
+    "chapters": [
+        "Chapter 1: Sexual Reproduction in Flowering Plants",
+        "Chapter 2: Human Reproduction",
+        "Chapter 3: Reproductive Health",
+        "Chapter 4: Principles of Inheritance and Variation",
+        "Chapter 5: Molecular Basis of Inheritance",
+        "Chapter 6: Evolution",
+        "Chapter 7: Human Health and Disease",
+        "Chapter 8: Microbes in Human Welfare",
+        "Chapter 9: Biotechnology : Principles and Processes",
+        "Chapter 10: Biotechnology and its Applications",
+        "Chapter 11: Organisms and Populations",
+        "Chapter 12: Ecosystem",
+        "Chapter 13: Biodiversity and Conservation"
+    ]
+  },
+  "Psychology": {
+    "book": "Psychology",
+    "chapters": [
+        "Chapter 1: Variations in Psychological Attributes",
+        "Chapter 2: Self and Personality",
+        "Chapter 3: Meeting Life Challenges ",
+        "Chapter 4: Psychological Disorders",
+        "Chapter 5: Therapeutic Approaches",
+        "Chapter 6: Attitude and Social Cognition",
+        "Chapter 7: Social Influence and Group Processes"
+    ]
+  },
+  "Geography": {
+    "books": [
+      {
+        "book": "Fundamental of Human Geography",
+        "chapters": [
+            "Chapter 1: Human Geography Nature and Scope",
+            "Chapter 2: The World Population Distribution, Density and Growth",
+            "Chapter 3: Human Development",
+            "Chapter 4: Primary Activities",
+            "Chapter 5: Secondary Activities",
+            "Chapter 6: Tertiary and Quaternary Activities",
+            "Chapter 7: Transport and Communication",
+            "Chapter 8: International Trade"
+        ]
+    },
+      {
+        "book": "Pratical Work in Geography",
+        "chapters": [
+            "Chapter 1: Data - Its Source and Compilation",
+            "Chapter 2: Data Processing",
+            "Chapter 3: Graphical Representation of Data",
+            "Chapter 4: Spatial Information Technology"
+        ]
+    },
+      {
+        "book": "India - People And Economy",
+        "chapters": [
+            "Chapter 1: Population : Distribution, Density, Growth and Composition",
+            "Chapter 2: Human Settlements",
+            "Chapter 3: Land Resources and Agriculture",
+            "Chapter 4: Water Resources",
+            "Chapter 5: Mineral and Energy Resources",
+            "Chapter 6: Planning and Sustainable Development in Indian Context",
+            "Chapter 7: Transport and Communication",
+            "Chapter 8: International Trade",
+            "Chapter 9: Geographical Perspective on Selected Issues and Problems"
+        ]
+      }
+    ]
+  },
+  "Physics": {
+    "books": [
+      {
+        "book": "Physics Part-1",
+        "chapters": [
+          "Chapter 1: ELECTRIC CHARGES AND FIELDS",
+          "Chapter 2: ELECTROSTATIC POTENTIAL AND CAPACITANCE",
+          "Chapter 3: CURRENT ELECTRICITY",
+          "Chapter 4: MOVING CHARGES AND MAGNETISM",
+          "Chapter 5: MAGNETISM AND MATTER",
+          "Chapter 6: ELECTROMAGNETIC INDUCTION",
+          "Chapter 7: ALTERNATING CURRENT",
+          "Chapter 8: ELECTROMAGNETIC WAVES"
+        ]
+      },
+      {
+        "book": "Physics Part-2",
+        "chapters": [
+          "Chapter 1: RAY OPTICS AND OPTICAL INSTRUMENTS",
+          "Chapter 2: WAVE OPTICS",
+          "Chapter 3: DUAL NATURE OF RADIATION AND MATTER",
+          "Chapter 4: ATOMS",
+          "Chapter 5: NUCLEI",
+          "Chapter 6: SEMICONDUCTOR ELECTRONICS: MATERIALS, DEVICES AND SIMPLE CIRCUITS"
+        ]
+      }
+    ]
+  },
+  "Hindi": {
+    "books": [
+      {
+        "book": "Antra",
+        "chapters": [
+          "पाठ 1 - देवसेना का गीत / कार्नेलिया का गीत",
+          "पाठ 2 - सरोज स्मृति",
+          "पाठ 3 - यह दीप अकेला / मैंने देखा, एक बूँद",
+          "पाठ 4 - बनारस / दिशा",
+          "पाठ 5 - वसंत आया / तोड़ो",
+          "पाठ 6 - भरत - राम का प्रेम / पद",
+          "पाठ 7 - बारहमासा",
+          "पाठ 8 - पद",
+          "पाठ 9 - कवित्त",
+          "पाठ 10 - प्रेमघन की छाया स्मृति",
+          "पाठ 11 - सुमिरिनी के मन के",
+          "पाठ 12 - संवदिया",
+          "पाठ 13 - गांधी, नेहरू और यासर अराफ़ात",
+          "पाठ 14 - शेर, पहचान, चार हाथ, सहजा",
+          "पाठ 15 - जहां कोई वापसी नहीं",
+          "पाठ 16 - दूसरा देवदास",
+          "पाठ 17 - कुटज"
+        ]
+      },
+      {
+        "book": "Aroh",
+        "chapters": [
+          "पाठ 1 - आत्मपरिचय - एक गीत",
+          "पाठ 2 - पतंग",
+          "पाठ 3 - कविता के बहाने - बात सीधी थी पर",
+          "पाठ 4 - कैमरे में बंद अपाहिज",
+          "पाठ 5 - उषा",
+          "पाठ 6 - बादल राग",
+          "पाठ 7 - कवितावली (उत्तर कांड से) - लक्ष्मण-मूर्छा और राम का बिलाप",
+          "पाठ 8 - रुबाइयां",
+          "पाठ 9 - छोटा मेरा खेत - बंगुलो के पंख",
+          "पाठ 10 - भक्तिन",
+          "पाठ 11 - बाज़ार दर्शन",
+          "पाठ 12 - काले मेघ पानी दे",
+          "पाठ 13 - पहलवान की ढोलक",
+          "पाठ 14 - शिरीष के फूल",
+          "पाठ 15 - श्रम-विभाजन और जाति-प्रथा, मेरी कल्पना का आदर्श समाज"
+        ]
+      },
+      {
+        "book": "Vitan",
+        "chapters": [
+          "पाठ 1 - सिल्वर वैडिंग",
+          "पाठ 2 - जूझ",
+          "पाठ 3 - अतीत में दबे पाँव"
+        ]
+       },
+       {
+        "book": "Antral Bhag 2",
+        "chapters": [
+            "पाठ 1 - सूरदास की झोंपड़ी",
+            "पाठ 2 - बिस्कोहर की माटी",
+            "पाठ 3 - अपना मालवा - खाऊ-उजाडू सभ्यता में"
+            ]
+        }
+    ]
+    },
+    "Sociology": {
+        "books": [
+            {
+                "book": "Indian Society",
+                "chapters": [
+                    "Chapter 1: Introducing Indian Society",
+                    "Chapter 2: The Demographic Structure of the Indian Society",
+                    "Chapter 3: Social Institutions: Continuity and Change",
+                    "Chapter 4: The Market as a Social Institution",
+                    "Chapter 5: Patterns of Social Inequality and Exclusion",
+                    "Chapter 6: The Challenges of Cultural Diversity",
+                    "Chapter 7: Suggestions for Project Work"
+                ]
+            },
+            {
+                "book": "Social Change and Development in India",
+                "chapters": [
+                    "Chapter 1: Structural Change",
+                    "Chapter 2: Cultural Change",
+                    "Chapter 3: The Constitution and Social Change",
+                    "Chapter 4: Change and Development in Rural Society",
+                    "Chapter 5: Change and Development in Industrial Society",
+                    "Chapter 6: Globalisation and Social Change",
+                    "Chapter 7: Mass Media and Communications",
+                    "Chapter 8: Social Movements"
+                ]
+            }
+        ]
+    },
+    "English": {
+        "books": [
+            {
+                "book": "Kaliedoscope",
+                "chapters": [
+                    "Chapter 1: I Sell my Dreams",
+                    "Chapter 2: Eveline",
+                    "Chapter 3: A Wedding in Brownsville",
+                    "Chapter 4: Tomorrow",
+                    "Chapter 5: One Centimetre",
+                    "Chapter 6: A Lecture Upon the Shadow",
+                    "Chapter 8: Poems by Milton",
+                    "Chapter 9: Poems by Blake",
+                    "Chapter 10: Kubla Khan",
+                    "Chapter 11: Trees",
+                    "Chapter 12: The Wild Swans at Coole",
+                    "Chapter 13: Time and Time Again",
+                    "Chapter 14: Blood",
+                    "Chapter 15: Freedom",
+                    "Chapter 16: The Mark on the Wall",
+                    "Chapter 17: Film-making",
+                    "Chapter 18: Why the Novel Matters",
+                    "Chapter 19: The Argumentative Indian",
+                    "Chapter 20: On Science Fiction",
+                    "Chapter 21: Chandalika",
+                    "Chapter 22: Broken Images"
+                ]
+             },
+             {
+                "book": "Flamingo",
+                "chapters": [
+                    "Chapter 1: The Last Lesson",
+                    "Chapter 2: Lost Spring",
+                    "Chapter 3: Deep Water",
+                    "Chapter 4: The Rattrap",
+                    "Chapter 5: Indigo",
+                    "Chapter 6: Poets and Pancakes",
+                    "Chapter 7: The Interview",
+                    "Chapter 8: Going Places",
+                    "Chapter 9: My Mother at Sixty-six",
+                    "Chapter 10: Keeping Quiet",
+                    "Chapter 11: A Thing of Beauty",
+                    "Chapter 12: A Roadside Stand",
+                    "Chapter 13: Aunt Jennifer's Tigers"
+                ]
+             },
+             {
+                "book": "Vistas",
+                "chapters": [
+                    "Chapter 1: The Third Level",
+                    "Chapter 2: The Tiger King",
+                    "Chapter 3: Journey to the end of the Earth",
+                    "Chapter 4: The Enemy",
+                    "Chapter 5: On the face of It",
+                    "Chapter 6: Memories of Childhood"
+                ]
+             }
+         ]
+        },
+    "Political Science": {
+        "books": [
+            {
+                "book": "Contemporary World Politics",
+                "chapters": [
+                    "Chapter 1: The End of Bipolarity",
+                    "Chapter 2: Contemporary Centres of Power",
+                    "Chapter 3: Contemporary South Asia",
+                    "Chapter 4: International Organisations",
+                    "Chapter 5: Security in the Contemporary World",
+                    "Chapter 6: Environment and Natural Resources",
+                    "Chapter 7: Globalisation"
+                ]
+            },
+            {
+                "book": "Politics In India Since Independence",
+                "chapters": [
+                    "Chapter 1: Challenges of nation building",
+                    "Chapter 2: Era of one-party dominance",
+                    "Chapter 3: Politics of planned development",
+                    "Chapter 4: India's external relations",
+                    "Chapter 5: Challenges to and restoration of the congress system",
+                    "Chapter 6: The crisis of democratic order",
+                    "Chapter 7: Regional aspirations",
+                    "Chapter 8: Recent developments in indian politics"
+                ]
+            }
+         ]
+        },
+    "History": {
+        "books": [
+            {
+                "book": "Themes in Indian History - I",
+                "chapters": [
+                    "Chapter 1: BRICKS, BEADS AND BONES",
+                    "Chapter 2: KINGS, FARMERS AND TOWNS",
+                    "Chapter 3: KINSHIP, CASTE AND CLASS",
+                    "Chapter 4: THINKERS, BELIEFS AND BUILDINGS"
+                ]
+            },
+            {
+                "book": "Themes in Indian History - II",
+                "chapters": [
+                    "Chapter 1: THROUGH THE EYES OF TRAVELLERS",
+                    "Chapter 2: BHAKTI - SUFI TRADITIONS",
+                    "Chapter 3: AN IMPERIAL CAPITAL: VIJAYANAGARA",
+                    "Chapter 4: PEASANTS, ZAMINDARS AND THE STATE"
+                ]
+             },
+             {
+                "book": "Themes in Indian History - III",
+                "chapters": [
+                    "Chapter 1: COLONIALISM AND THE COUNTRYSIDE",
+                    "Chapter 2: REBELS AND THE RAJ",
+                    "Chapter 3: MAHATMA GANDHI AND THE NATIONALIST MOVEMENT",
+                    "Chapter 4: FRAMING THE CONSTITUTION"
+                  ]
+              }
+        ]
+    },
+    "Economics": {
+        "books": [
+            {
+                "book": "Introductory Microeconomics",
+                "chapters": [
+                    "Chapter 1: INTRODUCTION",
+                    "Chapter 2: THEORY OF CONSUMER BEHAVIOUR",
+                    "Chapter 3: PRODUCTION AND COSTS",
+                    "Chapter 4: THE THEORY OF THE FIRM UNDER PERFECT COMPETITION",
+                    "Chapter 5:  MARKET EQUILIBRIUM"
+                  ]
+                },
+            {
+                "book": "Introductory Macroeconomics",
+                "chapters": [
+                  "Chapter 1: INTRODUCTION",
+                  "Chapter 2: NATIONAL INCOME ACCOUNTING",
+                  "Chapter 3: MONEY AND BANKING",
+                  "Chapter 4: DETERMINATION OF INCOME AND EMPLOYMENT",
+                  "Chapter 5: GOVERNMENT BUDGET AND THE ECONOMY",
+                  "Chapter 6: OPEN ECONOMY MACROECONOMICS"
+         ]
+      }
+    ]
+  },
+    "Business Studies":{
+        "books": [
+            {
+                "book": "Business Studies - I",
+                "chapters": [
+                    "Chapter 1: Nature and Significance of Management",
+                    "Chapter 2: Principles of Management",
+                    "Chapter 3: Business Environment",
+                    "Chapter 4: Planning",
+                    "Chapter 5: Organising",
+                    "Chapter 6: Staffing",
+                    "Chapter 7: Directing",
+                    "Chapter 8: Controlling"
+                ]
+            },
+            {
+                "book": "Business Studies - II",
+                "chapters": [
+                    "Chapter 1: Financial Management",
+                    "Chapter 2: Marketing",
+                    "Chapter 3: Consumer Protection"
+                ]
+            }
+        ]
+    },
+    "Home Science": {
+        "books": [
+            {
+                "book": "Human Ecology and Family Sciences Part I",
+                "chapters": [
+                    "Chapter 1: Work, Livelihood and Career",
+                    "Chapter 2: Clinical Nutrition and Dietetics",
+                    "Chapter 3: Public Nutrition and Health",
+                    "Chapter 4: Food Processing and Technology",
+                    "Chapter 5: Food Quality and Food Safety",
+                    "Chapter 6: Early Childhood Care and Education",
+                    "Chapter 7: Management of Support Services, Institutions and Programmes for Children, Youth and Elderly"
+                 ]
+                },
+            {
+                "book": "Human Ecology and Family Sciences Part II",
+                "chapters": [
+                    "Chapter 1: Design for Fabric and Apparel",
+                    "Chapter 2: Fashion Design and Merchandising",
+                    "Chapter 3: Care and Maintenance of Fabrics in Institutions ",
+                    "Chapter 4: Hospitality Management",
+                    "Chapter 5: Consumer Education and Protection",
+                    "Chapter 6: Development Communication and Journalism",
+                    "Chapter 7: Corporate Communication and Public Relations"
+       ]
+      }
+    ]
+  },
+  "Fine Art": {
+    "book": "An Introduction to Indian Art",
+    "chapters": [
+        "Chapter 1: The Manuscript Painting Tradition",
+        "Chapter 2: The Rajasthani Schools of Painting",
+        "Chapter 3: The Mughal School of Miniature Painting",
+        "Chapter 4: The Deccani Schools of Painting",
+        "Chapter 5: The Pahari Schools of Painting",
+        "Chapter 6: The Bengal School and Cultural Nationalism",
+        "Chapter 7: The Modern Indian Art",
+        "Chapter 8: The Living Art Traditions of India"
+    ]
+  },
+    "Informatics Practices" : {
+        "book": "Informatics Practices",
+        "chapters": [
+            "Chapter 1: Querying and SQL Functions ",
+            "Chapter 2: Data Handling using Pandas - I",
+            "Chapter 3: Data Handling using Pandas - II",
+            "Chapter 4: Plotting Data using Matplotlib",
+            "Chapter 5: Internet and Web",
+            "Chapter 6: Societal Impacts",
+            "Chapter 7: Project Based Learning"
+        ]
+    },
+    "Computer Science": {
+        "book": "Computer Science",
+        "chapters": [
+            "Chapter 1: Exception Handling in Python",
+            "Chapter 2: File Handling in Python",
+            "Chapter 3: Stack",
+            "Chapter 4: Queue",
+            "Chapter 5: Sorting",
+            "Chapter 6: Searching",
+            "Chapter 7: Understanding Data",
+            "Chapter 8: Database Concepts",
+            "Chapter 9: Structured Query Language (SQL)",
+            "Chapter 10: Computer Networks",
+            "Chapter 11: Data Communication",
+            "Chapter 12: Security Aspects",
+            "Chapter 13: Project Based Learning"
+        ]
+    },
+    "Biotechnology": {
+        "book": "Biotechnology",
+        "chapters": [
+            "Chapter 1: An Overview of Recombinant DNA Technology",
+            "Chapter 2: Host-Vector System",
+            "Chapter 3: Gene Cloning",
+            "Chapter 4: Applications of Recombinant DNA Technology",
+            "Chapter 5: Genome Technology and Engineering",
+            "Chapter 6: Microbial Culture",
+            "Chapter 7: Plant Tissue Culture",
+            "Chapter 8: Animal Cell Culture",
+            "Chapter 9: Stem Cell Culture and Organ Culture",
+            "Chapter 10: Bioprocessing and Biomanufacturing",
+            "Chapter 11: Bioremediation",
+            "Chapter 12: Recent Innovations in Biotechnology",
+            "Chapter 13: Entrepreneurship"
+        ]
+    }
+}

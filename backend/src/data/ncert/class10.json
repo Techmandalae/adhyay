@@ -1,0 +1,246 @@
+{
+  "English": {
+    "books": [
+      {
+        "book": "First Flight",
+        "chapters": [
+          "Unit 1: A Letter to God",
+          "Unit 2: Nelson Mandela: Long Walk to Freedom",
+          "Unit 3: Two Stories about Flying (I. His First Flight, II. Black Aeroplane)",
+          "Unit 4: From the Diary of Anne Frank",
+          "Unit 5: Glimpses of India (I. A Baker from Goa, II. Coorg, III. Tea from Assam)",
+          "Unit 6: Mijbil the Otter",
+          "Unit 7: Madam Rides the Bus",
+          "Unit 8: The Sermon at Benares",
+          "Unit 9: The Proposal"
+        ]
+      },
+      {
+        "book": "Footprints without Feet",
+        "chapters": [
+          "Unit 1: A Triumph of Surgery",
+          "Unit 2: The Thief's Story",
+          "Unit 3: The Midnight Visitor",
+          "Unit 4: A Question of Trust",
+          "Unit 5: Footprints without Feet",
+          "Unit 6: The Making of a Scientist",
+          "Unit 7: The Necklace",
+          "Unit 8: Bholi",
+          "Unit 9: The Book that Saved the Earth"
+        ]
+      }
+    ]
+  },
+  "Hindi": {
+    "books": [
+      {
+        "book": "Kshitij",
+        "chapters": [
+          "पाठ 1 - सूरदास",
+          "पाठ 2 - राम-लक्ष्मण-परशुराम संवाद",
+          "पाठ 3 - आत्मकथ्य",
+          "पाठ 4 - उत्साह और अट नहीं रही है",
+          "पाठ 5 - यह दंतुरित मुसकान और फसल",
+          "पाठ 6 - संगतकार",
+          "पाठ 7 - नेताजी का चश्मा",
+          "पाठ 8 - बालगोबिन भगत",
+          "पाठ 9 - लखनवी अंदाज़",
+          "पाठ 10 - एक कहानी यह भी",
+          "पाठ 11 - नौबतखाने में इबादत",
+          "पाठ 12 - संस्कृति"
+        ]
+      },
+      {
+        "book": "Sparsh",
+        "chapters": [
+          "पाठ 1 - साखी - कबीर",
+          "पाठ 2 - पद - मीरा",
+          "पाठ 3 - मनुष्यता - मैथिलीशरण गुप्त",
+          "पाठ 4 - पर्वत प्रदेश में पावस - सुमित्रानंदन पंत",
+          "पाठ 5 - तोप - वीरेन डंगवाल",
+          "पाठ 6 - कर चले हम फ़िदा - कैफ़ी आज़मी",
+          "पाठ 7 - आत्मत्राण - रवींद्रनाथ ठाकुर",
+          "पाठ 8 - बड़े भाई साहब - प्रेमचंद",
+          "पाठ 9 - डायरी का एक पन्ना - सीताराम सेकसरिया",
+          "पाठ 10 - तताँरा वामीरो कथा - लीलाधर मंडलोई",
+          "पाठ 11 - तीसरी कसम के शिल्पकार शैलेंद्र - प्रहलाद अग्रवाल",
+          "पाठ 12 - अब कहाँ दूसरे के दुख से दुखी होने वाले - निदा फ़ाज़ली",
+          "पाठ 13 - पतझर में टूटी पत्तियाँ (गिन्नी का सोना / झेन की देन) - रवींद्र केलेकर",
+          "पाठ 14 - कारतूस (एकांकी) - हबीब तनवीर"
+        ]
+      },
+      {
+        "book": "Kritika",
+        "chapters": [
+          "पाठ 1 - माता का आँचल",
+          "पाठ 2 - साना-साना हाथ जोड़ि...",
+          "पाठ 3 - मैं क्यों लिखता हूँ?"
+        ]
+      },
+      {
+        "book": "Sanchayan",
+        "chapters": [
+          "पाठ 1 - हरिहर काका",
+          "पाठ 2 - सपनों के-से दिन",
+          "पाठ 3 - टोपी शुक्ला"
+        ]
+      }
+    ]
+  },
+  "Mathematics": {
+    "book": "Mathematics",
+    "chapters": [
+        "Chapter 1: Real Numbers",
+        "Chapter 2: Polynomials",
+        "Chapter 3: Pair of Linear Equations in Two Variables",
+        "Chapter 4: Quadratic Equations",
+        "Chapter 5: Arithmetic Progressions",
+        "Chapter 6: Triangles",
+        "Chapter 7: Coordinate Geometry",
+        "Chapter 8: Introduction to Trigonometry",
+        "Chapter 9: Some Applications of Trigonometry",
+        "Chapter 10: Circles",
+        "Chapter 11: Areas Related to Circles",
+        "Chapter 12: Surface Areas and Volumes",
+        "Chapter 13: Statistics",
+        "Chapter 14: Probability"
+    ]
+  },
+  "Social Science": {
+    "books": [
+      {
+        "book": "Democratic Politics (Political Science)",
+        "chapters": [
+          "Chapter 1: Power-sharing",
+          "Chapter 2: Federalism",
+          "Chapter 3: Gender, Religion and Caste",
+          "Chapter 4: Political Parties",
+          "Chapter 5: Outcomes of Democracy"
+        ]
+      },
+      {
+        "book": "Contemporary India (Geography)",
+        "chapters": [
+            "Chapter 1: Resources and Development",
+            "Chapter 2: Forest and Wildlife Resources",
+            "Chapter 3: Water Resources",
+            "Chapter 4: Agriculture",
+            "Chapter 5: Minerals and Energy Resources",
+            "Chapter 6: Manufacturing Industries",
+            "Chapter 7: Lifelines of National Economy"
+        ]
+      },
+      {
+        "book": "Understanding Economic Development (Economics)",
+        "chapters": [
+            "Chapter 1: DEVELOPMENT",
+            "Chapter 2: SECTORS OF THE INDIAN ECONOMY",
+            "Chapter 3: MONEY AND CREDIT",
+            "Chapter 4: GLOBALISATION AND THE INDIAN ECONOMY",
+            "Chapter 5: CONSUMER RIGHTS"
+        ]
+      },
+      {
+        "book": "India And The Contemporary World (History)",
+        "chapters": [
+            "Chapter 1: The Rise of Nationalism in Europe",
+            "Chapter 2: Nationalism in India",
+            "Chapter 3: The Making of a Global World",
+            "Chapter 4: The Age of Industrialisation",
+            "Chapter 5: Print Culture and the Modern World"
+        ]
+      }
+    ]
+  },
+  "Science": {
+    "book": "Science",
+    "chapters": [
+      "Chapter 1: Chemical Reactions and Equations",
+      "Chapter 2: Acids, Bases and Salts",
+      "Chapter 3: Metals and Non-metals",
+      "Chapter 4: Carbon and its Compounds",
+      "Chapter 5: Life Processes",
+      "Chapter 6: Control and Coordination",
+      "Chapter 7: How do Organisms Reproduce?",
+      "Chapter 8: Heredity",
+      "Chapter 9: Light - Reflection and Refraction",
+      "Chapter 10: The Human Eye and the Colourful World",
+      "Chapter 11: Electricity",
+      "Chapter 12: Magnetic Effects of Electric Current",
+      "Chapter 13: Our Environment"
+    ]
+  },
+  "Sanskrit": {
+    "books": [
+      {
+        "book": "Shemushi",
+        "chapters": [
+          "प्रथमः पाठः - शुचिपर्यावरणम्",
+          "द्वितीयः पाठः - बुद्धिर्बलवती सदा",
+          "तृतीयः पाठः - शिशुलालनम्",
+          "चतुर्थः पाठः - जननी तुल्यवत्सला",
+          "पञ्चमः पाठः - सुभाषितानि",
+          "षष्‍ठः पाठः - सौहार्दं प्रकृतेः शोभा",
+          "सप्‍तमः पाठः - विचित्रः साक्षी",
+          "अष्‍टमः पाठः - सूक्तयः",
+          "नवमः पाठः - भूकम्पविभीषिका",
+          "दशमः पाठः - अन्योक्तयः"
+        ]
+      },
+      {
+        "book": "Vyakaranavithi",
+        "chapters": [
+          "प्रथमः पाठः - वर्ण विचार",
+          "द्वितीयः पाठः - संज्ञा एवं परिभाषा प्रकरण",
+          "तृतीयः पाठः - सन्धि",
+          "चतुर्थः पाठः - शब्‍दरूप - सामान्य परिचय",
+          "पञ्चमः पाठः - धातुरूप - सामान्य परिचय",
+          "षष्‍ठः पाठः - उपसर्ग",
+          "सप्‍तमः पाठः - अव्यय",
+          "अष्‍टमः पाठः - प्रत्यय",
+          "नवमः पाठः - समास परिचय",
+          "दशमः पाठः - कारक और विभक्ति",
+          "एकादशः पाठः - वाच्य परिवर्तन",
+          "द्वादशः पाठः - रचना प्रयोग"
+        ]
+      },
+      {
+        "book": "Abhyaswaan Bhav",
+        "chapters": [
+          "प्रथमः पाठः - अपठितावबोधनम्",
+          "द्वितीयः पाठः - पत्रम्",
+          "तृतीयः पाठः - चित्रवर्णनम्",
+          "चतुर्थः पाठः - संवादानुच्छेदलेखनम्",
+          "पञ्चमः पाठः - रचनानुवादः",
+          "षष्‍ठः पाठः - कारकोपपदविभक्तिः",
+          "सप्‍तमः पाठः - सन्धिः",
+          "अष्‍टमः पाठः - उपसर्गाव्ययप्रत्ययाः",
+          "नवमः पाठः - समासाः",
+          "दशमः पाठः - शब्दरूपाणि",
+          "एकादशः पाठः - धातुरूपाणि",
+          "द्वादशः पाठः - वर्णविचारः",
+          "परिशिष्टम् - 1",
+          "परिशिष्टम्  - 2"
+        ]
+      }
+    ]
+  },
+  "Health & Physical Education": {
+    "book": "Health & Physical Education",
+    "chapters": [
+      "Chapter 1: Physical Education: Relation with other Subjects",
+      "Chapter 2: Effects of Physical Activities on Human Body",
+      "Chapter 3: Growth and Development during Adolescence",
+      "Chapter 4: Individual Games and Sports I",
+      "Chapter 5: Individual Games and Sports II",
+      "Chapter 6: Team Games and Sports I",
+      "Chapter 7: Team Games and Sports II",
+      "Chapter 8: Yoga for Healthy Living",
+      "Chapter 9: Dietary Considerations and Food Quality",
+      "Chapter 10: Safety Measures for Healthy Living",
+      "Chapter 11: Healthy Community Living",
+      "Chapter 12: Social Health",
+      "Chapter 13: Agencies and Awards Promoting Health, Sports and Yoga"
+    ]
+  }
+}

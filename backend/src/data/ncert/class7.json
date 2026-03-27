@@ -1,0 +1,172 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Unit 1: Learning Together",
+      "Unit 2: Wit and Humour",
+      "Unit 3: Dreams and Discoveries",
+      "Unit 4: Travel and Adventure",
+      "Unit 5: Bravehearts"
+    ]
+  },
+  "Hindi": {
+    "book": "Malhar",
+    "chapters": [
+      "पाठ 1 - माँ, कह एक कहानी",
+      "पाठ 2 - तीन बुद्धिमान (लोककथा)",
+      "पाठ 3 - फूल और काँटा (कविता)",
+      "पाठ 4 - पानी रे पानी (निबंध)",
+      "पाठ 5 - नहीं होना बीमार (कहानी)",
+      "पाठ 6 - गिरिधर कविराय की कुंडलिया (कविता)",
+      "पाठ 7 - वर्षा-बहार (कविता)",
+      "पाठ 8 - बिरजू महाराज से साक्षात्कार",
+      "पाठ 9 - चिड़िया (कविता)",
+      "पाठ 10 - मीरा के पद (पद)"
+    ]
+  },
+  "Mathematics": {
+    "books":
+    [
+        {
+            "book": "Ganit Prakash Part-1",
+            "chapters": [
+                "Chapter 1: Large Numbers Around Us",
+                "Chapter 2: Arithmetic Expressions",
+                "Chapter 3: A Peek Beyond the Point",
+                "Chapter 4: Expressions using Letter-Numbers",
+                "Chapter 5: Parallel and Intersecting Lines",
+                "Chapter 6: Number Play",
+                "Chapter 7: A Tale of Three Intersecting Lines",
+                "Chapter 8: Working with Fractions"
+            ]
+        },
+        {
+            "book": "Ganit Prakash Part-2",
+            "chapters": [
+                "Chapter 1: Geometric Twins",
+                "Chapter 2: Operations with Integers",
+                "Chapter 3: Finding Common Ground",
+                "Chapter 4: Another Peek Beyond the Point",
+                "Chapter 5: Connecting the Dots...",
+                "Chapter 6: Constructions and Tilings",
+                "Chapter 7: Finding the Unknown"
+            ]
+        }
+    ]
+  },
+  "Social Science": {
+    "books": [
+      {
+        "book": "Exploring Society India And Beyond Part-1",
+        "chapters": [
+          "Chapter 1: Geographical Diversity of India",
+          "Chapter 2: Understanding the Weather",
+          "Chapter 3: Climates of India",
+          "Chapter 4: New Beginnings: Cities and States",
+          "Chapter 5: The Rise of Empires",
+          "Chapter 6: The Age of Reorganisation",
+          "Chapter 7: The Gupta Era: An Age of Tireless Creativity",
+          "Chapter 8: How the Land Becomes Sacred",
+          "Chapter 9: From the Rulers to the Ruled: Types of Governments",
+          "Chapter 10: The Constitution of India — An Introduction ",
+          "Chapter 11: From Barter to Money",
+          "Chapter 12: Understanding Markets"
+        ]
+      },
+      {
+        "book": "Exploring Society India And Beyond Part-2",
+        "chapters": [
+            "Chapter 1: The Story of Indian Farming",
+            "Chapter 2: India and Her Neighbours",
+            "Chapter 3: Empires and Kingdoms: 6th to 10th Centuries",
+            "Chapter 4: Turning Tides: 11th and 12th Centuries",
+            "Chapter 5: India, a Home to Many",
+            "Chapter 6: The State, the Government, and You ",
+            "Chapter 7: Infrastructure: Engine of India's Development",
+            "Chapter 8: Banks and the Magic of Finance"
+        ]
+      }
+    ]
+  },
+  "Science": {
+    "book": "Curiosity",
+    "chapters": [
+      "Chapter 1: The Ever-Evolving World of Science",
+      "Chapter 2: Exploring Substances: Acidic, Basic, and Neutral",
+      "Chapter 3: Electricity: Circuits and their Components",
+      "Chapter 4: The World of Metals and Non-metals",
+      "Chapter 5: Changes Around Us: Physical and Chemical",
+      "Chapter 6: Adolescence: A Stage of Growth and Change",
+      "Chapter 7: Heat Transfer in Nature",
+      "Chapter 8: Measurement of Time and Motion",
+      "Chapter 9: Life Processes in Animals",
+      "Chapter 10: Life Processes in Plants",
+      "Chapter 11: Light: Shadows and Reflections",
+      "Chapter 12: Earth, Moon, and the Sun"
+    ]
+  },
+  "Sanskrit": {
+    "book": "Deepakam",
+    "chapters": [
+      "प्रथमः पाठः - वन्देभारतमातरम्",
+      "द्वितीयः पाठः - नित्यं पिबाम: सुभाषितरसम्",
+      "तृतीयः पाठः - मित्राय नमः",
+      "चतुर्थः पाठः - न लभ्यते चेत्आम्लं द्राक्षाफलम्",
+      "पञ्चमः पाठः - सेवा हि परमो धर्म:",
+      "षष्‍ठः पाठः - क्रीडाम वयं श्‍लोकान्त्याक्षरीम्",
+      "सप्‍तमः पाठः - ईशावास्यम्इदं सर्वम्",
+      "अष्‍टमः पाठः - हितं मनोहारि च दुर्लभं वचः",
+      "नवमः पाठः - अन्‍नाद् भवन्ति भूतानि",
+      "दशमः पाठः - दशमः कः?",
+      "एकादशः पाठः - द्वीपेषुरम्यः द्वीपोऽण्डमानः।",
+      "द्वादशः पाठः - वीराङ्गना पन्‍नाधाय"
+    ]
+  },
+  "Arts": {
+    "book": "Kriti",
+    "chapters": [
+      "Chapter 1: Understanding Emotions",
+      "Chapter 2: Say More without Speech—Mime",
+      "Chapter 3: Let's Design—Stage Technicals 2",
+      "Chapter 4: Story of India's Storytelling Tradition",
+      "Chapter 5: Making Music",
+      "Chapter 6: Music, Emotions and Creativity",
+      "Chapter 7: Ragas and Talas/Taal",
+      "Chapter 8: The Music of the People",
+      "Chapter 9: Performance",
+      "Chapter 10: Dance and Sculpture",
+      "Chapter 11: Dance Vocabulary and Techniques",
+      "Chapter 12: Dance, You and Creativity",
+      "Chapter 13: Personalities",
+      "Chapter 14: Natya",
+      "Chapter 15: Objects in Icons and Symbols",
+      "Chapter 16: Nature's Palette",
+      "Chapter 17: How You Feel",
+      "Chapter 18: Textiles and Traditions",
+      "Chapter 19: The Art of Calligraphy",
+      "Chapter 20: Integration of All Art Forms—Sculptures Come Alive!"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yatra",
+    "chapters": [
+      "Unit 1: Foundational Basis of Physical Education and Well-being",
+      "Unit 2: Physical and Motor Fitness",
+      "Unit 3: Fundamental Skills of Sports — Badminton",
+      "Unit 4: Fundamental Skills of Sports — Football",
+      "Unit 5: Fundamental Skills of Sports — Kabaddi",
+      "Unit 6: Yoga"
+    ]
+  },
+  "Vocational Education": {
+    "book": "Kaushal Bodh",
+    "chapters": [
+      "Chapter 1: Plant Nursery",
+      "Chapter 2: School Habitat Garden",
+      "Chapter 3: Tie and Dye",
+      "Chapter 4: AI Assistant",
+      "Chapter 5: Storytime with Puppets",
+      "Chapter 6: Family Health Handbook"
+    ]
+  }
+}

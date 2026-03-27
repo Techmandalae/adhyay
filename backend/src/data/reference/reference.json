@@ -1,0 +1,32 @@
+{
+  "Mathematics": [
+    "RD Sharma",
+    "RS Aggarwal",
+    "Arihant Mathematics",
+    "Oswaal Mathematics"
+  ],
+  "Physics": [
+    "HC Verma",
+    "DC Pandey Physics"
+  ],
+  "Chemistry": [
+    "OP Tandon",
+    "Modern ABC Chemistry"
+  ],
+  "Biology": [
+    "Trueman Biology",
+    "Pradeep Biology"
+  ],
+  "English": [
+    "BBC Compacta",
+    "Oswaal English"
+  ],
+  "Hindi": [
+    "Arihant Hindi",
+    "Oswaal Hindi"
+  ],
+  "Social Science": [
+    "Arihant SST",
+    "Together With SST"
+  ]
+}

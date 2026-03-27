@@ -1,0 +1,105 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Chapter 1: Papa's Spectacles",
+      "Chapter 2: Gone with the Scooter",
+      "Chapter 3: The Rainbow",
+      "Chapter 4: The Wise Parrot",
+      "Chapter 5: The Frog",
+      "Chapter 6: What a Tank!",
+      "Chapter 7: Gilli Danda",
+      "Chapter 8: The Decision of the Panchayat",
+      "Chapter 9: Vocation",
+      "Chapter 10: Glass Bangles"
+    ]
+  },
+  "Hindi": {
+    "book": "Veena",
+    "chapters": [
+      "अध्याय 1 - किरन",
+      "अध्याय 2 - न्याय की कुर्सी",
+      "अध्याय 3 - चाँद का कुरता",
+      "अध्याय 4 - साङकेन",
+      "अध्याय 5 - सुंदरिया",
+      "अध्याय 6 - चतुर चित्रकार",
+      "अध्याय 7 - मेरा बचपन",
+      "अध्याय 8 - काजीरंगा राष्ट्रीय उद्यान की यात्रा",
+      "अध्याय 9 - न्याय",
+      "अध्याय 10 - तीन मछलियाँ",
+      "अध्याय 11 - हमारे ये कलामंदिर",
+      "अध्याय 12 - गंगा की कहानी"
+    ]
+  },
+  "Mathematics": {
+    "book": "Maths Mela",
+    "chapters": [
+      "Chapter 1: We the Travellers—I",
+      "Chapter 2: Fractions",
+      "Chapter 3: Angles as Turns",
+      "Chapter 4: We the Travellers—II",
+      "Chapter 5: Far and Near",
+      "Chapter 6: The Dairy Farm",
+      "Chapter 7: Shapes and Patterns",
+      "Chapter 8: Weight and Capacity",
+      "Chapter 9: Coconut Farm",
+      "Chapter 10: Symmetrical Designs",
+      "Chapter 11: Grandmother's Quilt",
+      "Chapter 12: Racing Seconds",
+      "Chapter 13: Animal Jumps",
+      "Chapter 14: Maps and Locations",
+      "Chapter 15: Data Through Pictures"
+    ]
+  },
+  "The World Around Us": {
+    "book": "Our Wondrous World",
+    "chapters": [
+      "Chapter 1: Water—The Essence of Life",
+      "Chapter 2: Journey of a River",
+      "Chapter 3: The Mystery of Food",
+      "Chapter 4: Our School—A Happy Place",
+      "Chapter 5: Our Vibrant Country",
+      "Chapter 6: Some Unique Places",
+      "Chapter 7: Energy—How Things Work",
+      "Chapter 8: Clothes—How Things are Made",
+      "Chapter 9: Rhythms of Nature",
+      "Chapter 10: Earth—Our Shared Home"
+    ]
+  },
+  "Arts": {
+    "book": "Bansuri",
+    "chapters": [
+      "Chapter 1: Objects on the Move",
+      "Chapter 2: Peeping Out of the Window",
+      "Chapter 3: Picturing Stories",
+      "Chapter 4: Imaginary Beings",
+      "Chapter 5: Spreading the Message",
+      "Chapter 6: Create a Scene",
+      "Chapter 7: Stitch it for a Story",
+      "Chapter 8: Time, Team, Technique",
+      "Chapter 9: View and Review",
+      "Chapter 10: Sing and Play",
+      "Chapter 11: Music Around Me",
+      "Chapter 12: Sounds and Instruments",
+      "Chapter 13: Building Blocks",
+      "Chapter 14: Ideas and Inspiration",
+      "Chapter 15: My Everyday Activities in Modes of Dance",
+      "Chapter 16: Dancing with Rhythm and Tempos",
+      "Chapter 17: Dances of My Nation",
+      "Chapter 18: My Dance Expresses Emotions and Narrates Stories",
+      "Chapter 19: My Dance and Your Dance"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yoga",
+    "chapters": [
+      "Chapter 1: Throwing and Catching",
+      "Chapter 2: Kicking and Receiving",
+      "Chapter 3: Strike the Object",
+      "Chapter 4: Little Steps",
+      "Chapter 5: Local and Traditional Games",
+      "Chapter 6: Yoga for Daily Life",
+      "Chapter 7: Yoga Sadhana"
+    ]
+  }
+}

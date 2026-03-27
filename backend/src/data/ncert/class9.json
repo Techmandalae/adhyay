@@ -1,0 +1,221 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Unit 1: The Fun They Had (Isaac Asimov)",
+      "Unit 2: The Sound of Music (Evelyn Glennie & Bismillah Khan)",
+      "Unit 3: The Little Girl (Katherine Mansfield)",
+      "Unit 4: A Truly Beautiful Mind (About Albert Einstein)",
+      "Unit 5: The Snake and the Mirror (Vaikom Muhammad Basheer)",
+      "Unit 6: My Childhood (A.P.J. Abdul Kalam))",
+      "Unit 7: Reach for the Top (Santosh Yadav & Maria Sharapova)",
+      "Unit 8: Kathmandu (Vikram Seth)",
+      "Unit 9: If I Were You (Douglas James)"
+    ]
+  },
+  "Hindi": {
+    "books": [
+      {
+        "book": "Kshitij",
+        "chapters": [
+          "पाठ 1 - दो बैलों की कथा",
+          "पाठ 2 - ल्हासा की ओर",
+          "पाठ 3 - उपभोक्तावाद की संस्कृति",
+          "पाठ 4 - साँवले सपनों की याद",
+          "पाठ 5 - प्रेमचंद के फटे जूते",
+          "पाठ 6 - मेरे बचपन के दिन",
+          "पाठ 7 - साखियाँ एवं सबद",
+          "पाठ 8 - वाख",
+          "पाठ 9 - सवैये",
+          "पाठ 10 - कैदी और कोकिला",
+          "पाठ 11 - ग्राम श्री",
+          "पाठ 12 - मेघ आए",
+          "पाठ 13 - बच्चे काम पर जा रहे हैं"
+        ]
+      },
+      {
+        "book": "Sparsh",
+        "chapters": [
+          "पाठ 1 - दुःख का अधिकार",
+          "पाठ 2 - एवरेस्ट : मेरी शिखर यात्रा",
+          "पाठ 3 - तुम कब जाओगे, अतिथि",
+          "पाठ 4 - वैज्ञानिक चेतना के वाहक चंद्रशेखर वेंकट रमन",
+          "पाठ 5 - शुक्र तारे के समान",
+          "पाठ 6 - रैदास के पद",
+          "पाठ 7 - रहीम के दोहे",
+          "पाठ 8 - गीत-अगीत",
+          "पाठ 9 - अग्नि पथ",
+          "पाठ 10 - नए इलाके में, खुशबू रचते हैं हाथ"
+        ]
+      },
+      {
+        "book": "Kritika",
+        "chapters": [
+          "पाठ 1 - इस जल प्रलय में",
+          "पाठ 2 - मेरे संग की औरतें",
+          "पाठ 3 - रीढ़ की हड्डी"
+        ]
+      },
+      {
+        "book": "Sanchayan",
+        "chapters": [
+          "पाठ 1 - गिल्लू",
+          "पाठ 2 - स्मृति",
+          "पाठ 3 - कल्लू कुम्हार की उनाकोटी",
+          "पाठ 4 - मेरा छोटा-सा निजी पुस्तकालय"
+        ]
+      }
+    ]
+  },
+  "Mathematics": {
+    "book": "Mathematics",
+    "chapters": [
+        "Chapter 1: NUMBER SYSTEMS",
+        "Chapter 2: POLYNOMIALS",
+        "Chapter 3: COORDINATE GEOMETRY",
+        "Chapter 4: LINEAR EQUATIONS IN TWO VARIABLES",
+        "Chapter 5: INTRODUCTION TO EUCLID'S GEOMETRY",
+        "Chapter 6: LINES AND ANGLES",
+        "Chapter 7: TRIANGLES",
+        "Chapter 8: QUADRILATERALS",
+        "Chapter 9: CIRCLES",
+        "Chapter 10: HERON'S FORMULA",
+        "Chapter 11: SURFACE AREAS AND VOLUMES",
+        "Chapter 12: STATISTICS"
+    ]
+  },
+  "Social Science": {
+    "books": [
+      {
+        "book": "Democratic Politics (Political Science)",
+        "chapters": [
+          "Chapter 1: WHAT IS DEMOCRACY? WHY DEMOCRACY?",
+          "Chapter 2: CONSTITUTIONAL DESIGN",
+          "Chapter 3: ELECTORAL POLITICS",
+          "Chapter 4: WORKING OF INSTITUTIONS",
+          "Chapter 5: DEMOCRATIC RIGHTS"
+        ]
+      },
+      {
+        "book": "Contemporary India (Geography)",
+        "chapters": [
+            "Chapter 1: India – Size and Location",
+            "Chapter 2: Physical Features of India",
+            "Chapter 3: Drainage",
+            "Chapter 4: Climate",
+            "Chapter 5: Natural Vegetation and Wildlife",
+            "Chapter 6: Population"
+        ]
+      },
+      {
+        "book": "Economics",
+        "chapters": [
+            "Chapter 1: The Story of Village Palampur",
+            "Chapter 2: People as Resource",
+            "Chapter 3: Poverty as a Challenge",
+            "Chapter 4: Food Security in India"
+        ]
+      },
+      {
+        "book": "India And The Contemporary World (History)",
+        "chapters": [
+            "Chapter 1: The French Revolution",
+            "Chapter 2: Socialism in Europe and the Russian Revolution",
+            "Chapter 3: Nazism and the Rise of Hitler",
+            "Chapter 4: Forest Society and Colonialism",
+            "Chapter 5: Pastoralists in the Modern World"
+        ]
+      }
+    ]
+  },
+  "Science": {
+    "book": "Science",
+    "chapters": [
+      "Chapter 1: MATTER IN OUR SURROUNDINGS",
+      "Chapter 2: IS MATTER AROUND US PURE?",
+      "Chapter 3: ATOMS AND MOLECULES",
+      "Chapter 4: STRUCTURE OF THE ATOM",
+      "Chapter 5: THE FUNDAMENTAL UNIT OF LIFE",
+      "Chapter 6: TISSUES",
+      "Chapter 7: MOTION",
+      "Chapter 8: FORCE AND LAWS OF MOTION",
+      "Chapter 9: GRAVITATION",
+      "Chapter 10: WORK AND ENERGY",
+      "Chapter 11: SOUND",
+      "Chapter 12: IMPROVEMENT IN FOOD RESOURCES"
+    ]
+  },
+  "Sanskrit": {
+    "books": [
+      {
+        "book": "Shemushi Prathamo",
+        "chapters": [
+          "प्रथमः पाठः - भारतीवसन्तगीतिः",
+          "द्वितीयः पाठः - स्वर्णकाकः",
+          "तृतीयः पाठः - गोदोहनम्",
+          "चतुर्थः पाठः - सूक्तिमौक्तिकम्",
+          "पञ्चमः पाठः - भ्रान्तो बालः",
+          "षष्‍ठः पाठः - लौहतुला",
+          "सप्‍तमः पाठः - सिकतासेतुः",
+          "अष्‍टमः पाठः - जटायोः शौर्यम्",
+          "नवमः पाठः - पर्यावरणम्",
+          "दशमः पाठः - वाडमनःप्राणस्वरूपम्"
+        ]
+      },
+      {
+        "book": "Vyakaranavithi",
+        "chapters": [
+          "प्रथमः पाठः - वर्ण विचार",
+          "द्वितीयः पाठः - संज्ञा एवं परिभाषा प्रकरण",
+          "तृतीयः पाठः - सन्धि",
+          "चतुर्थः पाठः - शब्‍दरूप - सामान्य परिचय",
+          "पञ्चमः पाठः - धातुरूप - सामान्य परिचय",
+          "षष्‍ठः पाठः - उपसर्ग",
+          "सप्‍तमः पाठः - अव्यय",
+          "अष्‍टमः पाठः - प्रत्यय",
+          "नवमः पाठः - समास परिचय",
+          "दशमः पाठः - कारक और विभक्ति",
+          "एकादशः पाठः - वाच्य परिवर्तन",
+          "द्वादशः पाठः - रचना प्रयोग"
+        ]
+      },
+      {
+        "book": "Abhyaswaan Bhav",
+        "chapters": [
+          "प्रथमः पाठः - अपठितावबोधनम्",
+          "द्वितीयः पाठः - पत्रलेखनम्",
+          "तृतीयः पाठः - अनुच्छेदलेखनम्",
+          "चतुर्थः पाठः - चित्रवर्णनम्",
+          "पञ्चमः पाठः - रचनात्मककार्यम्/रचनानुवादः",
+          "षष्‍ठः पाठः - सन्धिः",
+          "सप्‍तमः पाठः - समासाः",
+          "अष्‍टमः पाठः - प्रत्ययाः",
+          "नवमः पाठः - अव्ययानि",
+          "दशमः पाठः - समयः",
+          "एकादशः पाठः - वाच्यम्",
+          "द्वादशः पाठः - अशुद्धिसंशोधनम्",
+          "त्रयोदशः पाठः - मिश्रिताभ्यासः",
+          "चतुर्दशः पाठः - आदर्शप्रश्नपत्रम्"
+        ]
+      }
+    ]
+  },
+  "Health & Physical Education": {
+    "book": "Health & Physical Education",
+    "chapters": [
+      "Chapter 1: Physical Education: Relation with other Subjects",
+      "Chapter 2: Effects of Physical Activities on Human Body",
+      "Chapter 3: Growth and Development during Adolescence",
+      "Chapter 4: Individual Games and Sports I",
+      "Chapter 5: Individual Games and Sports II",
+      "Chapter 6: Team Games and Sports I",
+      "Chapter 7: Team Games and Sports II",
+      "Chapter 8: Yoga for Healthy Living",
+      "Chapter 9: Dietary Considerations and Food Quality",
+      "Chapter 10: Safety Measures for Healthy Living",
+      "Chapter 11: Healthy Community Living",
+      "Chapter 12: Social Health",
+      "Chapter 13: Agencies and Awards Promoting Health, Sports and Yoga"
+    ]
+  }
+}

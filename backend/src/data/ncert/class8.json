@@ -1,0 +1,151 @@
+{
+  "English": {
+    "book": "Santoor",
+    "chapters": [
+      "Unit 1: Wit and Wisdom",
+      "Unit 2: Values and Dispositions",
+      "Unit 3: Mystery and Magic",
+      "Unit 4: Environment",
+      "Unit 5: Science and Curiosity"
+    ]
+  },
+  "Hindi": {
+    "book": "Malhar",
+    "chapters": [
+      "पाठ 1 - स्वदेश",
+      "पाठ 2 - दो गौरैया",
+      "पाठ 3 - एक आशीर्वाद",
+      "पाठ 4 - हरिद्वार",
+      "पाठ 5 - कबीर के दोहे",
+      "पाठ 6 - एक टोकरी भर मिट्टी",
+      "पाठ 7 - मत बाँधो",
+      "पाठ 8 - नए मेहमान (एकांकी)",
+      "पाठ 9 - आदमी का अनुपात",
+      "पाठ 10 - तरुण के स्वप्न (उद्बोधन)"
+    ]
+  },
+  "Mathematics": {
+    "books":
+    [
+        {
+            "book": "Ganita Prakash Part-1",
+            "chapters": [
+                "Chapter 1: A Square and A Cube",
+                "Chapter 2: Power Play",
+                "Chapter 3: A Story of Numbers",
+                "Chapter 4: Quadrilaterals",
+                "Chapter 5: Number Play",
+                "Chapter 6: We Distribute, Yet Things Multiply",
+                "Chapter 7: Proportional Reasoning-1"
+            ]
+        },
+        {
+            "book": "Ganita Prakash Part-2",
+            "chapters": [
+                "Chapter 1: Fractions in Disguise",
+                "Chapter 2: The Baudhayana-Pythagoras Theorem",
+                "Chapter 3: Proportional Reasoning-2",
+                "Chapter 4: Exploring Some Geometric Themes",
+                "Chapter 5: Tales by Dots and Lines",
+                "Chapter 6: Algebra Play",
+                "Chapter 7: Area"
+            ]
+        }
+    ]
+  },
+  "Social Science": {
+    "book": "Exploring Society India And Beyond Part-1",
+    "chapters": [
+        "Chapter 1: Natural Resources and Their Use",
+        "Chapter 2: Reshaping India's Political Map",
+        "Chapter 3: The Rise of the Marathas",
+        "Chapter 4: The Colonial Era in India",
+        "Chapter 5: Universal Franchise and India's Electoral System",
+        "Chapter 6: The Parliamentary System: Legislature and Executive",
+        "Chapter 7: Factors of Production"
+    ]
+  },
+  "Science": {
+    "book": "Curiosity",
+    "chapters": [
+      "Chapter 1: Exploring the Investigative World of Science",
+      "Chapter 2: The Invisible Living World: Beyond Our Naked Eye",
+      "Chapter 3: Health: The Ultimate Treasure",
+      "Chapter 4: Electricity: Magnetic and Heating Effects",
+      "Chapter 5: Exploring Forces",
+      "Chapter 6: Pressure, Winds, Storms, and Cyclones",
+      "Chapter 7: Particulate Nature of Matter",
+      "Chapter 8: Nature of Matter: Elements, Compounds, and Mixtures",
+      "Chapter 9: The Amazing World of Solutes, Solvents, and Solutions",
+      "Chapter 10: Light: Mirrors and Lenses",
+      "Chapter 11: Keeping Time with the Skies",
+      "Chapter 12: How Nature Works in Harmony",
+      "Chapter 13: Our Home: Earth, a Unique Life Sustaining Planet"
+    ]
+  },
+  "Sanskrit": {
+    "book": "Deepakam",
+    "chapters": [
+      "प्रथमः पाठः - संगच्छध्वं संवदध्वम्",
+      "द्वितीयः पाठः - अल्पानामपि वस्तूनां संहतिः कार्यसाधिका",
+      "तृतीयः पाठः - सुभाषितरसं पीत्वा जीवनं सफलं कु रु",
+      "चतुर्थः पाठः - प्रणम्यो देशभक्तोऽयं गोपबन्धुर्महामनाः",
+      "पञ्चमः पाठः - गीता सुगीता कर्तव्या",
+      "षष्ठः पाठः - डिजि‍भारतम्- युगपरिवर्तनम्",
+      "सप्तमः पाठः - मञ्जुलमञ्जूषा सुन्दरसुरभाषा",
+      "अष्टमः पाठः - पश्यत कोणमैशान्यं भारतस्य मनोहरम्",
+      "नवमः पाठः - कोऽरुक् ? कोऽरुक् ? कोऽरुक् ?",
+      "दशमः पाठः - सन्निमित्ते वरं त्यागः (क-भागः)",
+      "एकादशः पाठः - सन्निमित्ते वरं त्यागः (ख-भागः)",
+      "द्वादशः पाठः - सम्यग्वर्णप्रयोगेण ब्रह्मलोके महीयते",
+      "त्रयोदशः पाठः - वर्णोच्चारण-शिक्षा"
+    ]
+  },
+  "Arts": {
+    "book": "Kriti",
+    "chapters": [
+      "Chapter 1: Bringing Words Alive—Play Reading",
+      "Chapter 2: One Stage, Many Scripts",
+      "Chapter 3: From Page to Stage",
+      "Chapter 4: Applause and Advice",
+      "Chapter 5: Discovering the Elements of Music",
+      "Chapter 6: Musical Instruments",
+      "Chapter 7: Indian Classical Music",
+      "Chapter 8: The Music of the People",
+      "Chapter 9: Inspiration and Imagination",
+      "Chapter 10: My World of Music",
+      "Chapter 11: Inner Dynamics of Dance",
+      "Chapter 12: Pan Indian Dance Forms",
+      "Chapter 13: Dance for Well-being",
+      "Chapter 14: Innovation, Inclusivity and Inspiring Change",
+      "Chapter 15: A Presentation of Dance and Choreography",
+      "Chapter 16: Elements and Principles of Visual Art and Design",
+      "Chapter 17: Still Life in Colour",
+      "Chapter 18: People in Places",
+      "Chapter 19: Arts of the People, With the People, For the People",
+      "Chapter 20: Campaign for Art Awareness"
+    ]
+  },
+  "Physical Education & Well Being": {
+    "book": "Khel Yatra",
+    "chapters": [
+      "Unit 1: Foundations of Physical Education and Well-being",
+      "Unit 2: Physical and Motor Fitness",
+      "Unit 3: Fundamental Skills of Sports - Athletics",
+      "Unit 4: Fundamental Skills of Sports - Table Tennis",
+      "Unit 5: Fundamental Skills of Sports - Volleyball",
+      "Unit 6: Yoga"
+    ]
+  },
+  "Vocational Education": {
+    "book": "Kaushal Bodh",
+    "chapters": [
+      "Chapter 1: Hydroponics: Growing Plants without Soil",
+      "Chapter 2: Feeding and Caring for Farm Animals",
+      "Chapter 3: Working with Wood and Bamboo",
+      "Chapter 4: Home Automation",
+      "Chapter 5: Water Audit for Water Management",
+      "Chapter 6: Creating Advertisements"
+    ]
+  }
+}
