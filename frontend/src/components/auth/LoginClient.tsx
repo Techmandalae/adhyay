@@ -25,17 +25,12 @@ export function LoginClient() {
   const [isLoading, setIsLoading] = useState(false);
 
   const next = params.get("next") ?? "/";
-  const isSuperAdminLogin = email.trim().toLowerCase().includes("superadmin");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!email.trim() || !password.trim() || (!isSuperAdminLogin && !schoolId.trim())) {
-      setError(
-        isSuperAdminLogin
-          ? "Email and password are required."
-          : "Email, password, and school ID are required."
-      );
+    if (!email.trim() || !password.trim()) {
+      setError("Email and password are required.");
       return;
     }
 
@@ -69,14 +64,12 @@ export function LoginClient() {
             automatically.
           </p>
           <form className="mt-6 grid gap-4" onSubmit={handleSubmit}>
-            {!isSuperAdminLogin ? (
-              <Input
-                label="School ID"
-                placeholder="school_123"
-                value={schoolId}
-                onChange={(event) => setSchoolId(event.target.value)}
-              />
-            ) : null}
+            <Input
+              label="School ID (optional)"
+              placeholder="school_123"
+              value={schoolId}
+              onChange={(event) => setSchoolId(event.target.value)}
+            />
             <Input
               label="Email"
               placeholder="you@school.edu"

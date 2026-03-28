@@ -369,43 +369,43 @@ authRouter.post("/login", async (req, res, next) => {
 
   try {
     const { email, password, schoolId } = parsed.data;
-    const user = schoolId
-      ? await prisma.user.findUnique({
-          where: { schoolId_email: { schoolId, email } },
-          include: {
-            teacherProfile: true,
-            studentProfile: true,
-            parentProfile: {
-              include: {
-                children: {
-                  include: { student: true }
-                }
-              }
-            },
-            adminProfile: true,
-            school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+    const userInclude = {
+      teacherProfile: true,
+      studentProfile: true,
+      parentProfile: {
+        include: {
+          children: {
+            include: { student: true }
           }
-        })
-      : await prisma.user.findFirst({
-          where: { email, role: "SUPER_ADMIN" },
-          include: {
-            teacherProfile: true,
-            studentProfile: true,
-            parentProfile: {
-              include: {
-                children: {
-                  include: { student: true }
-                }
-              }
-            },
-            adminProfile: true,
-            school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
-          }
-        });
+        }
+      },
+      adminProfile: true,
+      school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+    } as const;
 
-    if (!schoolId && !user) {
-      return next(new HttpError(400, "School ID is required"));
+    let users = [];
+
+    if (schoolId) {
+      users = await prisma.user.findMany({
+        where: { email, schoolId },
+        include: userInclude
+      });
+    } else {
+      users = await prisma.user.findMany({
+        where: { email },
+        include: userInclude
+      });
     }
+
+    if (users.length === 0) {
+      return next(new HttpError(401, "Invalid email or password"));
+    }
+
+    if (!schoolId && users.length > 1) {
+      return next(new HttpError(400, "Please enter your School ID to continue"));
+    }
+
+    const user = users[0];
 
     if (!user || !user.isActive) {
       return next(new HttpError(401, "Invalid email or password"));
