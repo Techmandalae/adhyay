@@ -65,6 +65,21 @@ export async function sendVerificationEmail(to: string, link: string) {
   });
 }
 
+export async function sendOtpEmail(to: string, otp: string) {
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: getFromAddress(),
+    to,
+    subject: "Your Adhyay OTP Code",
+    html: `
+      <p>Use the OTP below to verify your Adhyay account.</p>
+      <h2>${otp}</h2>
+      <p>This OTP expires in 10 minutes.</p>
+    `
+  });
+}
+
 export async function sendEmail(to: string, link: string) {
   return sendPasswordResetEmail(to, link);
 }

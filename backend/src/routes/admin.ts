@@ -425,6 +425,7 @@ adminRouter.post("/users", async (req, res, next) => {
         schoolId: admin.schoolId,
         email: parsed.data.email,
         passwordHash,
+        isVerified: true,
         emailVerified: true,
         emailVerificationToken: null,
         emailVerificationExpires: null,
@@ -865,6 +866,7 @@ adminRouter.post(
         const parent = await prisma.user.upsert({
           where: { schoolId_email: { schoolId: admin.schoolId, email: row.parentEmail } },
           update: {
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
@@ -891,6 +893,7 @@ adminRouter.post(
             schoolId: admin.schoolId,
             email: row.parentEmail,
             passwordHash: parentPasswordHash,
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
@@ -912,6 +915,7 @@ adminRouter.post(
         const student = await prisma.user.upsert({
           where: { schoolId_email: { schoolId: admin.schoolId, email: row.studentEmail } },
           update: {
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
@@ -956,6 +960,7 @@ adminRouter.post(
             schoolId: admin.schoolId,
             email: row.studentEmail,
             passwordHash: studentPasswordHash,
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
@@ -1059,6 +1064,7 @@ adminRouter.post(
         const teacher = await prisma.user.upsert({
           where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
           update: {
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
@@ -1089,6 +1095,7 @@ adminRouter.post(
             schoolId: admin.schoolId,
             email: row.email,
             passwordHash: teacherPasswordHash,
+            isVerified: true,
             emailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,

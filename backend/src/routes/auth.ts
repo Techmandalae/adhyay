@@ -11,6 +11,7 @@ import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
 import type { AuthUser } from "../types/auth";
 import {
+  sendOtpEmail,
   sendPasswordResetEmail,
   sendVerificationEmail
 } from "../utils/email";
@@ -47,6 +48,21 @@ const registerTeacherSchema = z
     password: z.string().min(6),
     name: z.string().trim().min(1),
     employeeId: z.string().trim().min(1).optional()
+  })
+  .strict();
+
+const verifyOtpSchema = z
+  .object({
+    email: z.string().email(),
+    otp: z.string().trim().length(6),
+    schoolId: z.string().min(1).optional()
+  })
+  .strict();
+
+const resendOtpSchema = z
+  .object({
+    email: z.string().email(),
+    schoolId: z.string().min(1).optional()
   })
   .strict();
 
@@ -114,6 +130,10 @@ function hashToken(rawToken: string) {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 function generatePublicId() {
   return `EB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
@@ -140,6 +160,24 @@ async function issueEmailVerification(userId: string, email: string) {
   });
 
   await sendVerificationEmail(email, getFrontendUrl(`/verify-email/${rawToken}`));
+}
+
+async function issueRegistrationOtp(userId: string, email: string) {
+  const otp = generateOTP();
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      otp,
+      otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+      isVerified: false,
+      emailVerified: false,
+      emailVerificationToken: null,
+      emailVerificationExpires: null
+    }
+  });
+
+  await sendOtpEmail(email, otp);
 }
 
 const handlePasswordResetRequest = async (
@@ -318,8 +356,101 @@ authRouter.post("/request-email-verification", requireAuth, async (req, res, nex
       return res.json({ message: "Email already verified" });
     }
 
-    await issueEmailVerification(existingUser.id, existingUser.email);
-    return res.json({ message: "Verification email sent" });
+    await issueRegistrationOtp(existingUser.id, existingUser.email);
+    return res.json({ message: "OTP sent successfully" });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+authRouter.post("/verify-otp", async (req, res, next) => {
+  const parsed = verifyOtpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new HttpError(400, "Invalid OTP verification request"));
+  }
+
+  try {
+    const { email, otp, schoolId } = parsed.data;
+    const users = await prisma.user.findMany({
+      where: schoolId ? { email, schoolId } : { email },
+      select: {
+        id: true,
+        email: true,
+        otp: true,
+        otpExpiry: true,
+        isVerified: true
+      }
+    });
+
+    if (users.length === 0) {
+      return next(new HttpError(400, "Invalid OTP"));
+    }
+
+    if (!schoolId && users.length > 1) {
+      return next(new HttpError(400, "Please enter your School ID to continue"));
+    }
+
+    const user = users[0];
+
+    if (!user.otp || user.otp !== otp) {
+      return next(new HttpError(400, "Invalid OTP"));
+    }
+
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
+      return next(new HttpError(400, "OTP expired"));
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        emailVerified: true,
+        otp: null,
+        otpExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationExpires: null
+      }
+    });
+
+    return res.json({ message: "Email verified successfully" });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+authRouter.post("/resend-otp", async (req, res, next) => {
+  const parsed = resendOtpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new HttpError(400, "Invalid resend OTP request"));
+  }
+
+  try {
+    const { email, schoolId } = parsed.data;
+    const users = await prisma.user.findMany({
+      where: schoolId ? { email, schoolId } : { email },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true
+      }
+    });
+
+    if (users.length === 0) {
+      return next(new HttpError(404, "User not found"));
+    }
+
+    if (!schoolId && users.length > 1) {
+      return next(new HttpError(400, "Please enter your School ID to continue"));
+    }
+
+    const user = users[0];
+
+    if (user.isVerified) {
+      return res.json({ message: "Email already verified" });
+    }
+
+    await issueRegistrationOtp(user.id, user.email);
+    return res.json({ message: "OTP sent successfully" });
   } catch (error) {
     return next(error);
   }
@@ -345,7 +476,10 @@ authRouter.get("/verify-email/:token", async (req, res, next) => {
     await prisma.user.update({
       where: { id: user.id },
       data: {
+        isVerified: true,
         emailVerified: true,
+        otp: null,
+        otpExpiry: null,
         emailVerificationToken: null,
         emailVerificationExpires: null
       }
@@ -417,8 +551,8 @@ authRouter.post("/login", async (req, res, next) => {
     }
 
     if (user.role !== "SUPER_ADMIN") {
-      if (!user.emailVerified) {
-        return next(new HttpError(403, "Please verify your email before logging in."));
+      if (!(user.isVerified || user.emailVerified)) {
+        return next(new HttpError(403, "Please verify your email using OTP"));
       }
       if (user.approvalStatus !== "APPROVED") {
         return next(new HttpError(403, "Approval required"));
@@ -473,7 +607,7 @@ authRouter.post("/login", async (req, res, next) => {
             isIndependentTeacher
           }
         : {}),
-      emailVerified: user.emailVerified,
+      emailVerified: user.isVerified || user.emailVerified,
       ...(user.school?.meta ? { schoolMeta: user.school.meta as Record<string, unknown> } : {}),
       ...(user.school?.status ? { schoolStatus: user.school.status } : {}),
       ...(user.approvalStatus ? { approvalStatus: user.approvalStatus } : {})
@@ -526,6 +660,7 @@ authRouter.post("/register-school", async (req, res, next) => {
         schoolId: school.id,
         email: adminEmail,
         passwordHash,
+        isVerified: false,
         emailVerified: false,
         role: "ADMIN",
         name: payload.adminName,
@@ -545,8 +680,8 @@ authRouter.post("/register-school", async (req, res, next) => {
       }
     });
 
-    void issueEmailVerification(admin.id, adminEmail).catch((error) => {
-      console.error("Failed to send admin verification email", error);
+    void issueRegistrationOtp(admin.id, adminEmail).catch((error) => {
+      console.error("Failed to send admin OTP email", error);
     });
 
     return res.status(201).json({
@@ -610,6 +745,7 @@ authRouter.post("/register-teacher", async (req, res, next) => {
         schoolId: targetSchool.id,
         email: parsed.data.email,
         passwordHash,
+        isVerified: false,
         emailVerified: false,
         role: "TEACHER",
         name: parsed.data.name,
@@ -633,8 +769,8 @@ authRouter.post("/register-teacher", async (req, res, next) => {
       include: { teacherProfile: true }
     });
 
-    void issueEmailVerification(teacher.id, parsed.data.email).catch((error) => {
-      console.error("Failed to send teacher verification email", error);
+    void issueRegistrationOtp(teacher.id, parsed.data.email).catch((error) => {
+      console.error("Failed to send teacher OTP email", error);
     });
 
     if (teacher.teacherProfile && !targetSchool.isIndependentWorkspace) {
