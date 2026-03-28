@@ -6,11 +6,11 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon --watch src --ext ts,json --exec \"node --enable-source-maps -r ts-node/register src/server.ts\"",
-    "prebuild": "prisma generate --config prisma.config.ts",
+    "prebuild": "prisma generate",
     "build": "tsc",
     "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
-    "migrate:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "migrate:deploy": "prisma migrate deploy",
     "seed": "ts-node prisma/seed.ts",
     "reset-admin-password": "ts-node scripts/reset-admin-password.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,7 +19,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^7.3.0",
+    "@prisma/client": "^6.7.0",
     "aws-sdk": "^2.1693.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -36,7 +36,7 @@
     "otplib": "^13.3.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
-    "prisma": "^7.3.0",
+    "prisma": "^6.7.0",
     "razorpay": "^2.9.6",
     "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0",
