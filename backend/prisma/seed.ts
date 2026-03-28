@@ -3,8 +3,6 @@ import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
 import { PrismaClient, BookType, UserRole } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 
 type NcertChapterInput =
   | string
@@ -29,12 +27,7 @@ type NcertSubjectInput = {
 
 type NcertClassData = Record<string, NcertSubjectInput>;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 const SUPER_ADMIN_EMAIL = process.env.SEED_SUPER_ADMIN_EMAIL ?? "superadmin@exambuddy.com";
 const SUPER_ADMIN_PASSWORD = process.env.SEED_SUPER_ADMIN_PASSWORD ?? "Super@123";

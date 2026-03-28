@@ -19,7 +19,6 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "aws-sdk": "^2.1693.0",
     "bcrypt": "^6.0.0",
@@ -37,7 +36,6 @@
     "otplib": "^13.3.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
-    "pg": "^8.18.0",
     "prisma": "^7.3.0",
     "razorpay": "^2.9.6",
     "sharp": "^0.34.5",
@@ -52,7 +50,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.2.1",
     "@types/nodemailer": "^6.4.17",
-    "@types/pg": "^8.16.0",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
