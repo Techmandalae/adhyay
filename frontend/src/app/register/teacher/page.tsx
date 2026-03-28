@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { registerTeacher } from "@/lib/api";
+import { registerTeacher, resendOtp, verifyOtp } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -14,7 +14,16 @@ export default function RegisterTeacherPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [schoolId, setSchoolId] = useState("");
+  const [otp, setOtp] = useState("");
+  const [verification, setVerification] = useState<{
+    email: string;
+    schoolId?: string;
+  } | null>(null);
   const [status, setStatus] = useState<{
+    state: "idle" | "loading" | "success" | "error";
+    message?: string;
+  }>({ state: "idle" });
+  const [otpStatus, setOtpStatus] = useState<{
     state: "idle" | "loading" | "success" | "error";
     message?: string;
   }>({ state: "idle" });
@@ -22,18 +31,23 @@ export default function RegisterTeacherPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setStatus({ state: "loading" });
+    setOtpStatus({ state: "idle" });
     try {
-      await registerTeacher({
+      const response = await registerTeacher({
         schoolId: schoolId.trim() || undefined,
         email: email.trim(),
         password: password.trim(),
         name: name.trim()
       });
+      setVerification({
+        email: email.trim(),
+        schoolId: response.schoolId
+      });
       setStatus({
         state: "success",
         message: schoolId.trim()
-          ? "Teacher account created and linked to the school."
-          : "Independent teacher account created. Publishing to students will remain disabled."
+          ? "Teacher account created and linked to the school. Enter the OTP sent to your email."
+          : "Independent teacher account created. Enter the OTP sent to your email to verify the account."
       });
       setName("");
       setEmail("");
@@ -43,6 +57,47 @@ export default function RegisterTeacherPage() {
       setStatus({
         state: "error",
         message: error instanceof Error ? error.message : "Registration failed."
+      });
+    }
+  };
+
+  const handleVerifyOtp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!verification) {
+      return;
+    }
+    setOtpStatus({ state: "loading" });
+    try {
+      const response = await verifyOtp({
+        email: verification.email,
+        schoolId: verification.schoolId,
+        otp: otp.trim()
+      });
+      setOtpStatus({ state: "success", message: response.message });
+      setOtp("");
+    } catch (error) {
+      setOtpStatus({
+        state: "error",
+        message: error instanceof Error ? error.message : "OTP verification failed."
+      });
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!verification) {
+      return;
+    }
+    setOtpStatus({ state: "loading" });
+    try {
+      const response = await resendOtp({
+        email: verification.email,
+        schoolId: verification.schoolId
+      });
+      setOtpStatus({ state: "success", message: response.message });
+    } catch (error) {
+      setOtpStatus({
+        state: "error",
+        message: error instanceof Error ? error.message : "Failed to resend OTP."
       });
     }
   };
@@ -94,6 +149,43 @@ export default function RegisterTeacherPage() {
             </Button>
           </form>
         </Card>
+        {verification ? (
+          <Card className="space-y-6">
+            <SectionHeader
+              eyebrow="Email verification"
+              title="Verify OTP"
+              subtitle={`Enter the OTP sent to ${verification.email}.`}
+            />
+            <form className="grid gap-4" onSubmit={handleVerifyOtp}>
+              <Input
+                label="OTP"
+                value={otp}
+                onChange={(event) => setOtp(event.target.value)}
+                placeholder="123456"
+                required
+              />
+              {otpStatus.state === "error" ? (
+                <StatusBlock tone="negative" title="OTP verification failed" description={otpStatus.message ?? ""} />
+              ) : null}
+              {otpStatus.state === "success" ? (
+                <StatusBlock tone="positive" title="OTP status" description={otpStatus.message ?? ""} />
+              ) : null}
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" disabled={otpStatus.state === "loading"}>
+                  {otpStatus.state === "loading" ? "Verifying..." : "Verify OTP"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResendOtp}
+                  disabled={otpStatus.state === "loading"}
+                >
+                  Resend OTP
+                </Button>
+              </div>
+            </form>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

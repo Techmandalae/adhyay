@@ -177,6 +177,29 @@ export async function requestEmailVerification(token: string) {
   );
 }
 
+export async function verifyOtp(payload: {
+  email: string;
+  otp: string;
+  schoolId?: string;
+}) {
+  return apiFetch<{ message: string }>(
+    "/auth/verify-otp",
+    { method: "POST", body: JSON.stringify(payload) },
+    null
+  );
+}
+
+export async function resendOtp(payload: {
+  email: string;
+  schoolId?: string;
+}) {
+  return apiFetch<{ message: string }>(
+    "/auth/resend-otp",
+    { method: "POST", body: JSON.stringify(payload) },
+    null
+  );
+}
+
 /* =======================
    Admin Users
 ======================= */
