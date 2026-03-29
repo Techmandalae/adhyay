@@ -665,12 +665,15 @@ authRouter.post("/register-school", async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(adminPassword, 12);
     const adminPublicId = await generateUniquePublicId();
+    const adminOtp = generateOTP();
     const admin = await prisma.user.create({
       data: {
         publicId: adminPublicId,
         schoolId: school.id,
         email: adminEmail,
         passwordHash,
+        otp: adminOtp,
+        otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
         isVerified: false,
         emailVerified: false,
         role: "ADMIN",
@@ -691,9 +694,16 @@ authRouter.post("/register-school", async (req, res, next) => {
       }
     });
 
-    void issueRegistrationOtp(admin.id, adminEmail).catch((error) => {
-      console.error("Failed to send admin OTP email", error);
-    });
+    console.log("OTP generated:", adminOtp);
+    console.log("Triggering email to:", admin.email);
+
+    try {
+      await sendOtpEmail(admin.email, adminOtp);
+      console.log("OTP email triggered successfully");
+    } catch (err) {
+      console.error("OTP email failed:", err);
+      console.log("OTP (fallback):", adminOtp);
+    }
 
     return res.status(201).json({
       schoolId: school.id,
@@ -752,12 +762,15 @@ authRouter.post("/register-teacher", async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
     const teacherPublicId = await generateUniquePublicId();
+    const teacherOtp = generateOTP();
     const teacher = await prisma.user.create({
       data: {
         publicId: teacherPublicId,
         schoolId: targetSchool.id,
         email: parsed.data.email,
         passwordHash,
+        otp: teacherOtp,
+        otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
         isVerified: false,
         emailVerified: false,
         role: "TEACHER",
@@ -782,9 +795,16 @@ authRouter.post("/register-teacher", async (req, res, next) => {
       include: { teacherProfile: true }
     });
 
-    void issueRegistrationOtp(teacher.id, parsed.data.email).catch((error) => {
-      console.error("Failed to send teacher OTP email", error);
-    });
+    console.log("OTP generated:", teacherOtp);
+    console.log("Triggering email to:", teacher.email);
+
+    try {
+      await sendOtpEmail(teacher.email, teacherOtp);
+      console.log("OTP email triggered successfully");
+    } catch (err) {
+      console.error("OTP email failed:", err);
+      console.log("OTP (fallback):", teacherOtp);
+    }
 
     if (teacher.teacherProfile && !targetSchool.isIndependentWorkspace) {
       const classes = await prisma.academicClass.findMany({
