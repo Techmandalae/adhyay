@@ -900,7 +900,9 @@ export async function getSubjects(token: string | null, classId: string) {
 }
 
 export async function loadSubjects(classId: string) {
-  const response = await fetch(`/api/academic/subjects/${classId}`);
+  const url = `${API_BASE}/academic/subjects/${classId}`;
+  console.log("Calling API:", url);
+  const response = await fetch(url);
   return response.json();
 }
 
