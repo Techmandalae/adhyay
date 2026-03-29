@@ -164,6 +164,7 @@ async function issueEmailVerification(userId: string, email: string) {
 
 async function issueRegistrationOtp(userId: string, email: string) {
   const otp = generateOTP();
+  console.log("OTP generated:", otp);
 
   await prisma.user.update({
     where: { id: userId },
@@ -177,7 +178,15 @@ async function issueRegistrationOtp(userId: string, email: string) {
     }
   });
 
-  await sendOtpEmail(email, otp);
+  console.log("Triggering email to:", email);
+
+  try {
+    await sendOtpEmail(email, otp);
+    console.log("OTP email triggered successfully");
+  } catch (err) {
+    console.error("OTP email failed:", err);
+    console.log("OTP (fallback):", otp);
+  }
 }
 
 const handlePasswordResetRequest = async (
