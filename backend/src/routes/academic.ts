@@ -32,6 +32,21 @@ const STREAM_SUBJECTS: Record<string, string[]> = {
   Arts: ["Political Science", "History", "Geography"]
 };
 
+const DEFAULT_CLASSES = [
+  "Class 1",
+  "Class 2",
+  "Class 3",
+  "Class 4",
+  "Class 5",
+  "Class 6",
+  "Class 7",
+  "Class 8",
+  "Class 9",
+  "Class 10",
+  "Class 11",
+  "Class 12"
+];
+
 const COMMON_SUBJECTS = ["Mathematics", "Science", "Social Science", "English", "Hindi"];
 
 function buildSubjectPool(hasStreams: boolean, sections: { name: string }[]) {
@@ -100,6 +115,23 @@ router.get(
       const user = _req.user;
       if (!user) {
         return next(new HttpError(401, "Authentication required"));
+      }
+
+      if (!user.schoolId) {
+        console.log("Using default classes for independent user");
+        const items = DEFAULT_CLASSES.map((name, index) => ({
+          id: `default-${index + 1}`,
+          name,
+          label: name,
+          classId: `default-${index + 1}`,
+          classLevel: index + 1,
+          sectionId: null,
+          sectionName: null,
+          classStandardId: null,
+          className: name
+        }));
+
+        return res.json({ items });
       }
 
       const classRecords = await prisma.academicClass.findMany({
