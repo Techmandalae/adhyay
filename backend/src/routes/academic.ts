@@ -341,6 +341,19 @@ catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: 
       return next(new HttpError(401, "Authentication required"));
     }
 
+    if (!user.schoolId) {
+      console.log("Using default catalog for independent teacher");
+      return res.json(
+        DEFAULT_CLASSES.map((name, index) => ({
+          classId: `default-${index + 1}`,
+          className: name,
+          classLevel: index + 1,
+          sections: [],
+          subjects: []
+        }))
+      );
+    }
+
     const standards = await prisma.academicClassStandard.findMany({
       where: { schoolId: user.schoolId },
       orderBy: { name: "asc" },
