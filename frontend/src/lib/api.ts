@@ -21,7 +21,10 @@ import type {
 } from "@/types/analytics";
 import type { NotificationDispatchSummary } from "@/types/notifications";
 
-const DEFAULT_API_BASE = "http://localhost:4000";
+const DEFAULT_API_BASE =
+  process.env.NODE_ENV === "production"
+    ? "https://api.adhyay.techmandalae.com"
+    : "http://localhost:4000";
 export const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -74,6 +77,7 @@ export async function registerSchool(payload: {
   adminContactNumber: string;
   domain?: string;
 }) {
+  console.log("Calling API:", `${API_BASE}/auth/register-school`);
   return apiFetch<{ schoolId: string; adminId: string; status: string }>(
     "/auth/register-school",
     {
@@ -99,6 +103,7 @@ export async function registerTeacher(payload: {
   name: string;
   employeeId?: string;
 }) {
+  console.log("Calling API:", `${API_BASE}/auth/register-teacher`);
   return apiFetch<{ id: string; approvalStatus: string; schoolId: string; canPublish: boolean }>(
     "/auth/register-teacher",
     { method: "POST", body: JSON.stringify(payload) },
@@ -549,14 +554,23 @@ async function apiFetch<T>(
   options: RequestInit,
   token: string | null = null
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-      ...getAuthHeaders(token)
-    }
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+        ...getAuthHeaders(token)
+      }
+    });
+  } catch (error) {
+    console.error("API error:", error);
+    throw error;
+  }
+
+  console.log("Response status:", response.status, "for", `${API_BASE}${path}`);
 
   const text = await response.text();
   const payload = text ? (JSON.parse(text) as unknown) : null;

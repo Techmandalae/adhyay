@@ -624,6 +624,8 @@ authRouter.post("/login", async (req, res, next) => {
 });
 
 authRouter.post("/register-school", async (req, res, next) => {
+  console.log("REGISTER SCHOOL API HIT");
+  console.log("REGISTER SCHOOL BODY:", req.body);
   const parsed = registerSchoolSchema.safeParse(req.body);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue) => ({
@@ -698,6 +700,8 @@ authRouter.post("/register-school", async (req, res, next) => {
 });
 
 authRouter.post("/register-teacher", async (req, res, next) => {
+  console.log("REGISTER TEACHER API HIT");
+  console.log("REGISTER TEACHER BODY:", req.body);
   const parsed = registerTeacherSchema.safeParse(req.body);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue) => ({
