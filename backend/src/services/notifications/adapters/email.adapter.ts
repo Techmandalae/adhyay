@@ -1,32 +1,20 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import { Resend } from "resend";
 
 import { env } from "../../../config/env";
 import type { NotificationAdapter, NotificationMessage, NotificationSendResult } from "../types";
 
-let transporter: Transporter | null = null;
+function getResendClient() {
+  const apiKey = env.RESEND_API_KEY;
 
-function isConfigured() {
-  return Boolean(env.SMTP_HOST && env.SMTP_FROM_EMAIL);
+  if (!apiKey) {
+    return null;
+  }
+
+  return new Resend(apiKey);
 }
 
-function getTransporter(): Transporter {
-  if (!transporter) {
-    const port = env.SMTP_PORT ?? 587;
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port,
-      secure: env.SMTP_SECURE ?? false,
-      ...(env.SMTP_USER
-        ? {
-            auth: {
-              user: env.SMTP_USER,
-              pass: env.SMTP_PASS ?? ""
-            }
-          }
-        : {})
-    });
-  }
-  return transporter;
+function isConfigured() {
+  return Boolean(env.RESEND_API_KEY);
 }
 
 export function createEmailAdapter(): NotificationAdapter {
@@ -38,7 +26,7 @@ export function createEmailAdapter(): NotificationAdapter {
       isConfigured(),
     async send(message: NotificationMessage): Promise<NotificationSendResult> {
       if (!isConfigured()) {
-        return { status: "skipped", reason: "SMTP not configured" };
+        return { status: "skipped", reason: "Resend not configured" };
       }
 
       if (!message.to) {
@@ -50,17 +38,19 @@ export function createEmailAdapter(): NotificationAdapter {
       }
 
       try {
-        const mailer = getTransporter();
-        await mailer.sendMail({
-          from: {
-            name: env.SMTP_FROM_NAME ?? "Adhyay",
-            address: env.SMTP_FROM_EMAIL ?? ""
-          },
+        const resend = getResendClient();
+        if (!resend) {
+          return { status: "skipped", reason: "Resend not configured" };
+        }
+
+        await resend.emails.send({
+          from: "Adhyay <onboarding@resend.dev>",
           to: message.to,
           subject: message.subject ?? "Adhyay notification",
           text: message.body
         });
-        return { status: "sent", provider: "smtp" };
+
+        return { status: "sent", provider: "resend" };
       } catch (error) {
         return {
           status: "failed",

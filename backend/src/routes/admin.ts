@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import { Readable } from "stream";
 import XLSX from "xlsx";
 import { z } from "zod";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
@@ -165,31 +165,13 @@ async function generateUniquePublicId() {
   return publicId;
 }
 
-function createTransporter() {
-  const smtpUser = env.SMTP_USER ?? env.EMAIL_USER;
-  const smtpPass = env.SMTP_PASS ?? env.EMAIL_PASS;
-
-  if (!smtpUser || !smtpPass) {
+function getResendClient() {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) {
     return null;
   }
 
-  return env.SMTP_HOST && env.SMTP_PORT
-    ? nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_SECURE ?? env.SMTP_PORT === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass
-        }
-      })
-    : nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: smtpUser,
-          pass: smtpPass
-        }
-      });
+  return new Resend(apiKey);
 }
 
 async function sendImportedLoginEmail(params: {
@@ -199,15 +181,15 @@ async function sendImportedLoginEmail(params: {
   email: string;
   password: string;
 }) {
-  const transporter = createTransporter();
-  if (!transporter) {
+  const resend = getResendClient();
+  if (!resend) {
     return;
   }
 
   const loginUrl = env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM_EMAIL ?? env.SMTP_USER ?? env.EMAIL_USER,
+  await resend.emails.send({
+    from: "Adhyay <onboarding@resend.dev>",
     to: params.to,
     subject: "Adhyay Login Details",
     html: `

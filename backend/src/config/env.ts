@@ -4,10 +4,6 @@ const optionalString = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().optional()
 );
-const optionalNumber = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  z.coerce.number().int().positive().optional()
-);
 const booleanSchema = z.preprocess((value) => {
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
@@ -16,11 +12,6 @@ const booleanSchema = z.preprocess((value) => {
   }
   return value;
 }, z.boolean());
-
-const optionalBoolean = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  booleanSchema.optional()
-);
 
 const envSchema = z
   .object({
@@ -40,16 +31,8 @@ const envSchema = z
   NOTIFICATION_EMAIL_ENABLED: booleanSchema.default(true),
   NOTIFICATION_WHATSAPP_ENABLED: booleanSchema.default(true),
   NOTIFICATION_USAGE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.8),
-  SMTP_HOST: optionalString,
-  SMTP_PORT: optionalNumber,
-  SMTP_SECURE: optionalBoolean,
-  SMTP_USER: optionalString,
-  SMTP_PASS: optionalString,
-  SMTP_FROM_EMAIL: optionalString,
-  SMTP_FROM_NAME: optionalString,
+  RESEND_API_KEY: optionalString,
   FRONTEND_URL: optionalString,
-  EMAIL_USER: optionalString,
-  EMAIL_PASS: optionalString
 })
   .superRefine((data, ctx) => {
     if (!data.OPENAI_API_KEY) {
@@ -65,6 +48,14 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ["CORS_ORIGIN"],
         message: "CORS_ORIGIN cannot be '*' in production."
+      });
+    }
+
+    if (data.NODE_ENV === "production" && data.NOTIFICATION_EMAIL_ENABLED && !data.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["RESEND_API_KEY"],
+        message: "RESEND_API_KEY is required when email notifications are enabled."
       });
     }
   });

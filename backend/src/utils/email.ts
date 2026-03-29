@@ -1,40 +1,42 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-function getEmailCredentials() {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
+import { env } from "../config/env";
 
-  if (!user || !pass) {
-    throw new Error("EMAIL_USER and EMAIL_PASS must be configured for Gmail delivery");
-  }
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+const DEFAULT_FROM = "Adhyay <onboarding@resend.dev>";
 
-  return { user, pass };
-}
-
-function createGmailTransporter() {
-  const { user, pass } = getEmailCredentials();
-
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user,
-      pass
-    }
-  });
-}
-
-type SendMailInput = {
+type SendEmailInput = {
   to: string;
   subject: string;
-  text: string;
-  html?: string;
+  html: string;
   label: string;
   fallbackOtp?: string;
 };
 
-async function sendMail(input: SendMailInput): Promise<void> {
-  const { user } = getEmailCredentials();
-  const transporter = createGmailTransporter();
+async function sendWithResend(input: SendEmailInput): Promise<boolean> {
+  if (!env.NOTIFICATION_EMAIL_ENABLED) {
+    console.log(`[email] ${input.label} skipped because email notifications are disabled`, {
+      to: input.to
+    });
+
+    if (input.fallbackOtp) {
+      console.log("OTP (fallback):", input.fallbackOtp);
+    }
+
+    return false;
+  }
+
+  if (!resend) {
+    console.error(`[email] ${input.label} failed: RESEND_API_KEY is not configured`, {
+      to: input.to
+    });
+
+    if (input.fallbackOtp) {
+      console.log("OTP (fallback):", input.fallbackOtp);
+    }
+
+    return false;
+  }
 
   console.log(`[email] ${input.label} sending started`, {
     to: input.to,
@@ -42,49 +44,45 @@ async function sendMail(input: SendMailInput): Promise<void> {
   });
 
   try {
-    const info = await transporter.sendMail({
-      from: user,
+    const response = await resend.emails.send({
+      from: DEFAULT_FROM,
       to: input.to,
       subject: input.subject,
-      text: input.text,
-      ...(input.html ? { html: input.html } : {})
+      html: input.html
     });
 
-    console.log(`[email] ${input.label} sent successfully`, {
-      to: input.to,
-      messageId: info.messageId,
-      response: info.response
-    });
-  } catch (error) {
-    console.error(`[email] ${input.label} failed`, {
-      to: input.to,
-      error: error instanceof Error ? error.message : "Unknown email error"
-    });
+    console.log(`[email] ${input.label} sent successfully`, response);
 
     if (input.fallbackOtp) {
-      console.log(`OTP (fallback): ${input.fallbackOtp}`);
+      console.log("OTP (fallback):", input.fallbackOtp);
     }
 
-    throw error;
+    return true;
+  } catch (error) {
+    console.error(`[email] ${input.label} failed`, error);
+
+    if (input.fallbackOtp) {
+      console.log("OTP (fallback):", input.fallbackOtp);
+    }
+
+    return false;
   }
 }
 
-export async function sendOtpEmail(to: string, otp: string): Promise<void> {
-  await sendMail({
+export async function sendOtpEmail(to: string, otp: string): Promise<boolean> {
+  return sendWithResend({
     to,
-    subject: "Your OTP Code",
-    text: `Your OTP is: ${otp}`,
-    html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
+    subject: "Verify your email",
+    html: `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`,
     label: "OTP email",
     fallbackOtp: otp
   });
 }
 
-export async function sendPasswordResetEmail(to: string, link: string): Promise<void> {
-  await sendMail({
+export async function sendPasswordResetEmail(to: string, link: string): Promise<boolean> {
+  return sendWithResend({
     to,
     subject: "Reset your Adhyay password",
-    text: `Reset your password using this link: ${link}`,
     html: `
       <p>Click the link below to reset your Adhyay password.</p>
       <p><a href="${link}">Reset Password</a></p>
@@ -94,11 +92,10 @@ export async function sendPasswordResetEmail(to: string, link: string): Promise<
   });
 }
 
-export async function sendVerificationEmail(to: string, link: string): Promise<void> {
-  await sendMail({
+export async function sendVerificationEmail(to: string, link: string): Promise<boolean> {
+  return sendWithResend({
     to,
     subject: "Verify your Adhyay email",
-    text: `Verify your email using this link: ${link}`,
     html: `
       <p>Click the link below to verify your Adhyay email address.</p>
       <p><a href="${link}">Verify Email</a></p>
@@ -107,6 +104,6 @@ export async function sendVerificationEmail(to: string, link: string): Promise<v
   });
 }
 
-export async function sendEmail(to: string, link: string): Promise<void> {
-  await sendPasswordResetEmail(to, link);
+export async function sendEmail(to: string, link: string): Promise<boolean> {
+  return sendPasswordResetEmail(to, link);
 }
