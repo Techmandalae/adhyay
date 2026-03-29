@@ -177,10 +177,7 @@ async function issueRegistrationOtp(userId: string, email: string) {
     }
   });
 
-  const delivery = await sendOtpEmail(email, otp);
-  if (!delivery.delivered) {
-    console.log("OTP delivery fallback active for:", email);
-  }
+  await sendOtpEmail(email, otp);
 }
 
 const handlePasswordResetRequest = async (

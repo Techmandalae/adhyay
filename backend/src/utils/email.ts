@@ -1,118 +1,112 @@
 import nodemailer from "nodemailer";
 
-import { env } from "../config/env";
+function getEmailCredentials() {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
 
-function createTransporter() {
-  const smtpUser = env.SMTP_USER ?? env.EMAIL_USER;
-  const smtpPass = env.SMTP_PASS ?? env.EMAIL_PASS;
-
-  if (!smtpUser || !smtpPass) {
-    throw new Error("Email transport is not configured");
+  if (!user || !pass) {
+    throw new Error("EMAIL_USER and EMAIL_PASS must be configured for Gmail delivery");
   }
 
-  const transporter =
-    env.SMTP_HOST && env.SMTP_PORT
-      ? nodemailer.createTransport({
-          host: env.SMTP_HOST,
-          port: env.SMTP_PORT,
-          secure: env.SMTP_SECURE ?? env.SMTP_PORT === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
-        })
-      : nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
-        });
-
-  return transporter;
+  return { user, pass };
 }
 
-function getFromAddress() {
-  return env.SMTP_FROM_EMAIL ?? env.SMTP_USER ?? env.EMAIL_USER;
+function createGmailTransporter() {
+  const { user, pass } = getEmailCredentials();
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user,
+      pass
+    }
+  });
 }
 
-async function sendMailWithLogging(payload: {
+type SendMailInput = {
   to: string;
   subject: string;
-  html: string;
-  debugLabel: string;
-  debugOtp?: string;
-}) {
+  text: string;
+  html?: string;
+  label: string;
+  fallbackOtp?: string;
+};
+
+async function sendMail(input: SendMailInput): Promise<void> {
+  const { user } = getEmailCredentials();
+  const transporter = createGmailTransporter();
+
+  console.log(`[email] ${input.label} sending started`, {
+    to: input.to,
+    subject: input.subject
+  });
+
   try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: getFromAddress(),
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.html
+    const info = await transporter.sendMail({
+      from: user,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      ...(input.html ? { html: input.html } : {})
     });
-    console.log(`${payload.debugLabel} sent successfully to:`, payload.to);
-    return { delivered: true as const };
+
+    console.log(`[email] ${input.label} sent successfully`, {
+      to: input.to,
+      messageId: info.messageId,
+      response: info.response
+    });
   } catch (error) {
-    console.error(`${payload.debugLabel} failed for:`, payload.to, error);
-    if (payload.debugOtp) {
-      console.log("OTP (fallback):", payload.debugOtp);
-    }
-    return {
-      delivered: false as const,
+    console.error(`[email] ${input.label} failed`, {
+      to: input.to,
       error: error instanceof Error ? error.message : "Unknown email error"
-    };
+    });
+
+    if (input.fallbackOtp) {
+      console.log(`OTP (fallback): ${input.fallbackOtp}`);
+    }
+
+    throw error;
   }
 }
 
-export async function sendPasswordResetEmail(to: string, link: string) {
-  const result = await sendMailWithLogging({
+export async function sendOtpEmail(to: string, otp: string): Promise<void> {
+  await sendMail({
     to,
-    debugLabel: "Password reset email",
+    subject: "Your OTP Code",
+    text: `Your OTP is: ${otp}`,
+    html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
+    label: "OTP email",
+    fallbackOtp: otp
+  });
+}
+
+export async function sendPasswordResetEmail(to: string, link: string): Promise<void> {
+  await sendMail({
+    to,
     subject: "Reset your Adhyay password",
+    text: `Reset your password using this link: ${link}`,
     html: `
       <p>Click the link below to reset your Adhyay password.</p>
       <p><a href="${link}">Reset Password</a></p>
       <p>This link expires in 15 minutes.</p>
-    `
+    `,
+    label: "Password reset email"
   });
-
-  if (!result.delivered) {
-    throw new Error(result.error);
-  }
 }
 
-export async function sendVerificationEmail(to: string, link: string) {
-  const result = await sendMailWithLogging({
+export async function sendVerificationEmail(to: string, link: string): Promise<void> {
+  await sendMail({
     to,
-    debugLabel: "Verification email",
     subject: "Verify your Adhyay email",
+    text: `Verify your email using this link: ${link}`,
     html: `
       <p>Click the link below to verify your Adhyay email address.</p>
       <p><a href="${link}">Verify Email</a></p>
-    `
-  });
-
-  if (!result.delivered) {
-    throw new Error(result.error);
-  }
-}
-
-export async function sendOtpEmail(to: string, otp: string) {
-  console.log("Sending OTP to:", to, "OTP:", otp);
-  return sendMailWithLogging({
-    to,
-    subject: "Your Adhyay OTP Code",
-    html: `
-      <p>Use the OTP below to verify your Adhyay account.</p>
-      <h2>${otp}</h2>
-      <p>This OTP expires in 10 minutes.</p>
     `,
-    debugLabel: "OTP email",
-    debugOtp: otp
+    label: "Verification email"
   });
 }
 
-export async function sendEmail(to: string, link: string) {
-  return sendPasswordResetEmail(to, link);
+export async function sendEmail(to: string, link: string): Promise<void> {
+  await sendPasswordResetEmail(to, link);
 }
