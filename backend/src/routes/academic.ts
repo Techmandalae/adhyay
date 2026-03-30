@@ -104,6 +104,18 @@ async function getClassSubjectsWithBooks(classId: string, schoolId: string, expe
   }));
 }
 
+function buildDefaultCatalogResponse() {
+  return {
+    classes: DEFAULT_CLASSES.map((name, index) => ({
+      id: `default-${index + 1}`,
+      name
+    })),
+    subjects: [],
+    books: [],
+    chapters: []
+  };
+}
+
 /* ======================================================
    GET /academic/classes
 ====================================================== */
@@ -343,15 +355,7 @@ catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: 
 
     if (!user.schoolId) {
       console.log("Using default catalog for independent teacher");
-      return res.json(
-        DEFAULT_CLASSES.map((name, index) => ({
-          classId: `default-${index + 1}`,
-          className: name,
-          classLevel: index + 1,
-          sections: [],
-          subjects: []
-        }))
-      );
+      return res.json(buildDefaultCatalogResponse());
     }
 
     const standards = await prisma.academicClassStandard.findMany({
@@ -362,6 +366,11 @@ catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: 
         classes: { select: { id: true, name: true, classLevel: true }, orderBy: { classLevel: "asc" } }
       }
     });
+
+    if (standards.length === 0) {
+      console.log("No classes found -> using default fallback");
+      return res.json(buildDefaultCatalogResponse());
+    }
 
     const items = [];
 
@@ -394,6 +403,11 @@ catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: 
           }))
         }))
       });
+    }
+
+    if (items.length === 0) {
+      console.log("No classes found -> using default fallback");
+      return res.json(buildDefaultCatalogResponse());
     }
 
     res.json(items);
