@@ -18,7 +18,6 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   generateExam,
-  getAcademicSections,
   getSubjects,
   getAcademicBooksBySubjectId,
   getAcademicChapters,
@@ -42,7 +41,8 @@ import type {
   AcademicClass,
   AcademicCatalogClass,
   AcademicSubject,
-  AcademicBook
+  AcademicBook,
+  TeacherCatalogResponse
 } from "@/types/academic";
 import type {
   ExamSummary,
@@ -74,6 +74,70 @@ const defaultExamInput: GenerateExamInput = {
   chapterIds: [],
   bookIds: []
 };
+
+function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): AcademicClass[] {
+  return catalog.flatMap((item) => {
+    if (item.sections.length === 0) {
+      return [
+        {
+          id: item.classId,
+          label: item.className,
+          classId: item.classId,
+          classLevel: item.classLevel ?? 0,
+          sectionId: "",
+          sectionName: "",
+          classStandardId: item.classId,
+          className: item.className
+        }
+      ];
+    }
+
+    return item.sections.map((section) => {
+      const suffix = /^[A-Z]$/.test(section.name) ? section.name : ` ${section.name}`;
+      return {
+        id: section.id,
+        label: `${item.className}${suffix}`,
+        classId: item.classId,
+        classLevel: item.classLevel ?? 0,
+        sectionId: section.id,
+        sectionName: section.name,
+        classStandardId: item.classId,
+        className: item.className
+      };
+    });
+  });
+}
+
+function normalizeTeacherCatalog(
+  response: TeacherCatalogResponse
+): { catalogClasses: AcademicCatalogClass[]; classOptions: AcademicClass[] } {
+  if (Array.isArray(response)) {
+    console.log("Catalog classes:", response.map((item) => ({
+      id: item.classId,
+      name: item.className
+    })));
+    return {
+      catalogClasses: response,
+      classOptions: buildCatalogClassOptions(response)
+    };
+  }
+
+  const classes = response.classes || [];
+  console.log("Catalog classes:", classes);
+
+  const catalogClasses: AcademicCatalogClass[] = classes.map((cls, index) => ({
+    classId: cls.id,
+    className: cls.name,
+    classLevel: index + 1,
+    sections: [],
+    subjects: []
+  }));
+
+  return {
+    catalogClasses,
+    classOptions: buildCatalogClassOptions(catalogClasses)
+  };
+}
 
 export default function TeacherDashboard() {
   const { token, user } = useAuth();
@@ -186,7 +250,9 @@ export default function TeacherDashboard() {
       try {
         const response = await getTeacherCatalog(token);
         if (!isActive) return;
-        setCatalogClasses(response ?? []);
+        const normalized = normalizeTeacherCatalog(response);
+        setCatalogClasses(normalized.catalogClasses);
+        setClassOptions(normalized.classOptions);
         setAcademicStatus({ status: "success", data: null });
       } catch (error) {
         if (!isActive) return;
@@ -198,25 +264,6 @@ export default function TeacherDashboard() {
       }
     };
     void loadCatalog();
-    return () => {
-      isActive = false;
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    let isActive = true;
-    const loadClasses = async () => {
-      try {
-        const response = await getAcademicSections(token);
-        if (!isActive) return;
-        setClassOptions(response.items);
-      } catch (_error) {
-        if (!isActive) return;
-        setClassOptions([]);
-      }
-    };
-    void loadClasses();
     return () => {
       isActive = false;
     };

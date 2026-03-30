@@ -67,4 +67,11 @@ export type AcademicCatalogClass = {
   subjects: AcademicSubjectWithBooks[];
 };
 
-export type TeacherCatalogResponse = AcademicCatalogClass[];
+export type TeacherCatalogFallbackResponse = {
+  classes: Array<{ id: string; name: string }>;
+  subjects: [];
+  books: [];
+  chapters: [];
+};
+
+export type TeacherCatalogResponse = AcademicCatalogClass[] | TeacherCatalogFallbackResponse;
