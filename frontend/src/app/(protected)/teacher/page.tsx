@@ -139,6 +139,25 @@ function normalizeTeacherCatalog(
   };
 }
 
+function normalizeSubjectsResponse(
+  response: { items?: AcademicSubject[] } | AcademicSubject[]
+): AcademicSubject[] {
+  const subjects = Array.isArray(response) ? response : response.items || [];
+
+  console.log("Subjects API response:", response);
+
+  if (!subjects || subjects.length === 0) {
+    console.warn("No subjects returned");
+    return [];
+  }
+
+  return subjects.map((subject) => ({
+    id: subject.id,
+    name: subject.name,
+    classId: subject.classId
+  }));
+}
+
 export default function TeacherDashboard() {
   const { token, user } = useAuth();
   const router = useRouter();
@@ -363,7 +382,7 @@ export default function TeacherDashboard() {
 
     try {
       const response = await getSubjects(token, selectedOption.classId);
-      setClassSubjects(response.items);
+      setClassSubjects(normalizeSubjectsResponse(response));
     } catch (_error) {
       setClassSubjects([]);
     }
