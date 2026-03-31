@@ -763,6 +763,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
     const payload = parsed.data;
     const user = req.user!;
     const { teacherId, schoolId } = user;
+    const isDefaultClass = payload.classId.startsWith("default-");
 
     const academicClass = await prisma.academicClass.findFirst({
       where: { id: payload.classId, schoolId: user.schoolId },
@@ -777,12 +778,18 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       }
     });
 
-    if (!academicClass) {
+    if (!academicClass && !isDefaultClass) {
       return next(new HttpError(400, "Invalid class selection"));
     }
 
-    const resolvedClassLevel = academicClass.classLevel;
-    if (payload.classLevel !== undefined && payload.classLevel !== resolvedClassLevel) {
+    const resolvedClassLevel =
+      academicClass?.classLevel ??
+      Number(payload.classId.replace("default-", ""));
+    if (
+      resolvedClassLevel &&
+      payload.classLevel !== undefined &&
+      payload.classLevel !== resolvedClassLevel
+    ) {
       return next(new HttpError(400, "Class level mismatch"));
     }
 
@@ -790,7 +797,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds
         : [payload.subjectId];
-    const selectedSubjects = academicClass.subjects.filter((subject) =>
+    const selectedSubjects = (academicClass?.subjects ?? []).filter((subject) =>
       requestedSubjectIds.includes(subject.id)
     );
 
@@ -811,14 +818,14 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         : [];
 
     console.log("Fetched:", {
-      class: academicClass.name,
+      class: academicClass?.name ?? payload.classId,
       subject: primarySubject.name,
       chaptersCount: fetchedChaptersForDebug.length
     });
 
     let sectionId: string | null = null;
     if (payload.sectionId) {
-      if (!academicClass.classStandardId) {
+      if (!academicClass?.classStandardId) {
         return next(new HttpError(400, "Class standard is missing for section assignment"));
       }
       const section = await prisma.academicSection.findFirst({
@@ -1010,7 +1017,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         : primarySubject.name;
 
     const syllabusChapterTitles =
-      academicClass.classStandardId
+      academicClass?.classStandardId
         ? await prisma.syllabusChapter.findMany({
             where: {
               schoolId: user.schoolId,
@@ -1048,7 +1055,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         ? templateStructure
         : inferredPatternProfile.sections;
 
-    const syllabusChapterIds = academicClass.classStandardId
+    const syllabusChapterIds = academicClass?.classStandardId
       ? await prisma.syllabusChapter.findMany({
           where: {
             schoolId: user.schoolId,
@@ -1140,7 +1147,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         });
       }
     } else {
-      if (!academicClass.classStandardId) {
+      if (!academicClass?.classStandardId) {
         return next(new HttpError(400, "Class standard is missing for question bank lookup"));
       }
 
@@ -1405,11 +1412,12 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       });
     }
 
-    if (academicClass.classStandardId) {
+    if (academicClass?.classStandardId) {
+      const classStandardId = academicClass.classStandardId;
       const syllabusRows = await prisma.syllabusChapter.findMany({
         where: {
           schoolId: user.schoolId,
-          classStandardId: academicClass.classStandardId,
+          classStandardId,
           subjectId: primarySubject.id
         },
         select: {
@@ -1433,7 +1441,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
 
           return {
             schoolId: user.schoolId,
-            classStandardId: academicClass.classStandardId!,
+            classStandardId,
             subjectId: primarySubject.id,
             chapterId: syllabusByTitle.get(question.chapter.toLowerCase()) ?? null,
             difficulty: exam.metadata.difficulty,

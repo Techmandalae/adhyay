@@ -126,6 +126,14 @@ function extractSubjectBooks(data: unknown, subjectId: string) {
       ([name]) => normalizeSubjectId(name) === subjectId
     );
 
+    if (entry && Array.isArray(entry[1])) {
+      return (entry[1] as string[]).map((name) => ({
+        book: undefined as string | undefined,
+        name,
+        chapters: [] as string[]
+      }));
+    }
+
     const subject = entry?.[1] as
       | {
           book?: string;
