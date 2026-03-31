@@ -275,7 +275,7 @@ router.get(
       if (!classId) {
         return res.status(400).json({ error: "classId required" });
       }
-      const isIndependent = !user.schoolId;
+      const isIndependent = classId.startsWith("default-");
 
       console.log("ClassId:", classId);
 
@@ -346,7 +346,7 @@ router.get(
       if (!subjectId) {
         return res.status(400).json({ error: "subjectId required" });
       }
-      const isIndependent = !user.schoolId;
+      const isIndependent = subjectId.startsWith("default-");
 
       const subject = user.schoolId
         ? await prisma.academicSubject.findFirst({
@@ -536,7 +536,7 @@ router.get(
       if (!bookId) {
         return res.status(400).json({ error: "bookId required" });
       }
-      const isIndependent = !user.schoolId;
+      const isIndependent = bookId.startsWith("default-");
 
       const book = user.schoolId
         ? await prisma.academicBook.findFirst({
