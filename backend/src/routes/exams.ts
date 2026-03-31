@@ -797,9 +797,15 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds
         : [payload.subjectId];
-    const selectedSubjects = (academicClass?.subjects ?? []).filter((subject) =>
-      requestedSubjectIds.includes(subject.id)
-    );
+    const selectedSubjects = isDefaultClass
+      ? requestedSubjectIds.map((subjectId) => ({
+          id: subjectId,
+          name: payload.subject || subjectId,
+          books: []
+        }))
+      : (academicClass?.subjects ?? []).filter((subject) =>
+          requestedSubjectIds.includes(subject.id)
+        );
 
     if (selectedSubjects.length === 0) {
       return next(new HttpError(400, "Invalid subject selection"));
