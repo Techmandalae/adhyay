@@ -273,6 +273,23 @@ router.get(
 
       console.log("ClassId:", classId);
 
+      if (classId.startsWith("default-")) {
+        console.log("Using default class -> returning all subjects");
+
+        const subjects = await prisma.academicSubject.findMany({
+          ...(user.schoolId ? { where: { schoolId: user.schoolId } } : {}),
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, classId: true }
+        });
+
+        console.log("Subjects:", subjects);
+        if (subjects.length === 0) {
+          console.log("No subjects found for default class:", classId);
+        }
+
+        return res.json({ items: subjects });
+      }
+
       const classRecord = await prisma.academicClass.findFirst({
         where: { id: classId, schoolId: user.schoolId },
         select: { id: true, classStandardId: true }
