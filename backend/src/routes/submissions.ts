@@ -73,7 +73,7 @@ function canStudentAccessExam(
   user: AuthUser,
   exam: {
     status: string;
-    classId: string;
+    classId: string | null;
     sectionId: string | null;
     assignedClassId: string | null;
     assignedClassLevel: number | null;
@@ -83,6 +83,9 @@ function canStudentAccessExam(
     return true;
   }
   if (exam.status !== "PUBLISHED") {
+    return false;
+  }
+  if (!exam.classId) {
     return false;
   }
   const classId = user.classId;

@@ -356,7 +356,7 @@ model Exam {
   id                 String     @id @default(uuid())
   schoolId           String
   teacherId          String?
-  classId            String
+  classId            String?
   sectionId          String?
   subjectId          String
   templateId         String?
@@ -372,7 +372,7 @@ model Exam {
 
   school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher  TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  class    AcademicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class    AcademicClass? @relation(fields: [classId], references: [id], onDelete: Cascade)
   section  AcademicSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   subject  AcademicSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   template ExamTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
