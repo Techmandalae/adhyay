@@ -216,6 +216,18 @@ function getPeriodBounds(date: Date) {
   return { start, end };
 }
 
+function getClassStandard(classId: string) {
+  if (!classId) {
+    return null;
+  }
+
+  if (classId.startsWith("default-")) {
+    return classId.replace("default-", "");
+  }
+
+  return classId;
+}
+
 function isTeacher(user: AuthUser) {
   return user.role === "TEACHER";
 }
@@ -786,6 +798,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
     const user = req.user!;
     const { teacherId, schoolId } = user;
     const isDefaultClass = payload.classId.startsWith("default-");
+    const classStandard = getClassStandard(payload.classId);
 
     const academicClass = await prisma.academicClass.findFirst({
       where: { id: payload.classId, schoolId: user.schoolId },
@@ -1199,32 +1212,39 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         });
       }
     } else {
-      if (!academicClass?.classStandardId) {
-        return next(new HttpError(400, "Class standard is missing for question bank lookup"));
+      const questionBankClassStandardId = academicClass?.classStandardId ?? null;
+
+      if (!questionBankClassStandardId && isDefaultClass) {
+        console.log(
+          "Skipping local question bank lookup for default class:",
+          classStandard ?? payload.classId
+        );
       }
 
-      const sourceQuestions = await prisma.questionBank.findMany({
-        where: {
-          schoolId: user.schoolId,
-          classStandardId: academicClass.classStandardId,
-          subjectId: primarySubject.id,
-          ...(syllabusChapterIds.length > 0
-            ? { chapterId: { in: syllabusChapterIds.map((chapter) => chapter.id) } }
-            : {})
-        },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          question: true,
-          answer: true,
-          type: true,
-          optionA: true,
-          optionB: true,
-          optionC: true,
-          optionD: true,
-          chapterId: true
-        }
-      });
+      const sourceQuestions = questionBankClassStandardId
+        ? await prisma.questionBank.findMany({
+            where: {
+              schoolId: user.schoolId,
+              classStandardId: questionBankClassStandardId,
+              subjectId: primarySubject.id,
+              ...(syllabusChapterIds.length > 0
+                ? { chapterId: { in: syllabusChapterIds.map((chapter) => chapter.id) } }
+                : {})
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              question: true,
+              answer: true,
+              type: true,
+              optionA: true,
+              optionB: true,
+              optionC: true,
+              optionD: true,
+              chapterId: true
+            }
+          })
+        : [];
 
       const chapterTitleById = new Map(
         syllabusChapterIds.map((chapter) => [chapter.id, chapter.chapterTitle] as const)
