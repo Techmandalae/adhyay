@@ -531,6 +531,7 @@ export default function TeacherDashboard() {
     Boolean(examForm.classId) &&
     hasPrimarySubject &&
     (isReferenceOnly ? hasRequiredReferences : hasRequiredNcert);
+  const selectedClassOptionId = examForm.sectionId || examForm.classId || "";
 
   const handleGenerateExam = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -726,7 +727,7 @@ export default function TeacherDashboard() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Select
                   label="Class"
-                  value={examForm.sectionId ?? ""}
+                  value={selectedClassOptionId}
                   onChange={(event) => void handleClassChange(event.target.value)}
                   required
                 >
