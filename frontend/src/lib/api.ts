@@ -908,10 +908,12 @@ export async function loadSubjects(classId: string) {
 
 export async function getAcademicBooksBySubjectId(
   token: string | null,
+  classId: string,
   subjectId: string
 ) {
+  const query = new URLSearchParams({ classId, subjectId });
   return apiFetch<{ ncertBooks: AcademicBook[]; referenceBooks: AcademicBook[] }>(
-    `/academic/books/${subjectId}`,
+    `/academic/books?${query}`,
     { method: "GET" },
     token
   );
@@ -930,9 +932,18 @@ export async function getAcademicBooks(
   );
 }
 
-export async function getAcademicChapters(token: string | null, bookId: string) {
+export async function getAcademicChapters(
+  token: string | null,
+  bookId: string,
+  classId?: string,
+  subjectId?: string
+) {
+  const query = new URLSearchParams();
+  if (classId) query.set("classId", classId);
+  if (subjectId) query.set("subjectId", subjectId);
+  const suffix = query.toString() ? `?${query}` : "";
   return apiFetch<AcademicChaptersResponse>(
-    `/academic/chapters/${bookId}`,
+    `/academic/chapters/${bookId}${suffix}`,
     { method: "GET" },
     token
   );

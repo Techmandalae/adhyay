@@ -412,7 +412,11 @@ export default function TeacherDashboard() {
     }
 
     try {
-      const response = await getAcademicBooksBySubjectId(token, nextSubjectId);
+      const response = await getAcademicBooksBySubjectId(
+        token,
+        examForm.classId ?? "",
+        nextSubjectId
+      );
       setNcertBooks(response.ncertBooks);
       setReferenceBooks(response.referenceBooks);
     } catch (_error) {
@@ -471,7 +475,9 @@ export default function TeacherDashboard() {
 
     try {
       const responses = await Promise.all(
-        bookIds.map((bookId) => getAcademicChapters(token, bookId))
+        bookIds.map((bookId) =>
+          getAcademicChapters(token, bookId, examForm.classId, examForm.subjectId)
+        )
       );
       const unique = new Map<string, AcademicChapter>();
       responses.forEach((response) => {

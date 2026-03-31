@@ -7,6 +7,7 @@ import { getString } from "../utils/query";
 import {
   buildFallbackBooks,
   buildFallbackChapters,
+  buildFallbackChaptersFromContext,
   buildFallbackSubjects
 } from "../utils/catalogLoader";
 
@@ -488,17 +489,22 @@ router.get(
       if (!classId || typeof classId !== "string") {
         return next(new HttpError(400, "classId is required"));
       }
+      const isIndependent = classId.startsWith("default-");
+      const resolvedSubjectId =
+        isIndependent && !subjectId.includes("::") ? `${classId}::${subjectId}` : subjectId;
 
-      const subject = await prisma.academicSubject.findFirst({
-        where: { id: subjectId, classId, schoolId: user.schoolId },
-        select: { id: true }
-      });
+      const subject = isIndependent
+        ? null
+        : await prisma.academicSubject.findFirst({
+            where: { id: subjectId, classId, schoolId: user.schoolId },
+            select: { id: true }
+          });
 
-      if (!subject) {
+      if (!isIndependent && !subject) {
         return next(new HttpError(404, "Subject not found for class"));
       }
 
-      const books = await prisma.academicBook.findMany({
+      let books = await prisma.academicBook.findMany({
         where: { subjectId, schoolId: user.schoolId },
         orderBy: { name: "asc" },
         select: {
@@ -508,6 +514,12 @@ router.get(
           subjectId: true
         },
       });
+
+      if (books.length === 0 && isIndependent) {
+        console.log("Fallback -> loading books from JSON");
+        const fallback = buildFallbackBooks(resolvedSubjectId);
+        books = [...fallback.ncertBooks, ...fallback.referenceBooks];
+      }
 
       res.json({
         ...splitBooksByType(books),
@@ -536,9 +548,15 @@ router.get(
       if (!bookId) {
         return res.status(400).json({ error: "bookId required" });
       }
-      const isIndependent = bookId.startsWith("default-");
+      const classId =
+        typeof req.query.classId === "string" ? req.query.classId : "";
+      const subjectId =
+        typeof req.query.subjectId === "string" ? req.query.subjectId : "";
+      const isIndependent = classId.startsWith("default-");
 
-      const book = user.schoolId
+      const book = isIndependent
+        ? null
+        : user.schoolId
         ? await prisma.academicBook.findFirst({
             where: { id: bookId, schoolId: user.schoolId },
             select: {
@@ -550,11 +568,11 @@ router.get(
           })
         : null;
 
-      if (user.schoolId && !book) {
+      if (!isIndependent && user.schoolId && !book) {
         return next(new HttpError(404, "Book not found"));
       }
 
-      const chapters = user.schoolId
+      let chapters = user.schoolId && !isIndependent
         ? await prisma.academicChapter.findMany({
             where: { bookId, schoolId: user.schoolId },
             orderBy: { title: "asc" },
@@ -568,7 +586,7 @@ router.get(
 
       if (chapters.length === 0 && isIndependent) {
         console.log("Fallback -> loading chapters from JSON");
-        return res.json(buildFallbackChapters(bookId));
+        return res.json(buildFallbackChaptersFromContext(classId, subjectId, bookId));
       }
 
       res.json({ subjectId: book!.subjectId, bookName: book!.name, items: chapters });
@@ -596,32 +614,46 @@ router.get(
       if (!user) {
         return next(new HttpError(401, "Authentication required"));
       }
+      const classId =
+        typeof req.query.classId === "string" ? req.query.classId : "";
+      const subjectId =
+        typeof req.query.subjectId === "string" ? req.query.subjectId : "";
+      const isIndependent = classId.startsWith("default-");
 
-      const book = await prisma.academicBook.findFirst({
-        where: { id: bookId, schoolId: user.schoolId },
-        select: {
-          id: true,
-          name: true,
-          subjectId: true,
-          subject: { select: { classId: true } }
-        }
-      });
+      const book = isIndependent
+        ? null
+        : await prisma.academicBook.findFirst({
+            where: { id: bookId, schoolId: user.schoolId },
+            select: {
+              id: true,
+              name: true,
+              subjectId: true,
+              subject: { select: { classId: true } }
+            }
+          });
 
-      if (!book) {
+      if (!isIndependent && !book) {
         return next(new HttpError(404, "Book not found"));
       }
 
-      const chapters = await prisma.academicChapter.findMany({
-        where: { bookId, schoolId: user.schoolId },
-        orderBy: { title: "asc" },
-        select: {
-          id: true,
-          title: true,
-          bookId: true
-        },
-      });
+      let chapters = isIndependent
+        ? []
+        : await prisma.academicChapter.findMany({
+            where: { bookId, schoolId: user.schoolId },
+            orderBy: { title: "asc" },
+            select: {
+              id: true,
+              title: true,
+              bookId: true
+            },
+          });
 
-      res.json({ subjectId: book.subjectId, bookName: book.name, items: chapters });
+      if (chapters.length === 0 && isIndependent) {
+        console.log("Fallback -> loading chapters from JSON");
+        return res.json(buildFallbackChaptersFromContext(classId, subjectId, bookId));
+      }
+
+      res.json({ subjectId: book!.subjectId, bookName: book!.name, items: chapters });
     } catch (error) {
       next(error);
     }

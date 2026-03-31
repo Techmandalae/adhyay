@@ -217,6 +217,63 @@ export function buildFallbackBooks(subjectId: string) {
   return { ncertBooks, referenceBooks };
 }
 
+export function buildFallbackChaptersFromContext(
+  classId: string,
+  subjectId: string,
+  bookId: string
+) {
+  const normalizedSubjectId = subjectId.includes(ID_SEPARATOR)
+    ? subjectId.split(ID_SEPARATOR)[1] ?? ""
+    : subjectId;
+  const { ncert, reference } = loadClassData(classId);
+
+  const candidates = [
+    ...extractSubjectBooks(ncert, normalizedSubjectId).map((book, index) => ({
+      sourceType: "ncert",
+      index,
+      name: book.book ?? book.name ?? "",
+      chapters: Array.isArray(book.chapters) ? book.chapters : []
+    })),
+    ...extractSubjectBooks(reference, normalizedSubjectId).map((book, index) => ({
+      sourceType: "reference",
+      index,
+      name: book.book ?? book.name ?? "",
+      chapters: Array.isArray(book.chapters) ? book.chapters : []
+    }))
+  ];
+
+  const matchedBook = candidates.find((book) => {
+    const generatedId = `${classId}${ID_SEPARATOR}${normalizedSubjectId}${ID_SEPARATOR}${book.sourceType}${ID_SEPARATOR}${book.index}`;
+    return (
+      generatedId === bookId ||
+      normalizeSubjectId(book.name) === bookId ||
+      book.name === bookId
+    );
+  });
+
+  if (!matchedBook) {
+    return {
+      subjectId: subjectId.includes(ID_SEPARATOR)
+        ? subjectId
+        : `${classId}${ID_SEPARATOR}${normalizedSubjectId}`,
+      bookName: "",
+      items: []
+    };
+  }
+
+  return {
+    subjectId: subjectId.includes(ID_SEPARATOR)
+      ? subjectId
+      : `${classId}${ID_SEPARATOR}${normalizedSubjectId}`,
+    bookName: matchedBook.name,
+    items: matchedBook.chapters.map((title, chapterIndex) => ({
+      id: `${bookId}${ID_SEPARATOR}chapter${ID_SEPARATOR}${chapterIndex}`,
+      title,
+      bookId
+    }))
+  };
+}
+
 export function buildFallbackChapters(bookId: string) {
   const [classId, subjectSlug, sourceType, rawIndex] = bookId.split(ID_SEPARATOR);
   if (!classId || !subjectSlug || !sourceType || rawIndex === undefined) {
