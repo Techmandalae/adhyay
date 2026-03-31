@@ -348,69 +348,42 @@ router.get(
 
 catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log("CATALOG API HIT - NEW CODE");
     const user = req.user;
     if (!user) {
       return next(new HttpError(401, "Authentication required"));
     }
 
+    console.log("USER:", user);
+    console.log("USER SCHOOL ID:", user?.schoolId);
+
     if (!user.schoolId) {
-      console.log("Using default catalog for independent teacher");
+      console.log("FALLBACK TRIGGERED - USING DEFAULT CLASSES");
       return res.json(buildDefaultCatalogResponse());
     }
 
-    const standards = await prisma.academicClassStandard.findMany({
+    const classes = await prisma.academicClass.findMany({
       where: { schoolId: user.schoolId },
-      orderBy: { name: "asc" },
-      include: {
-        sections: { select: { id: true, name: true }, orderBy: { name: "asc" } },
-        classes: { select: { id: true, name: true, classLevel: true }, orderBy: { classLevel: "asc" } }
-      }
+      orderBy: { classLevel: "asc" },
+      select: { id: true, name: true }
     });
 
-    if (standards.length === 0) {
-      console.log("No classes found -> using default fallback");
+    console.log("DB CLASSES RESULT:", classes);
+
+    if (!classes || classes.length === 0) {
+      console.log("FALLBACK TRIGGERED - USING DEFAULT CLASSES");
       return res.json(buildDefaultCatalogResponse());
     }
 
-    const items = [];
-
-    for (const standard of standards) {
-      const classRecord = standard.classes[0];
-      const expectedSubjects = buildSubjectPool(standard.hasStreams, standard.sections);
-      const subjects = classRecord
-        ? await getClassSubjectsWithBooks(classRecord.id, user.schoolId, expectedSubjects)
-        : [];
-
-      items.push({
-        classId: classRecord?.id ?? standard.id,
-        className: standard.name,
-        classLevel: classRecord?.classLevel ?? null,
-        sections: standard.sections.map((section) => ({
-          id: section.id,
-          name: section.name
-        })),
-        subjects: subjects.map((subject) => ({
-          subjectId: subject.id,
-          name: subject.name,
-          books: (subject.books ?? []).map((book: any) => ({
-            id: book.id,
-            name: book.name,
-            type: book.type,
-            chapters: (book.chapters ?? []).map((chapter: any) => ({
-              id: chapter.id,
-              name: chapter.title
-            }))
-          }))
-        }))
-      });
-    }
-
-    if (items.length === 0) {
-      console.log("No classes found -> using default fallback");
-      return res.json(buildDefaultCatalogResponse());
-    }
-
-    res.json(items);
+    return res.json({
+      classes: classes.map((klass) => ({
+        id: klass.id,
+        name: klass.name
+      })),
+      subjects: [],
+      books: [],
+      chapters: []
+    });
   } catch (error) {
     next(error);
   }
