@@ -6,6 +6,22 @@ type SubjectSummary = {
   name: string;
 };
 
+type FallbackChapter = {
+  id: string;
+  title: string;
+  bookId: string;
+  source: "NCERT" | "REFERENCE";
+};
+
+type FallbackBook = {
+  id: string;
+  name: string;
+  type: "NCERT" | "REFERENCE";
+  source: "NCERT" | "REFERENCE";
+  subjectId: string;
+  chapters: FallbackChapter[];
+};
+
 type SubjectItem = {
   subject?: string;
   name?: string;
@@ -26,6 +42,24 @@ function normalizeSubjectId(value: string) {
   return value.toLowerCase().replace(/\s+/g, "-");
 }
 
+function getChapterNumber(name: string) {
+  const match = name.match(/Chapter\s*(\d+)/i);
+  return match ? Number.parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
+}
+
+function sortChapterTitles(chapters: string[]) {
+  return [...chapters].sort((left, right) => {
+    const leftNumber = getChapterNumber(left);
+    const rightNumber = getChapterNumber(right);
+
+    if (leftNumber !== rightNumber) {
+      return leftNumber - rightNumber;
+    }
+
+    return left.localeCompare(right);
+  });
+}
+
 function parseDefaultClassId(classId: string) {
   if (!classId.startsWith("default-")) {
     return null;
@@ -41,6 +75,16 @@ function readJsonFile(filePath: string) {
   }
 
   return JSON.parse(fs.readFileSync(filePath, "utf-8")) as unknown;
+}
+
+function readFirstExistingJsonFile(filePaths: string[]) {
+  for (const filePath of filePaths) {
+    if (fs.existsSync(filePath)) {
+      return readJsonFile(filePath);
+    }
+  }
+
+  return null;
 }
 
 function asRecord(value: unknown): JsonRecord | null {
@@ -172,23 +216,30 @@ export function loadClassData(classId: string) {
     return { classNumber: null, ncert: null, reference: null };
   }
 
-  const ncertPath = path.join(basePath, "ncert", `class${classNumber}.json`);
-  const referencePath = path.join(basePath, "reference", "reference.json");
+  const ncertPaths = [
+    path.join(basePath, "ncert", `class-${classNumber}.json`),
+    path.join(basePath, "ncert", `class${classNumber}.json`)
+  ];
+  const referencePaths = [
+    path.join(basePath, "reference", `class-${classNumber}.json`),
+    path.join(basePath, "reference", `class${classNumber}.json`),
+    path.join(basePath, "reference", "reference.json")
+  ];
 
-  console.log("NCERT path:", ncertPath);
-  console.log("Exists:", fs.existsSync(ncertPath));
+  console.log("NCERT path:", ncertPaths[0]);
+  console.log("Exists:", ncertPaths.some((filePath) => fs.existsSync(filePath)));
 
-  const ncert = readJsonFile(ncertPath);
-  const reference = readJsonFile(referencePath);
+  const ncert = readFirstExistingJsonFile(ncertPaths);
+  const reference = readFirstExistingJsonFile(referencePaths);
 
   return { classNumber, ncert, reference };
 }
 
 export function buildFallbackSubjects(classId: string) {
-  const { ncert, reference } = loadClassData(classId);
+  const { ncert } = loadClassData(classId);
   const subjectMap = new Map<string, { id: string; name: string; classId: string }>();
 
-  [...extractSubjects(ncert), ...extractSubjects(reference)].forEach((subject) => {
+  extractSubjects(ncert).forEach((subject) => {
     subjectMap.set(subject.id, {
       id: `${classId}${ID_SEPARATOR}${subject.id}`,
       name: subject.name,
@@ -208,19 +259,40 @@ export function buildFallbackBooks(subjectId: string) {
   }
 
   const { ncert, reference } = loadClassData(classId);
-  const ncertBooks = extractSubjectBooks(ncert, subjectSlug).map((book, index) => ({
-    id: `${classId}${ID_SEPARATOR}${subjectSlug}${ID_SEPARATOR}ncert${ID_SEPARATOR}${index}`,
-    name: book.book ?? book.name ?? `Book ${index + 1}`,
-    type: "NCERT" as const,
-    subjectId
-  }));
+  const ncertBooks: FallbackBook[] = extractSubjectBooks(ncert, subjectSlug).map((book, index) => {
+    const id = `${classId}${ID_SEPARATOR}${subjectSlug}${ID_SEPARATOR}ncert${ID_SEPARATOR}${index}`;
+    const chapters = sortChapterTitles(Array.isArray(book.chapters) ? book.chapters : []).map(
+      (title, chapterIndex) => ({
+        id: `${id}${ID_SEPARATOR}chapter${ID_SEPARATOR}${chapterIndex}`,
+        title,
+        bookId: id,
+        source: "NCERT" as const
+      })
+    );
 
-  const referenceBooks = extractSubjectBooks(reference, subjectSlug).map((book, index) => ({
-    id: `${classId}${ID_SEPARATOR}${subjectSlug}${ID_SEPARATOR}reference${ID_SEPARATOR}${index}`,
-    name: book.book ?? book.name ?? `Reference ${index + 1}`,
-    type: "REFERENCE" as const,
-    subjectId
-  }));
+    return {
+      id,
+      name: book.book ?? book.name ?? `Book ${index + 1}`,
+      type: "NCERT",
+      source: "NCERT",
+      subjectId,
+      chapters
+    };
+  });
+
+  const referenceBooks: FallbackBook[] = extractSubjectBooks(reference, subjectSlug).map(
+    (book, index) => {
+      const id = `${classId}${ID_SEPARATOR}${subjectSlug}${ID_SEPARATOR}reference${ID_SEPARATOR}${index}`;
+      return {
+        id,
+        name: book.book ?? book.name ?? `Reference ${index + 1}`,
+        type: "REFERENCE",
+        source: "REFERENCE",
+        subjectId,
+        chapters: []
+      };
+    }
+  );
 
   return { ncertBooks, referenceBooks };
 }
@@ -274,10 +346,11 @@ export function buildFallbackChaptersFromContext(
       ? subjectId
       : `${classId}${ID_SEPARATOR}${normalizedSubjectId}`,
     bookName: matchedBook.name,
-    items: matchedBook.chapters.map((title, chapterIndex) => ({
+    items: sortChapterTitles(matchedBook.chapters).map((title, chapterIndex) => ({
       id: `${bookId}${ID_SEPARATOR}chapter${ID_SEPARATOR}${chapterIndex}`,
       title,
-      bookId
+      bookId,
+      source: matchedBook.sourceType === "reference" ? "REFERENCE" : "NCERT"
     }))
   };
 }
@@ -305,7 +378,7 @@ export function buildFallbackChapters(bookId: string) {
   }
 
   const bookName = book.book ?? book.name ?? "";
-  const chapters = Array.isArray(book.chapters) ? book.chapters : [];
+  const chapters = sortChapterTitles(Array.isArray(book.chapters) ? book.chapters : []);
 
   return {
     subjectId: `${classId}${ID_SEPARATOR}${subjectSlug}`,
@@ -313,7 +386,8 @@ export function buildFallbackChapters(bookId: string) {
     items: chapters.map((title, chapterIndex) => ({
       id: `${bookId}${ID_SEPARATOR}chapter${ID_SEPARATOR}${chapterIndex}`,
       title,
-      bookId
+      bookId,
+      source: sourceType === "reference" ? "REFERENCE" : "NCERT"
     }))
   };
 }

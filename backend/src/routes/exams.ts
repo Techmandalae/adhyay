@@ -39,6 +39,7 @@ import {
   inferNcertTemplateSections
 } from "../services/ai.exam.service";
 import { notificationService } from "../services/notifications";
+import { buildFallbackBooks, buildFallbackSubjects } from "../utils/catalogLoader";
 import type { AuthUser, MetaBlob } from "../types/auth";
 
 export const examsRouter = Router();
@@ -68,6 +69,27 @@ type ExamMeta = {
 
 type UsageLimit = {
   monthlyExamLimit?: number;
+};
+
+type SelectedChapter = {
+  id: string;
+  title: string;
+  chapterNumber?: number | null;
+  summary?: string | null;
+  keywords?: string | null;
+};
+
+type SelectedBook = {
+  id: string;
+  name: string;
+  type: "NCERT" | "REFERENCE";
+  chapters: SelectedChapter[];
+};
+
+type SelectedSubject = {
+  id: string;
+  name: string;
+  books: SelectedBook[];
 };
 
 const normalizedTemplateType = z.preprocess((value) => {
@@ -797,13 +819,37 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds
         : [payload.subjectId];
-    const selectedSubjects = isDefaultClass
-      ? requestedSubjectIds.map((subjectId) => ({
-          id: subjectId,
-          name: payload.subject || subjectId,
-          books: []
+    const defaultClassSubjects: SelectedSubject[] = isDefaultClass
+      ? buildFallbackSubjects(payload.classId).map((subject) => {
+          const fallbackBooks = buildFallbackBooks(subject.id);
+          return {
+            id: subject.id,
+            name: subject.name,
+            books: [...fallbackBooks.ncertBooks, ...fallbackBooks.referenceBooks]
+          };
+        })
+      : [];
+    const schoolSubjects: SelectedSubject[] = (academicClass?.subjects ?? []).map((subject) => ({
+      id: subject.id,
+      name: subject.name,
+      books: subject.books.map((book) => ({
+        id: book.id,
+        name: book.name,
+        type: book.type as "NCERT" | "REFERENCE",
+        chapters: book.chapters.map((chapter) => ({
+          id: chapter.id,
+          title: chapter.title,
+          chapterNumber: chapter.chapterNumber,
+          summary: chapter.summary,
+          keywords: chapter.keywords
         }))
-      : (academicClass?.subjects ?? []).filter((subject) =>
+      }))
+    }));
+    const selectedSubjects: SelectedSubject[] = isDefaultClass
+      ? defaultClassSubjects.filter((subject) =>
+          requestedSubjectIds.includes(subject.id)
+        )
+      : schoolSubjects.filter((subject) =>
           requestedSubjectIds.includes(subject.id)
         );
 
