@@ -359,7 +359,8 @@ model Exam {
   classId            String?
   classStandard      String?
   sectionId          String?
-  subjectId          String
+  subjectId          String?
+  subjectName        String?
   templateId         String?
   meta               Json
   aiPayload          Json
@@ -375,7 +376,7 @@ model Exam {
   teacher  TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   class    AcademicClass? @relation(fields: [classId], references: [id], onDelete: Cascade)
   section  AcademicSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
-  subject  AcademicSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject  AcademicSubject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   template ExamTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   examPaper ExamPaper?
   submissions ExamSubmission[]
@@ -383,6 +384,7 @@ model Exam {
 
   @@index([schoolId])
   @@index([teacherId])
+  @@index([subjectName])
   @@index([status])
   @@index([classStandard])
   @@index([assignedClassId])
