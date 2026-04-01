@@ -33,19 +33,20 @@ export default function RegisterTeacherPage() {
     setStatus({ state: "loading" });
     setOtpStatus({ state: "idle" });
     try {
+      const requestedSchoolId = schoolId.trim() || undefined;
       const response = await registerTeacher({
-        schoolId: schoolId.trim() || undefined,
+        schoolId: requestedSchoolId,
         email: email.trim(),
         password: password.trim(),
         name: name.trim()
       });
       setVerification({
         email: email.trim(),
-        schoolId: response.schoolId
+        schoolId: requestedSchoolId
       });
       setStatus({
         state: "success",
-        message: schoolId.trim()
+        message: requestedSchoolId
           ? "Teacher account created and linked to the school. Enter the OTP sent to your email."
           : "Independent teacher account created. Enter the OTP sent to your email to verify the account."
       });

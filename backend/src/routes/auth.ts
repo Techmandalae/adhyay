@@ -138,6 +138,26 @@ function generatePublicId() {
   return `EB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
 
+function isIndependentUserRecord(user: {
+  role?: string;
+  teacherProfile?: { isIndependent?: boolean } | null;
+  school?: { isIndependentWorkspace?: boolean } | null;
+}) {
+  return Boolean(
+    user.role === "TEACHER" &&
+      (user.teacherProfile?.isIndependent || user.school?.isIndependentWorkspace)
+  );
+}
+
+function selectIndependentUser<T extends {
+  role?: string;
+  teacherProfile?: { isIndependent?: boolean } | null;
+  school?: { isIndependentWorkspace?: boolean } | null;
+}>(users: T[]) {
+  const independentUsers = users.filter((user) => isIndependentUserRecord(user));
+  return independentUsers.length === 1 ? independentUsers[0] : null;
+}
+
 async function generateUniquePublicId() {
   let publicId = generatePublicId();
   // Extremely low collision risk, but keep it deterministic and cheap.
@@ -387,7 +407,14 @@ authRouter.post("/verify-otp", async (req, res, next) => {
         email: true,
         otp: true,
         otpExpiry: true,
-        isVerified: true
+        isVerified: true,
+        role: true,
+        teacherProfile: {
+          select: { isIndependent: true }
+        },
+        school: {
+          select: { isIndependentWorkspace: true }
+        }
       }
     });
 
@@ -395,11 +422,12 @@ authRouter.post("/verify-otp", async (req, res, next) => {
       return next(new HttpError(400, "Invalid OTP"));
     }
 
-    if (!schoolId && users.length > 1) {
+    const user =
+      !schoolId && users.length > 1 ? selectIndependentUser(users) ?? null : users[0];
+
+    if (!user) {
       return next(new HttpError(400, "Please enter your School ID to continue"));
     }
-
-    const user = users[0];
 
     if (!user.otp || user.otp !== otp) {
       return next(new HttpError(400, "Invalid OTP"));
@@ -440,7 +468,14 @@ authRouter.post("/resend-otp", async (req, res, next) => {
       select: {
         id: true,
         email: true,
-        isVerified: true
+        isVerified: true,
+        role: true,
+        teacherProfile: {
+          select: { isIndependent: true }
+        },
+        school: {
+          select: { isIndependentWorkspace: true }
+        }
       }
     });
 
@@ -448,11 +483,12 @@ authRouter.post("/resend-otp", async (req, res, next) => {
       return next(new HttpError(404, "User not found"));
     }
 
-    if (!schoolId && users.length > 1) {
+    const user =
+      !schoolId && users.length > 1 ? selectIndependentUser(users) ?? null : users[0];
+
+    if (!user) {
       return next(new HttpError(400, "Please enter your School ID to continue"));
     }
-
-    const user = users[0];
 
     if (user.isVerified) {
       return res.json({ message: "Email already verified" });
@@ -544,11 +580,12 @@ authRouter.post("/login", async (req, res, next) => {
       return next(new HttpError(401, "Invalid email or password"));
     }
 
-    if (!schoolId && users.length > 1) {
+    const user =
+      !schoolId && users.length > 1 ? selectIndependentUser(users) ?? null : users[0];
+
+    if (!user) {
       return next(new HttpError(400, "Please enter your School ID to continue"));
     }
-
-    const user = users[0];
 
     if (!user || !user.isActive) {
       return next(new HttpError(401, "Invalid email or password"));
