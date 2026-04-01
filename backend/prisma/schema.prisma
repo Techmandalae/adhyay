@@ -357,6 +357,7 @@ model Exam {
   schoolId           String
   teacherId          String?
   classId            String?
+  classStandard      String?
   sectionId          String?
   subjectId          String
   templateId         String?
@@ -383,6 +384,7 @@ model Exam {
   @@index([schoolId])
   @@index([teacherId])
   @@index([status])
+  @@index([classStandard])
   @@index([assignedClassId])
   @@index([sectionId])
 }

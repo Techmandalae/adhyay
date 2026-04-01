@@ -1426,6 +1426,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         schoolId: user.schoolId,
         teacherId: teacherId ?? null,
         classId: isDefaultClass ? null : payload.classId,
+        classStandard: isDefaultClass ? classStandard : null,
         sectionId,
         subjectId: primarySubject.id,
         templateId: payload.templateId ?? null,

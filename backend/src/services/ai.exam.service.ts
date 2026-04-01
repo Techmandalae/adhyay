@@ -14,8 +14,8 @@ import {
 } from "../types/exam";
 
 const MODEL_NAME = "gpt-4.1";
-const OPENAI_TIMEOUT_MS = 30000;
-const OPENAI_MAX_RETRIES = 2;
+const OPENAI_TIMEOUT_MS = 20000;
+const OPENAI_MAX_RETRIES = 1;
 const OPENAI_RETRY_BASE_MS = 500;
 const DEFAULT_CHOICES_PER_QUESTION = 4;
 
@@ -1046,10 +1046,7 @@ export async function generateExam(
     }
 
     if (content.includes("Chapter") || content.toLowerCase().includes("concept")) {
-      console.log("Regenerating due to low quality");
-      if (attempt === 0) {
-        return attemptGeneration(1);
-      }
+      console.warn("Low-quality markers detected in AI response; continuing without regeneration");
     }
 
     const containsBannedQuestion = schemaParsed.data.sections.some(
@@ -1057,9 +1054,6 @@ export async function generateExam(
     );
 
     if (containsBannedQuestion) {
-      if (attempt === 0) {
-        return attemptGeneration(1);
-      }
       throw new Error("OpenAI response contained low-quality meta questions.");
     }
 
@@ -1068,11 +1062,7 @@ export async function generateExam(
     );
 
     if (containsLowQualityQuestionText) {
-      console.log("Regenerating due to low quality");
-      if (attempt === 0) {
-        return attemptGeneration(1);
-      }
-      throw new Error("OpenAI response contained generic low-quality questions.");
+      console.warn("Generic low-quality question text detected; continuing without regeneration");
     }
 
     const usage = toUsage(response);
