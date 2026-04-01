@@ -75,6 +75,13 @@ const defaultExamInput: GenerateExamInput = {
   bookIds: []
 };
 
+const generationSteps = [
+  "Analyzing syllabus...",
+  "Generating questions...",
+  "Structuring exam...",
+  "Finalizing paper..."
+];
+
 function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): AcademicClass[] {
   return catalog.flatMap((item) => {
     if (item.sections.length === 0) {
@@ -254,10 +261,46 @@ export default function TeacherDashboard() {
     data: null
   });
   const [publishSelections, setPublishSelections] = useState<Record<string, string>>({});
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [step, setStep] = useState(0);
 
   const isTeacher = user?.role === "TEACHER";
   const canCallApi = Boolean(token);
   const canPublishExams = Boolean(user?.canPublish ?? true);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setProgress(0);
+      setStep(0);
+      return;
+    }
+
+    let currentProgress = 0;
+
+    const interval = window.setInterval(() => {
+      currentProgress += Math.random() * 10;
+
+      if (currentProgress >= 90) {
+        currentProgress = 90;
+        window.clearInterval(interval);
+      }
+
+      setProgress(Math.floor(currentProgress));
+
+      if (currentProgress < 25) {
+        setStep(0);
+      } else if (currentProgress < 50) {
+        setStep(1);
+      } else if (currentProgress < 75) {
+        setStep(2);
+      } else {
+        setStep(3);
+      }
+    }, 800);
+
+    return () => window.clearInterval(interval);
+  }, [isGenerating]);
 
   useEffect(() => {
     if (!token) {
@@ -540,6 +583,9 @@ export default function TeacherDashboard() {
       window.alert("Please select at least one chapter");
       return;
     }
+    setIsGenerating(true);
+    setProgress(0);
+    setStep(0);
     setExamStatus({ status: "loading", data: null });
     try {
       console.log("Selected Chapters:", selectedChapters);
@@ -572,6 +618,8 @@ export default function TeacherDashboard() {
       };
       console.log("Generating exam with:", payload);
       const response = await generateExam(token, payload);
+      setProgress(100);
+      setStep(generationSteps.length - 1);
       setExamStatus({ status: "success", data: response });
       setExamForm(defaultExamInput);
       setClassSubjects([]);
@@ -581,8 +629,11 @@ export default function TeacherDashboard() {
       setReferenceBooks([]);
       setChapters([]);
       await fetchExams();
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+      setIsGenerating(false);
       router.push(`/teacher/exams/${response.examId}`);
     } catch (error) {
+      setIsGenerating(false);
       setExamStatus({
         status: "error",
         data: null,
@@ -888,9 +939,9 @@ export default function TeacherDashboard() {
                 {isTeacher ? (
                   <Button
                     type="submit"
-                    disabled={!canGenerateExam || examStatus.status === "loading"}
+                    disabled={!canGenerateExam || isGenerating}
                   >
-                    {examStatus.status === "loading" ? "Generatingâ€¦" : "Generate exam"}
+                    {isGenerating ? "Generating..." : "Generate exam"}
                   </Button>
                 ) : null}
                 <Button type="button" variant="ghost" onClick={fetchExams} disabled={!canCallApi}>
@@ -901,6 +952,17 @@ export default function TeacherDashboard() {
                 <p className="text-xs text-ink-soft">
                   Select class, subject, and required books/chapters before generating.
                 </p>
+              ) : null}
+              {isGenerating ? (
+                <div className="space-y-2">
+                  <div className="h-2 overflow-hidden rounded-full bg-sand-200">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-ink-soft">{generationSteps[step]}</p>
+                </div>
               ) : null}
               {examStatus.status === "success" && examStatus.data ? (
                 <StatusBlock

@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import { env } from "../config/env";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
-const DEFAULT_FROM = "Adhyay <onboarding@resend.dev>";
+const DEFAULT_FROM = "Adhyay <noreply@adhyay.techmandalae.com>";
 
 type SendEmailInput = {
   to: string;
@@ -11,6 +11,7 @@ type SendEmailInput = {
   html: string;
   label: string;
   fallbackOtp?: string;
+  from?: string;
 };
 
 async function sendWithResend(input: SendEmailInput): Promise<boolean> {
@@ -45,8 +46,8 @@ async function sendWithResend(input: SendEmailInput): Promise<boolean> {
 
   try {
     const response = await resend.emails.send({
-      from: DEFAULT_FROM,
-      to: input.to,
+      from: input.from ?? DEFAULT_FROM,
+      to: [input.to],
       subject: input.subject,
       html: input.html
     });
@@ -70,10 +71,49 @@ async function sendWithResend(input: SendEmailInput): Promise<boolean> {
 }
 
 export async function sendOtpEmail(to: string, otp: string): Promise<boolean> {
+  console.log("Sending OTP to:", to, "OTP:", otp);
+
   return sendWithResend({
     to,
-    subject: "Verify your email",
-    html: `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`,
+    from: DEFAULT_FROM,
+    subject: "Your OTP Code for Adhyay",
+    html: `
+      <div style="margin:0;padding:30px 16px;background:#f4f6f8;font-family:Arial,sans-serif;">
+        <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:30px;box-shadow:0 4px 12px rgba(0,0,0,0.05);text-align:center;">
+          <h1 style="margin:0 0 10px;color:#ff6a3d;font-size:30px;letter-spacing:1px;">ADHYAY</h1>
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+
+          <p style="margin:0 0 12px;font-size:16px;color:#333;">Hello,</p>
+
+          <p style="margin:0;font-size:14px;color:#555;line-height:1.6;">
+            Thank you for choosing <b>Adhyay</b>.<br />
+            Use this OTP to complete your sign up and verify your account.
+          </p>
+
+          <div style="margin:25px 0;">
+            <span style="display:inline-block;padding:12px 24px;font-size:24px;letter-spacing:4px;font-weight:bold;color:#ffffff;background:#1f4f66;border-radius:8px;">
+              ${otp}
+            </span>
+          </div>
+
+          <p style="margin:0;font-size:13px;color:#888;">
+            This OTP will expire in 10 minutes.
+          </p>
+
+          <p style="margin:20px 0 0;font-size:12px;color:#999;line-height:1.6;">
+            Never share this OTP with anyone.<br />
+            Adhyay will never ask for your OTP.
+          </p>
+
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+
+          <p style="margin:0;font-size:13px;color:#555;">
+            Regards,<br />
+            <b>Team Adhyay</b>
+          </p>
+        </div>
+      </div>
+    `,
     label: "OTP email",
     fallbackOtp: otp
   });
