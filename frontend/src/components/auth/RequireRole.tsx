@@ -12,7 +12,7 @@ type RequireRoleProps = {
 };
 
 export function RequireRole({ roles, children }: RequireRoleProps) {
-  const { user, isLoading } = useAuth();
+  const { token, user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -20,7 +20,6 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
     if (isLoading) {
       return;
     }
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
       router.replace(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
       return;
@@ -32,7 +31,7 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
     if (roles && !roles.includes(user.role)) {
       router.replace(`/unauthorized?from=${encodeURIComponent(pathname ?? "/")}`);
     }
-  }, [isLoading, user, router, roles, pathname]);
+  }, [isLoading, token, user, router, roles, pathname]);
 
   if (isLoading) {
     return (
@@ -42,7 +41,6 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
     );
   }
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
     return null;
   }

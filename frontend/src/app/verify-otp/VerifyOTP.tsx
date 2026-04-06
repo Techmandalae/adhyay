@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -25,6 +25,12 @@ export default function VerifyOTP() {
   const email = searchParams.get("email") ?? "";
   const schoolId = searchParams.get("schoolId") ?? "";
   const pendingVerification = useMemo(() => getPendingVerification(), []);
+  const isLoading = status.state === "loading";
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/signin");
+  }, [router]);
 
   const handleVerify = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -50,7 +56,9 @@ export default function VerifyOTP() {
         });
         signIn(session.token);
         clearPendingVerification();
-        router.push("/dashboard");
+        startTransition(() => {
+          router.replace("/dashboard");
+        });
         return;
       }
 
@@ -59,11 +67,13 @@ export default function VerifyOTP() {
         state: "success",
         message: response.message
       });
-      router.push(
-        `/signin?verified=1&email=${encodeURIComponent(email)}&schoolId=${encodeURIComponent(
-          schoolId
-        )}`
-      );
+      startTransition(() => {
+        router.replace(
+          `/signin?verified=1&email=${encodeURIComponent(email)}&schoolId=${encodeURIComponent(
+            schoolId
+          )}`
+        );
+      });
     } catch (error) {
       setStatus({
         state: "error",
@@ -104,12 +114,22 @@ export default function VerifyOTP() {
           }
         />
         <Card className="space-y-6">
+          {!email ? (
+            <StatusBlock
+              title="Missing verification details"
+              description="Open this page from the registration flow so the email and school details are available."
+              tone="negative"
+            />
+          ) : null}
           <form className="grid gap-4" onSubmit={handleVerify}>
             <Input
               label="OTP"
               value={otp}
               onChange={(event) => setOtp(event.target.value)}
               placeholder="Enter OTP"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              disabled={isLoading || !email}
               required
             />
             {status.state === "error" ? (
@@ -122,15 +142,21 @@ export default function VerifyOTP() {
             {status.state === "success" ? (
               <StatusBlock tone="positive" title="OTP status" description={status.message ?? ""} />
             ) : null}
+            {schoolId ? (
+              <StatusBlock
+                title="School ID"
+                description={schoolId}
+              />
+            ) : null}
             <div className="flex flex-wrap gap-3">
-              <Button type="submit" disabled={status.state === "loading" || !email}>
-                {status.state === "loading" ? "Verifying..." : "Verify"}
+              <Button type="submit" disabled={isLoading || !email}>
+                {isLoading ? "Verifying..." : "Verify"}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleResend}
-                disabled={status.state === "loading" || !email}
+                disabled={isLoading || !email}
               >
                 Resend OTP
               </Button>

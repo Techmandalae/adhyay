@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { registerSchool } from "@/lib/api";
@@ -23,6 +23,10 @@ export default function RegisterSchoolPage() {
     state: "idle" | "loading" | "success" | "error";
     message?: string;
   }>({ state: "idle" });
+
+  useEffect(() => {
+    router.prefetch("/verify-otp");
+  }, [router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -49,11 +53,13 @@ export default function RegisterSchoolPage() {
       setPassword("");
       setLocation("");
       setAdminContactNumber("");
-      router.push(
-        `/verify-otp?email=${encodeURIComponent(trimmedEmail)}&schoolId=${encodeURIComponent(
-          response.schoolId
-        )}`
-      );
+      startTransition(() => {
+        router.replace(
+          `/verify-otp?email=${encodeURIComponent(trimmedEmail)}&schoolId=${encodeURIComponent(
+            response.schoolId
+          )}`
+        );
+      });
     } catch (error) {
       setStatus({
         state: "error",
@@ -71,17 +77,21 @@ export default function RegisterSchoolPage() {
           subtitle="Create the school and principal account in one step."
         />
         <Card className="space-y-6">
-          <form className="grid gap-4" onSubmit={handleSubmit}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
             <Input
               label="School Name"
               value={schoolName}
               onChange={(event) => setSchoolName(event.target.value)}
+              autoComplete="organization"
+              disabled={status.state === "loading"}
               required
             />
             <Input
               label="Admin Name"
               value={adminName}
               onChange={(event) => setAdminName(event.target.value)}
+              autoComplete="name"
+              disabled={status.state === "loading"}
               required
             />
             <Input
@@ -89,18 +99,25 @@ export default function RegisterSchoolPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              disabled={status.state === "loading"}
               required
             />
             <Input
               label="Location"
               value={location}
               onChange={(event) => setLocation(event.target.value)}
+              autoComplete="address-level2"
+              disabled={status.state === "loading"}
               required
             />
             <Input
               label="Admin Contact Number"
               value={adminContactNumber}
               onChange={(event) => setAdminContactNumber(event.target.value)}
+              autoComplete="tel"
+              inputMode="tel"
+              disabled={status.state === "loading"}
               required
             />
             <Input
@@ -108,14 +125,20 @@ export default function RegisterSchoolPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              disabled={status.state === "loading"}
               required
             />
             {status.state === "error" ? (
-              <StatusBlock tone="negative" title="Registration failed" description={status.message ?? ""} />
+              <div className="md:col-span-2">
+                <StatusBlock tone="negative" title="Registration failed" description={status.message ?? ""} />
+              </div>
             ) : null}
-            <Button type="submit" disabled={status.state === "loading"}>
-              {status.state === "loading" ? "Submitting..." : "Register school"}
-            </Button>
+            <div className="md:col-span-2">
+              <Button type="submit" disabled={status.state === "loading"}>
+                {status.state === "loading" ? "Submitting..." : "Register school"}
+              </Button>
+            </div>
           </form>
         </Card>
       </div>

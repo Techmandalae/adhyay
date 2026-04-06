@@ -32,6 +32,8 @@ export const API_BASE = (
 ).replace(/\/+$/, "");
 
 const GET_CACHE_TTL_MS = 5 * 60 * 1000;
+const HOT_CACHE_TTL_MS = 30 * 1000;
+const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
 const getCache = new Map<
   string,
   {
@@ -151,7 +153,6 @@ export async function registerSchool(payload: {
   adminContactNumber: string;
   domain?: string;
 }) {
-  console.log("Calling API:", `${API_BASE}/auth/register-school`);
   return apiFetch<{ schoolId: string; adminId: string; status: string }>(
     "/auth/register-school",
     {
@@ -177,7 +178,6 @@ export async function registerTeacher(payload: {
   name: string;
   employeeId?: string;
 }) {
-  console.log("Calling API:", `${API_BASE}/auth/register-teacher`);
   return apiFetch<{ id: string; approvalStatus: string; schoolId: string; canPublish: boolean }>(
     "/auth/register-teacher",
     { method: "POST", body: JSON.stringify(payload) },
@@ -659,8 +659,6 @@ async function apiFetch<T>(
     throw error;
   }
 
-  console.log("Response status:", response.status, "for", `${API_BASE}${path}`);
-
   const text = await response.text();
   const payload = text ? (JSON.parse(text) as unknown) : null;
 
@@ -689,7 +687,7 @@ export async function getExams(token: string, page = 1, pageSize = 20) {
     page: String(page),
     pageSize: String(pageSize)
   });
-  return apiFetch<ExamListResponse>(`/exams?${query}`, { method: "GET" }, token);
+  return apiFetchCached<ExamListResponse>(`/exams?${query}`, token, HOT_CACHE_TTL_MS);
 }
 
 export async function getExamsByStatus(
@@ -703,7 +701,7 @@ export async function getExamsByStatus(
     pageSize: String(pageSize),
     status
   });
-  return apiFetch<ExamListResponse>(`/exams?${query}`, { method: "GET" }, token);
+  return apiFetchCached<ExamListResponse>(`/exams?${query}`, token, HOT_CACHE_TTL_MS);
 }
 
 export async function getExamById(token: string, examId: string) {
@@ -711,10 +709,10 @@ export async function getExamById(token: string, examId: string) {
 }
 
 export async function getAssignedExams(token: string) {
-  return apiFetch<{ items: ExamListResponse["items"] }>(
+  return apiFetchCached<{ items: ExamListResponse["items"] }>(
     "/exams/student/exams",
-    { method: "GET" },
-    token
+    token,
+    HOT_CACHE_TTL_MS
   );
 }
 
@@ -735,37 +733,46 @@ export async function getExamPreview(token: string, examId: string) {
 }
 
 export async function getArchivedExams(token: string) {
-  return apiFetch<{ items: ExamListResponse["items"] }>(
+  return apiFetchCached<{ items: ExamListResponse["items"] }>(
     "/exams/archived",
-    { method: "GET" },
-    token
+    token,
+    HOT_CACHE_TTL_MS
   );
 }
 
 export async function generateExam(token: string, input: GenerateExamInput) {
-  return apiFetch<GenerateExamResponse>(
+  const response = await apiFetch<GenerateExamResponse>(
     "/exams/generate",
     { method: "POST", body: JSON.stringify(input) },
     token
   );
+  invalidateApiCache("/exams?");
+  invalidateApiCache("/analytics/");
+  return response;
 }
 
 export async function publishExam(token: string, examId: string, assignedClassId: string) {
-  return apiFetch<{
+  const response = await apiFetch<{
     id: string;
     status: string;
     assignedClassId: string | null;
     assignedClassLevel: number | null;
     publishedAt?: string | null;
   }>(`/exams/${examId}/publish`, { method: "POST", body: JSON.stringify({ assignedClassId }) }, token);
+  invalidateApiCache("/exams?");
+  invalidateApiCache("/exams/student/exams");
+  return response;
 }
 
 export async function archiveExam(token: string, examId: string) {
-  return apiFetch<{ id: string; status: string }>(
+  const response = await apiFetch<{ id: string; status: string }>(
     `/exams/${examId}/archive`,
     { method: "POST" },
     token
   );
+  invalidateApiCache("/exams?");
+  invalidateApiCache("/exams/archived");
+  return response;
 }
 
 export async function updateAnswerKeyRelease(
@@ -972,7 +979,6 @@ export async function getSubjects(token: string | null, classId: string) {
 
 export async function loadSubjects(classId: string) {
   const url = `${API_BASE}/academic/subjects/${classId}`;
-  console.log("Calling API:", url);
   return fetchWithCache<{ items: AcademicSubject[] }>(url);
 }
 
@@ -1062,6 +1068,8 @@ export async function uploadSubmission(
     );
   }
 
+  invalidateApiCache("/exams/student/exams");
+  invalidateApiCache("/analytics/student");
   return payload as {
     message?: string;
     submissionId: string;
@@ -1092,10 +1100,10 @@ export async function submitTypedAnswers(
 ======================= */
 
 export async function getPendingEvaluations(token: string) {
-  return apiFetch<{ items: EvaluationSummary[] }>(
+  return apiFetchCached<{ items: EvaluationSummary[] }>(
     "/evaluations/pending",
-    { method: "GET" },
-    token
+    token,
+    HOT_CACHE_TTL_MS
   );
 }
 
@@ -1117,11 +1125,14 @@ export async function reviewEvaluation(
     rejectionReason?: string;
   }
 ) {
-  return apiFetch<EvaluationDetail>(
+  const response = await apiFetch<EvaluationDetail>(
     `/evaluations/${evaluationId}/review`,
     { method: "PATCH", body: JSON.stringify(payload) },
     token
   );
+  invalidateApiCache("/evaluations/pending");
+  invalidateApiCache("/analytics/");
+  return response;
 }
 
 export async function approveSubmission(
@@ -1133,7 +1144,7 @@ export async function approveSubmission(
     rejectionReason?: string;
   }
 ) {
-  return apiFetch<{
+  const response = await apiFetch<{
     submissionId: string;
     status: string;
     teacherScore: number | null;
@@ -1145,6 +1156,9 @@ export async function approveSubmission(
     },
     token
   );
+  invalidateApiCache("/evaluations/pending");
+  invalidateApiCache("/analytics/");
+  return response;
 }
 
 /* =======================
@@ -1174,10 +1188,10 @@ function buildAnalyticsQuery(params: AnalyticsQuery) {
 }
 
 export async function getStudentAnalytics(token: string, params: AnalyticsQuery) {
-  return apiFetch<StudentAnalyticsResponse>(
+  return apiFetchCached<StudentAnalyticsResponse>(
     `/analytics/student${buildAnalyticsQuery(params)}`,
-    { method: "GET" },
-    token
+    token,
+    ANALYTICS_CACHE_TTL_MS
   );
 }
 
@@ -1194,10 +1208,10 @@ export async function getStudentAnalyticsById(
 }
 
 export async function getParentAnalytics(token: string, params: AnalyticsQuery) {
-  return apiFetch<ParentAnalyticsResponse>(
+  return apiFetchCached<ParentAnalyticsResponse>(
     `/analytics/parent${buildAnalyticsQuery(params)}`,
-    { method: "GET" },
-    token
+    token,
+    ANALYTICS_CACHE_TTL_MS
   );
 }
 
@@ -1219,17 +1233,17 @@ export async function getParentChildAnalytics(token: string, studentId: string, 
 }
 
 export async function getTeacherAnalytics(token: string, params: AnalyticsQuery) {
-  return apiFetch<TeacherAnalyticsResponse>(
+  return apiFetchCached<TeacherAnalyticsResponse>(
     `/analytics/teacher${buildAnalyticsQuery(params)}`,
-    { method: "GET" },
-    token
+    token,
+    ANALYTICS_CACHE_TTL_MS
   );
 }
 
 export async function getAdminAnalytics(token: string, params: AnalyticsQuery) {
-  return apiFetch<AdminAnalyticsResponse>(
+  return apiFetchCached<AdminAnalyticsResponse>(
     `/analytics/admin${buildAnalyticsQuery(params)}`,
-    { method: "GET" },
-    token
+    token,
+    ANALYTICS_CACHE_TTL_MS
   );
 }

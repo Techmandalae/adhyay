@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -27,6 +27,10 @@ export function LoginClient() {
   const next = params.get("next") ?? "/";
   const verified = params.get("verified") === "1";
 
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -44,7 +48,9 @@ export function LoginClient() {
       });
       signIn(response.token);
       const decoded = decodeJwt(response.token);
-      router.push(decoded?.role ? getRoleRoute(decoded.role) : next);
+      startTransition(() => {
+        router.replace(decoded?.role ? getRoleRoute(decoded.role) : next);
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Login failed. Please try again.";
@@ -70,12 +76,16 @@ export function LoginClient() {
               placeholder="school_123"
               value={schoolId}
               onChange={(event) => setSchoolId(event.target.value)}
+              autoComplete="organization"
+              disabled={isLoading}
             />
             <Input
               label="Email"
               placeholder="you@school.edu"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              disabled={isLoading}
             />
             <Input
               label="Password"
@@ -83,6 +93,8 @@ export function LoginClient() {
               placeholder="••••••••"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              disabled={isLoading}
             />
             {verified ? (
               <StatusBlock

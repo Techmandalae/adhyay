@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/Button";
@@ -25,37 +27,47 @@ function getProfileHref(role?: string) {
 
 export function TopNav() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const dashboardHref = getRoleRoute(user?.role);
   const profileHref = getProfileHref(user?.role);
 
-  const navItems =
-    user?.role === "TEACHER"
-      ? [
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/exams/new", label: "New Exam" },
-          { href: "/exams/history", label: "History" },
-          { href: "/evaluations/pending", label: "Reviews" },
-          { href: "/reports", label: "Reports" }
-        ]
-      : user?.role === "STUDENT"
+  const navItems = useMemo(
+    () =>
+      user?.role === "TEACHER"
         ? [
             { href: "/dashboard", label: "Dashboard" },
-            { href: "/analytics/class", label: "Analytics" },
-            { href: "/reports", label: "Reports" },
-            { href: "/student/results", label: "Results" }
+            { href: "/exams/new", label: "New Exam" },
+            { href: "/exams/history", label: "History" },
+            { href: "/evaluations/pending", label: "Reviews" },
+            { href: "/reports", label: "Reports" }
           ]
-        : user?.role === "ADMIN"
+        : user?.role === "STUDENT"
           ? [
               { href: "/dashboard", label: "Dashboard" },
               { href: "/analytics/class", label: "Analytics" },
               { href: "/reports", label: "Reports" },
-              { href: "/admin#users", label: "Users" }
+              { href: "/student/results", label: "Results" }
             ]
-          : [];
+          : user?.role === "ADMIN"
+            ? [
+                { href: "/dashboard", label: "Dashboard" },
+                { href: "/analytics/class", label: "Analytics" },
+                { href: "/reports", label: "Reports" },
+                { href: "/admin#users", label: "Users" }
+              ]
+            : [],
+    [user?.role]
+  );
 
   const identityLabel = user
     ? `${user.name ?? user.email ?? "User"} | ID: ${user.publicId ?? user.id}`
     : null;
+
+  useEffect(() => {
+    router.prefetch(dashboardHref);
+    router.prefetch(profileHref);
+    navItems.forEach((item) => router.prefetch(item.href));
+  }, [dashboardHref, navItems, profileHref, router]);
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface px-6 py-4">

@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState
 } from "react";
@@ -24,43 +23,53 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_KEY = "token";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+function getStoredAuthState() {
+  if (typeof window === "undefined") {
+    return {
+      token: null as string | null,
+      user: null as AuthUser | null,
+      isLoading: true
+    };
+  }
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(TOKEN_KEY);
-    if (stored) {
-      const decoded = decodeJwt(stored);
-      setToken(stored);
-      setUser(decoded);
-    }
-    setIsLoading(false);
-  }, []);
+  const stored = window.localStorage.getItem(TOKEN_KEY);
+  return {
+    token: stored,
+    user: stored ? decodeJwt(stored) : null,
+    isLoading: false
+  };
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [authState, setAuthState] = useState(getStoredAuthState);
 
   const signIn = useCallback((newToken: string) => {
-    const decoded = decodeJwt(newToken);
-    setToken(newToken);
-    setUser(decoded);
     window.localStorage.setItem(TOKEN_KEY, newToken);
+    setAuthState({
+      token: newToken,
+      user: decodeJwt(newToken),
+      isLoading: false
+    });
   }, []);
 
   const signOut = useCallback(() => {
-    setToken(null);
-    setUser(null);
     window.localStorage.removeItem(TOKEN_KEY);
+    setAuthState({
+      token: null,
+      user: null,
+      isLoading: false
+    });
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
-      user,
-      isLoading,
+      token: authState.token,
+      user: authState.user,
+      isLoading: authState.isLoading,
       signIn,
       signOut
     }),
-    [token, user, isLoading, signIn, signOut]
+    [authState, signIn, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
