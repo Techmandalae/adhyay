@@ -510,7 +510,7 @@ export default function TeacherTemplatesPage() {
                     <Button variant="outline" onClick={() => handleDelete(template.id)} disabled={!token}>
                       Delete
                     </Button>
-                    <Button variant="ghost" onClick={() => router.push(`/teacher?templateId=${template.id}`)}>
+                    <Button variant="ghost" onClick={() => router.push(`/exams/new?templateId=${template.id}`)}>
                       Use Template
                     </Button>
                   </div>

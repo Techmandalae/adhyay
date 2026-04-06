@@ -31,6 +31,16 @@ export const API_BASE = (
   DEFAULT_API_BASE
 ).replace(/\/+$/, "");
 
+const GET_CACHE_TTL_MS = 5 * 60 * 1000;
+const getCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    data?: unknown;
+    promise?: Promise<unknown>;
+  }
+>();
+
 /* =======================
    Core API Helper
 ======================= */
@@ -43,6 +53,70 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
     this.payload = payload;
+  }
+}
+
+export async function fetchWithCache<T>(
+  url: string,
+  init?: RequestInit & { ttlMs?: number }
+) {
+  const ttlMs = init?.ttlMs ?? GET_CACHE_TTL_MS;
+  const method = init?.method ?? "GET";
+  const headers = new Headers(init?.headers);
+  const authKey = headers.get("Authorization") ?? "public";
+  const cacheKey = `${method}:${url}:${authKey}`;
+  const cached = getCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    if (cached.data !== undefined) {
+      return cached.data as T;
+    }
+    if (cached.promise) {
+      return (await cached.promise) as T;
+    }
+  }
+
+  const request = fetch(url, init).then(async (response) => {
+    const text = await response.text();
+    const payload = text ? (JSON.parse(text) as T) : (null as T);
+
+    if (!response.ok) {
+      getCache.delete(cacheKey);
+      const errorMessage =
+        (payload as { error?: { message?: string } })?.error?.message ??
+        (payload as { error?: string })?.error ??
+        (payload as { message?: string })?.message ??
+        `Request failed with status ${response.status}`;
+      throw new ApiError(errorMessage, response.status, payload);
+    }
+
+    getCache.set(cacheKey, {
+      data: payload,
+      expiresAt: Date.now() + ttlMs
+    });
+
+    return payload;
+  });
+
+  getCache.set(cacheKey, {
+    promise: request,
+    expiresAt: now + ttlMs
+  });
+
+  return (await request) as T;
+}
+
+export function invalidateApiCache(match?: string) {
+  if (!match) {
+    getCache.clear();
+    return;
+  }
+
+  for (const key of getCache.keys()) {
+    if (key.includes(match)) {
+      getCache.delete(key);
+    }
   }
 }
 
@@ -549,6 +623,21 @@ function getAuthHeaders(explicitToken?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function apiFetchCached<T>(
+  path: string,
+  token: string | null = null,
+  ttlMs = GET_CACHE_TTL_MS
+): Promise<T> {
+  return fetchWithCache<T>(`${API_BASE}${path}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(token)
+    },
+    ttlMs
+  });
+}
+
 async function apiFetch<T>(
   path: string,
   options: RequestInit,
@@ -756,46 +845,36 @@ export async function downloadAnswerKeyPdf(token: string, examPaperId: string) {
 ======================= */
 
 export async function getAcademicClasses(token: string | null) {
-  return apiFetch<{ items: AcademicClass[] }>(
-    "/academic/classes",
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<{ items: AcademicClass[] }>("/academic/classes", token);
 }
 
 export async function getAcademicSections(token: string | null) {
-  return apiFetch<{ items: AcademicClass[] }>(
-    "/academic/sections",
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<{ items: AcademicClass[] }>("/academic/sections", token);
 }
 
 export async function getTeacherCatalog(token: string) {
-  return apiFetch<TeacherCatalogResponse>(
-    "/teacher/catalog",
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<TeacherCatalogResponse>("/teacher/catalog", token);
 }
 
 export async function getAcademicSetup(token: string) {
-  return apiFetch<{ items: Array<{ id: string; name: string; hasStreams: boolean; sections: Array<{ id: string; name: string }> }> }>(
-    "/admin/academic-setup",
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<{
+    items: Array<{ id: string; name: string; hasStreams: boolean; sections: Array<{ id: string; name: string }> }>;
+  }>("/admin/academic-setup", token);
 }
 
 export async function saveAcademicSetup(
   token: string,
   payload: { classes: Array<{ name: string; hasStreams: boolean; sections: string[] }> }
 ) {
-  return apiFetch<{ items: Array<{ id: string; name: string }> }>(
+  const response = await apiFetch<{ items: Array<{ id: string; name: string }> }>(
     "/admin/academic-setup",
     { method: "POST", body: JSON.stringify(payload) },
     token
   );
+  invalidateApiCache("/admin/academic-setup");
+  invalidateApiCache("/academic/classes");
+  invalidateApiCache("/academic/sections");
+  return response;
 }
 
 export async function uploadSchoolLogo(token: string, file: File) {
@@ -877,22 +956,14 @@ export async function importTeachers(token: string, file: File) {
 
 export async function getAcademicSubjects(token: string | null, classId: string) {
   const query = new URLSearchParams({ classId });
-  return apiFetch<{ items: AcademicSubject[] }>(
-    `/academic/subjects?${query}`,
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<{ items: AcademicSubject[] }>(`/academic/subjects?${query}`, token);
 }
 
 export async function getAcademicSubjectsByClassId(
   token: string | null,
   classId: string
 ) {
-  return apiFetch<{ items: AcademicSubject[] }>(
-    `/academic/subjects/${classId}`,
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<{ items: AcademicSubject[] }>(`/academic/subjects/${classId}`, token);
 }
 
 export async function getSubjects(token: string | null, classId: string) {
@@ -902,8 +973,7 @@ export async function getSubjects(token: string | null, classId: string) {
 export async function loadSubjects(classId: string) {
   const url = `${API_BASE}/academic/subjects/${classId}`;
   console.log("Calling API:", url);
-  const response = await fetch(url);
-  return response.json();
+  return fetchWithCache<{ items: AcademicSubject[] }>(url);
 }
 
 export async function getAcademicBooksBySubjectId(
@@ -912,9 +982,8 @@ export async function getAcademicBooksBySubjectId(
   subjectId: string
 ) {
   const query = new URLSearchParams({ classId, subjectId });
-  return apiFetch<{ ncertBooks: AcademicBook[]; referenceBooks: AcademicBook[] }>(
+  return apiFetchCached<{ ncertBooks: AcademicBook[]; referenceBooks: AcademicBook[] }>(
     `/academic/books?${query}`,
-    { method: "GET" },
     token
   );
 }
@@ -925,11 +994,7 @@ export async function getAcademicBooks(
   subjectId: string
 ) {
   const query = new URLSearchParams({ classId, subjectId });
-  return apiFetch<AcademicBooksResponse>(
-    `/academic/books?${query}`,
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<AcademicBooksResponse>(`/academic/books?${query}`, token);
 }
 
 export async function getAcademicChapters(
@@ -942,11 +1007,7 @@ export async function getAcademicChapters(
   if (classId) query.set("classId", classId);
   if (subjectId) query.set("subjectId", subjectId);
   const suffix = query.toString() ? `?${query}` : "";
-  return apiFetch<AcademicChaptersResponse>(
-    `/academic/chapters/${bookId}${suffix}`,
-    { method: "GET" },
-    token
-  );
+  return apiFetchCached<AcademicChaptersResponse>(`/academic/chapters/${bookId}${suffix}`, token);
 }
 
 export async function getProfile(token: string) {

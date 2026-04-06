@@ -85,10 +85,16 @@ async function getClassSubjectsWithBooks(classId: string, schoolId: string, expe
   const subjects = await prisma.academicSubject.findMany({
     where: { classId, schoolId },
     orderBy: { name: "asc" },
-    include: {
+    select: {
+      id: true,
+      name: true,
       books: {
         orderBy: { name: "asc" },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          subjectId: true,
           chapters: { orderBy: { title: "asc" }, select: { id: true, title: true, bookId: true } }
         }
       }
@@ -215,8 +221,15 @@ router.get("/sections", async (req: Request, res: Response, next: NextFunction) 
 
     const sections = await prisma.academicSection.findMany({
       where: { schoolId: user.schoolId },
-      include: {
-        classStandard: true
+      select: {
+        id: true,
+        name: true,
+        classStandardId: true,
+        classStandard: {
+          select: {
+            name: true
+          }
+        }
       }
     });
 

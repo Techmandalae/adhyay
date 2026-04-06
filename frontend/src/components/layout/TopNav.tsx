@@ -28,14 +28,30 @@ export function TopNav() {
   const dashboardHref = getRoleRoute(user?.role);
   const profileHref = getProfileHref(user?.role);
 
-  const adminItems =
-    user?.role === "ADMIN"
+  const navItems =
+    user?.role === "TEACHER"
       ? [
-          { href: "/admin#academic-setup", label: "Academic Setup" },
-          { href: "/admin#users", label: "Users" },
-          { href: "/admin/profile", label: "Profile" }
+          { href: "/dashboard", label: "Dashboard" },
+          { href: "/exams/new", label: "New Exam" },
+          { href: "/exams/history", label: "History" },
+          { href: "/evaluations/pending", label: "Reviews" },
+          { href: "/reports", label: "Reports" }
         ]
-      : [];
+      : user?.role === "STUDENT"
+        ? [
+            { href: "/dashboard", label: "Dashboard" },
+            { href: "/analytics/class", label: "Analytics" },
+            { href: "/reports", label: "Reports" },
+            { href: "/student/results", label: "Results" }
+          ]
+        : user?.role === "ADMIN"
+          ? [
+              { href: "/dashboard", label: "Dashboard" },
+              { href: "/analytics/class", label: "Analytics" },
+              { href: "/reports", label: "Reports" },
+              { href: "/admin#users", label: "Users" }
+            ]
+          : [];
 
   const identityLabel = user
     ? `${user.name ?? user.email ?? "User"} | ID: ${user.publicId ?? user.id}`
@@ -54,9 +70,9 @@ export function TopNav() {
       </Link>
 
       <div className="flex flex-wrap items-center gap-3">
-        {adminItems.length > 0 ? (
+        {navItems.length > 0 ? (
           <nav className="flex flex-wrap items-center gap-2">
-            {adminItems.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}

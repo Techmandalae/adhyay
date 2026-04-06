@@ -51,7 +51,30 @@ export default function ArchivedExamsPage() {
   };
 
   useEffect(() => {
-    void loadArchivedExams();
+    if (!token) return;
+
+    let isActive = true;
+
+    const preloadArchivedExams = async () => {
+      try {
+        const response = await getArchivedExams(token);
+        if (!isActive) return;
+        setState({ status: "success", data: response.items });
+      } catch (error) {
+        if (!isActive) return;
+        setState({
+          status: "error",
+          data: null,
+          error: error instanceof Error ? error.message : "Failed to load archived exams"
+        });
+      }
+    };
+
+    void preloadArchivedExams();
+
+    return () => {
+      isActive = false;
+    };
   }, [token]);
 
   const handleDownloadPdf = async (examId: string) => {
@@ -76,8 +99,8 @@ export default function ArchivedExamsPage() {
         />
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/teacher">
-            <Button variant="outline">Back to teacher dashboard</Button>
+          <Link href="/exams/history">
+            <Button variant="outline">Back to exam history</Button>
           </Link>
           <Button variant="outline" onClick={() => void loadArchivedExams()} disabled={!token}>
             Refresh archived exams

@@ -18,13 +18,14 @@ export function LoginClient() {
   const { signIn } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [schoolId, setSchoolId] = useState(params.get("schoolId") ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const next = params.get("next") ?? "/";
+  const verified = params.get("verified") === "1";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -83,6 +84,13 @@ export function LoginClient() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+            {verified ? (
+              <StatusBlock
+                title="Email verified"
+                description="Your account is verified. Sign in to open your dashboard."
+                tone="positive"
+              />
+            ) : null}
             {error ? <StatusBlock title="Login failed" description={error} tone="negative" /> : null}
             <div className="flex justify-end">
               <Link
