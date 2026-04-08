@@ -5,9 +5,9 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { BrandLockup } from "@/components/layout/BrandLockup";
 import { Button } from "@/components/ui/Button";
 import { getRoleRoute } from "@/lib/auth";
-import { APP_NAME, APP_TAGLINE } from "@/lib/branding";
 
 function getProfileHref(role?: string) {
   switch (role) {
@@ -70,18 +70,9 @@ export function TopNav() {
   }, [dashboardHref, navItems, profileHref, router]);
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface px-6 py-4">
-      <Link href={dashboardHref} className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-2xl bg-accent text-center text-xl font-black text-white shadow-[0_12px_20px_rgba(255,107,53,0.3)]">
-          A
-        </div>
-        <div>
-          <p className="font-display text-lg font-semibold">{APP_NAME}</p>
-          <p className="text-xs text-ink-soft">{APP_TAGLINE}</p>
-        </div>
-      </Link>
-
-      <div className="flex flex-wrap items-center gap-3">
+    <header className="border-b border-border bg-surface px-6 py-4">
+      <div className="grid items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
+        <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
         {navItems.length > 0 ? (
           <nav className="flex flex-wrap items-center gap-2">
             {navItems.map((item) => (
@@ -95,7 +86,11 @@ export function TopNav() {
             ))}
           </nav>
         ) : null}
+        </div>
 
+        <BrandLockup href={dashboardHref} className="justify-center" />
+
+        <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
         {user ? (
           <>
             {identityLabel ? (
@@ -115,6 +110,7 @@ export function TopNav() {
             <Button>Sign in</Button>
           </Link>
         )}
+        </div>
       </div>
     </header>
   );

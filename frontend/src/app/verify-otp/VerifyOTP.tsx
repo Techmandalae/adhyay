@@ -3,7 +3,9 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AuthSecondaryAction } from "@/components/auth/AuthSecondaryAction";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -104,6 +106,7 @@ export default function VerifyOTP() {
   return (
     <div className="app-shell min-h-screen px-6 py-16">
       <div className="mx-auto max-w-xl space-y-8">
+        <AuthPageHeader action={<AuthSecondaryAction />} />
         <SectionHeader
           eyebrow="Email verification"
           title="Verify OTP"

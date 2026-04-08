@@ -3,6 +3,9 @@
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AuthSecondaryAction } from "@/components/auth/AuthSecondaryAction";
+import { UsernameField } from "@/components/auth/UsernameField";
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { registerSchool } from "@/lib/api";
 import { setPendingVerification } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +18,7 @@ export default function RegisterSchoolPage() {
   const router = useRouter();
   const [schoolName, setSchoolName] = useState("");
   const [adminName, setAdminName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
@@ -45,7 +49,8 @@ export default function RegisterSchoolPage() {
       setPendingVerification({
         email: trimmedEmail,
         schoolId: response.schoolId,
-        password: trimmedPassword
+        password: trimmedPassword,
+        username
       });
       setSchoolName("");
       setAdminName("");
@@ -71,6 +76,7 @@ export default function RegisterSchoolPage() {
   return (
     <div className="app-shell min-h-screen px-6 py-16">
       <div className="mx-auto max-w-3xl space-y-8">
+        <AuthPageHeader action={<AuthSecondaryAction />} />
         <SectionHeader
           eyebrow="School registration"
           title="Register your institution"
@@ -93,6 +99,12 @@ export default function RegisterSchoolPage() {
               autoComplete="name"
               disabled={status.state === "loading"}
               required
+            />
+            <UsernameField
+              sourceName={adminName}
+              label="Admin username"
+              disabled={status.state === "loading"}
+              onValueChange={setUsername}
             />
             <Input
               label="Email"

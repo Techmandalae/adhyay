@@ -6,6 +6,7 @@ export type PendingVerificationSession = {
   email: string;
   schoolId?: string;
   password?: string;
+  username?: string;
 };
 
 export function getRoleRoute(role?: UserRole) {

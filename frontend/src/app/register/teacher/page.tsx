@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AuthSecondaryAction } from "@/components/auth/AuthSecondaryAction";
+import { UsernameField } from "@/components/auth/UsernameField";
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { registerTeacher } from "@/lib/api";
 import { setPendingVerification } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +17,7 @@ import { StatusBlock } from "@/components/ui/StatusBlock";
 export default function RegisterTeacherPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [schoolId, setSchoolId] = useState("");
@@ -21,6 +25,10 @@ export default function RegisterTeacherPage() {
     state: "idle" | "loading" | "success" | "error";
     message?: string;
   }>({ state: "idle" });
+
+  useEffect(() => {
+    router.prefetch("/verify-otp");
+  }, [router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -38,17 +46,20 @@ export default function RegisterTeacherPage() {
       setPendingVerification({
         email: trimmedEmail,
         schoolId: response.schoolId,
-        password: trimmedPassword
+        password: trimmedPassword,
+        username
       });
       setName("");
       setEmail("");
       setPassword("");
       setSchoolId("");
-      router.push(
-        `/verify-otp?email=${encodeURIComponent(trimmedEmail)}&schoolId=${encodeURIComponent(
-          response.schoolId
-        )}`
-      );
+      startTransition(() => {
+        router.replace(
+          `/verify-otp?email=${encodeURIComponent(trimmedEmail)}&schoolId=${encodeURIComponent(
+            response.schoolId
+          )}`
+        );
+      });
     } catch (error) {
       setStatus({
         state: "error",
@@ -60,24 +71,34 @@ export default function RegisterTeacherPage() {
   return (
     <div className="app-shell min-h-screen px-6 py-16">
       <div className="mx-auto max-w-3xl space-y-8">
+        <AuthPageHeader action={<AuthSecondaryAction />} />
         <SectionHeader
           eyebrow="Teacher registration"
           title="Register as a teacher"
           subtitle="Use a school ID to join a school or leave it blank to work independently."
         />
         <Card className="space-y-6">
-          <form className="grid gap-4" onSubmit={handleSubmit}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
             <Input
               label="Full Name"
               value={name}
               onChange={(event) => setName(event.target.value)}
+              autoComplete="name"
+              disabled={status.state === "loading"}
               required
+            />
+            <UsernameField
+              sourceName={name}
+              disabled={status.state === "loading"}
+              onValueChange={setUsername}
             />
             <Input
               label="Email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              disabled={status.state === "loading"}
               required
             />
             <Input
@@ -85,6 +106,8 @@ export default function RegisterTeacherPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              disabled={status.state === "loading"}
               required
             />
             <Input
@@ -92,13 +115,19 @@ export default function RegisterTeacherPage() {
               value={schoolId}
               onChange={(event) => setSchoolId(event.target.value)}
               helperText="Optional. Leave blank to create an independent teacher workspace."
+              autoComplete="organization"
+              disabled={status.state === "loading"}
             />
             {status.state === "error" ? (
-              <StatusBlock tone="negative" title="Registration failed" description={status.message ?? ""} />
+              <div className="md:col-span-2">
+                <StatusBlock tone="negative" title="Registration failed" description={status.message ?? ""} />
+              </div>
             ) : null}
-            <Button type="submit" disabled={status.state === "loading"}>
-              {status.state === "loading" ? "Submitting..." : "Register teacher"}
-            </Button>
+            <div className="md:col-span-2">
+              <Button type="submit" disabled={status.state === "loading"}>
+                {status.state === "loading" ? "Submitting..." : "Register teacher"}
+              </Button>
+            </div>
           </form>
         </Card>
       </div>

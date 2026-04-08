@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Space_Grotesk } from "next/font/google";
+import { Footer } from "@/components/layout/Footer";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/branding";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -18,7 +19,10 @@ const bodyFont = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: APP_DESCRIPTION
+  description: APP_DESCRIPTION,
+  icons: {
+    icon: "/logo.png"
+  }
 };
 
 export default function RootLayout({
@@ -28,8 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
-        <Providers>{children}</Providers>
+      <body className={`${displayFont.variable} ${bodyFont.variable} flex min-h-screen flex-col antialiased`}>
+        <Providers>
+          <div className="flex min-h-screen flex-1 flex-col">{children}</div>
+        </Providers>
+        <Footer />
       </body>
     </html>
   );

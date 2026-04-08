@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AuthSecondaryAction } from "@/components/auth/AuthSecondaryAction";
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -21,6 +23,7 @@ export default function RegisterSelectorPage() {
   return (
     <div className="app-shell min-h-screen px-6 py-16">
       <div className="mx-auto max-w-5xl space-y-8">
+        <AuthPageHeader action={<AuthSecondaryAction />} />
         <SectionHeader
           eyebrow="Get started"
           title="Choose your registration path"
