@@ -22,7 +22,6 @@ export type ImportPreviewResult = {
 const studentSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email is required"),
-  password: z.string().trim().min(6, "Password must be at least 6 characters").default("Temp@123"),
   className: z.string().trim().min(1, "Class is required"),
   sectionName: z.string().trim().min(1, "Section is required"),
   parentEmail: z.string().trim().email("Valid parent email is required")
@@ -31,7 +30,6 @@ const studentSchema = z.object({
 const teacherSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email is required"),
-  password: z.string().trim().min(6, "Password must be at least 6 characters").default("Temp@123"),
   phone: z.string().trim().optional(),
   subject: z.string().trim().optional()
 });
@@ -39,18 +37,16 @@ const teacherSchema = z.object({
 export const studentImportColumns = [
   "name",
   "email",
-  "password",
   "className",
   "sectionName",
   "parentEmail"
 ] as const;
 
-export const teacherImportColumns = ["name", "email", "password", "phone"] as const;
+export const teacherImportColumns = ["name", "email", "phone"] as const;
 
 export const studentSampleRow = {
   name: "Aarav Sharma",
   email: "aarav@example.com",
-  password: "Temp@123",
   className: "Class 10",
   sectionName: "A",
   parentEmail: "parent@example.com"
@@ -59,7 +55,6 @@ export const studentSampleRow = {
 export const teacherSampleRow = {
   name: "Riya Singh",
   email: "riya@example.com",
-  password: "Temp@123",
   phone: "+91-9000000000"
 };
 
@@ -98,7 +93,6 @@ function buildStudentPreview(rows: Record<string, unknown>[]): ImportPreviewResu
     const candidate = {
       name: firstNonEmptyValue(normalized, "name", "studentname"),
       email: firstNonEmptyValue(normalized, "email", "studentemail"),
-      password: firstNonEmptyValue(normalized, "password") || "Temp@123",
       className: firstNonEmptyValue(normalized, "classname", "class"),
       sectionName: firstNonEmptyValue(normalized, "sectionname", "section"),
       parentEmail: firstNonEmptyValue(normalized, "parentemail")
@@ -112,7 +106,6 @@ function buildStudentPreview(rows: Record<string, unknown>[]): ImportPreviewResu
       values: {
         name: candidate.name,
         email: candidate.email,
-        password: candidate.password,
         className: candidate.className,
         sectionName: candidate.sectionName,
         parentEmail: candidate.parentEmail
@@ -134,7 +127,6 @@ function buildTeacherPreview(rows: Record<string, unknown>[]): ImportPreviewResu
     const candidate = {
       name: firstNonEmptyValue(normalized, "name"),
       email: firstNonEmptyValue(normalized, "email"),
-      password: firstNonEmptyValue(normalized, "password") || "Temp@123",
       phone: firstNonEmptyValue(normalized, "phone", "contact"),
       subject: firstNonEmptyValue(normalized, "subject")
     };
@@ -147,7 +139,6 @@ function buildTeacherPreview(rows: Record<string, unknown>[]): ImportPreviewResu
       values: {
         name: candidate.name,
         email: candidate.email,
-        password: candidate.password,
         phone: candidate.phone,
         subject: candidate.subject
       }
@@ -198,7 +189,7 @@ export function downloadErrorCsv(kind: ImportKind, rows: ImportPreviewRow[]) {
   const header =
     kind === "students"
       ? ["rowNumber", "message", "name", "email", "className", "sectionName", "parentEmail"]
-      : ["rowNumber", "message", "name", "email", "phone", "subject", "password"];
+      : ["rowNumber", "message", "name", "email", "phone", "subject"];
 
   const data = invalidRows.map((row) =>
     kind === "students"
@@ -217,8 +208,7 @@ export function downloadErrorCsv(kind: ImportKind, rows: ImportPreviewRow[]) {
           row.values.name ?? "",
           row.values.email ?? "",
           row.values.phone ?? "",
-          row.values.subject ?? "",
-          row.values.password ?? ""
+          row.values.subject ?? ""
         ]
   );
 

@@ -12,7 +12,7 @@ import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { requireAdmin } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
-import { sendPasswordResetEmail } from "../utils/email";
+import { sendSetPasswordEmail } from "../utils/email";
 
 const csvParser = require("csv-parser") as () => NodeJS.ReadWriteStream;
 
@@ -90,7 +90,7 @@ const importStudentRowSchema = z
   .object({
     name: z.string().trim().min(1),
     email: z.string().trim().email(),
-    password: z.string().trim().min(6).default("Temp@123"),
+    password: z.string().trim().min(6).optional(),
     className: z.string().trim().min(1),
     sectionName: z.string().trim().min(1),
     parentEmail: z.string().trim().email(),
@@ -106,7 +106,7 @@ const importTeacherRowSchema = z
   .object({
     name: z.string().trim().min(1),
     email: z.string().trim().email(),
-    password: z.string().trim().min(6).default("Temp@123"),
+    password: z.string().trim().min(6).optional(),
     phone: z.string().trim().optional(),
     subject: z.string().trim().optional()
   })
@@ -223,7 +223,7 @@ async function sendUserOnboardingEmail(params: {
   });
 
   const resetLink = `${frontendBase.replace(/\/+$/, "")}/set-password?token=${encodeURIComponent(token)}`;
-  const sent = await sendPasswordResetEmail(params.to, resetLink);
+  const sent = await sendSetPasswordEmail(params.to, resetLink);
 
   if (!sent) {
     console.warn("[email] onboarding email was not sent", {
@@ -254,10 +254,10 @@ function mapImportRows(rows: Record<string, unknown>[]): ParsedImportResult<z.in
 
   rows.forEach((row, index) => {
     const normalized = normalizeImportRow(row);
-    const candidate = {
-      name: firstNonEmptyValue(normalized, "name", "studentname"),
-      email: firstNonEmptyValue(normalized, "email", "studentemail"),
-      password: firstNonEmptyValue(normalized, "password") ?? "Temp@123",
+      const candidate = {
+        name: firstNonEmptyValue(normalized, "name", "studentname"),
+        email: firstNonEmptyValue(normalized, "email", "studentemail"),
+      password: firstNonEmptyValue(normalized, "password"),
       className: firstNonEmptyValue(normalized, "classname", "class"),
       sectionName: firstNonEmptyValue(normalized, "sectionname", "section"),
       parentEmail: firstNonEmptyValue(normalized, "parentemail"),
@@ -305,7 +305,7 @@ function mapTeacherImportRows(
     const candidate = {
       name: firstNonEmptyValue(normalized, "name"),
       email: firstNonEmptyValue(normalized, "email"),
-      password: firstNonEmptyValue(normalized, "password") ?? "Temp@123",
+      password: firstNonEmptyValue(normalized, "password"),
       phone: firstNonEmptyValue(normalized, "phone", "contact"),
       subject: firstNonEmptyValue(normalized, "subject")
     };
@@ -946,7 +946,7 @@ adminRouter.post(
 
           const parentName = row.parentName?.trim() || `${row.name} Parent`;
           const parentPassword = createImportedPasswordHashSource(row.parentEmail);
-          const studentPassword = row.password;
+          const studentPassword = createImportedPasswordHashSource(row.email);
           const parentPasswordHash = await bcrypt.hash(parentPassword, 12);
           const studentPasswordHash = await bcrypt.hash(studentPassword, 12);
 
@@ -1163,7 +1163,7 @@ adminRouter.post(
 
       for (const row of parsedRows.validRows) {
         try {
-          const teacherPassword = row.password;
+          const teacherPassword = createImportedPasswordHashSource(row.email);
           const teacherPasswordHash = await bcrypt.hash(teacherPassword, 12);
 
           const teacher = await prisma.user.upsert({

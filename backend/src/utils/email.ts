@@ -132,6 +132,20 @@ export async function sendPasswordResetEmail(to: string, link: string): Promise<
   });
 }
 
+export async function sendSetPasswordEmail(to: string, link: string): Promise<boolean> {
+  return sendWithResend({
+    to,
+    subject: "Welcome to Adhyay",
+    html: `
+      <p>Your Adhyay account is ready.</p>
+      <p>Click the button below to set your password and access your dashboard.</p>
+      <p><a href="${link}">Set Password</a></p>
+      <p>This link expires in 7 days.</p>
+    `,
+    label: "Set password email"
+  });
+}
+
 export async function sendVerificationEmail(to: string, link: string): Promise<boolean> {
   return sendWithResend({
     to,

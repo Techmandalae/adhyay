@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +15,7 @@ import { APP_NAME } from "@/lib/branding";
 
 export function ResetPasswordForm({ token }: { token?: string | null }) {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<{
@@ -49,6 +51,11 @@ export function ResetPasswordForm({ token }: { token?: string | null }) {
         newPassword: newPassword.trim()
       });
       setStatus({ type: "success", message: response.message });
+      if (response.token) {
+        signIn(response.token);
+        window.setTimeout(() => router.push("/dashboard"), 1200);
+        return;
+      }
       window.setTimeout(() => router.push("/signin"), 1500);
     } catch (error) {
       setStatus({

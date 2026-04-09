@@ -299,11 +299,35 @@ authRouter.post("/reset-password", async (req, res, next) => {
     const user = record.schoolId
       ? await prisma.user.findUnique({
           where: { schoolId_email: { schoolId: record.schoolId, email: record.email } },
-          select: { id: true }
+          include: {
+            teacherProfile: true,
+            studentProfile: true,
+            parentProfile: {
+              include: {
+                children: {
+                  include: { student: true }
+                }
+              }
+            },
+            adminProfile: true,
+            school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+          }
         })
       : await prisma.user.findFirst({
           where: { email: record.email, role: "SUPER_ADMIN" },
-          select: { id: true }
+          include: {
+            teacherProfile: true,
+            studentProfile: true,
+            parentProfile: {
+              include: {
+                children: {
+                  include: { student: true }
+                }
+              }
+            },
+            adminProfile: true,
+            school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+          }
         });
 
     if (!user) {
@@ -318,7 +342,57 @@ authRouter.post("/reset-password", async (req, res, next) => {
 
     await prisma.passwordResetToken.delete({ where: { token: record.token } });
 
-    res.json({ message: "Password updated successfully" });
+    const parentPrimaryStudent = user.parentProfile?.children[0]?.student ?? null;
+    const isIndependentTeacher = Boolean(
+      user.role === "TEACHER" &&
+        (user.teacherProfile?.isIndependent || user.school?.isIndependentWorkspace)
+    );
+    const payload: AuthUser = {
+      id: user.id,
+      role: user.role,
+      schoolId: user.schoolId,
+      ...(user.teacherProfile ? { teacherId: user.teacherProfile.id } : {}),
+      ...(user.studentProfile
+        ? {
+            studentId: user.studentProfile.id,
+            classId: user.studentProfile.classId,
+            classLevel: user.studentProfile.classLevel,
+            ...(user.studentProfile.sectionId ? { sectionId: user.studentProfile.sectionId } : {})
+          }
+        : {}),
+      ...(user.parentProfile ? { parentId: user.parentProfile.id } : {}),
+      ...(user.adminProfile ? { adminId: user.adminProfile.id } : {}),
+      ...(user.parentProfile
+        ? {
+            studentIds: user.parentProfile.children.map((link) => link.studentId),
+            ...(parentPrimaryStudent
+              ? {
+                  classId: parentPrimaryStudent.classId,
+                  classLevel: parentPrimaryStudent.classLevel,
+                  ...(parentPrimaryStudent.sectionId
+                    ? { sectionId: parentPrimaryStudent.sectionId }
+                    : {})
+                }
+              : {})
+          }
+        : {}),
+      ...(user.name ? { name: user.name } : {}),
+      ...(user.email ? { email: user.email } : {}),
+      ...(user.publicId ? { publicId: user.publicId } : {}),
+      ...(user.role === "TEACHER"
+        ? {
+            canPublish: !isIndependentTeacher,
+            isIndependentTeacher
+          }
+        : {}),
+      emailVerified: user.isVerified || user.emailVerified,
+      ...(user.school?.meta ? { schoolMeta: user.school.meta as Record<string, unknown> } : {}),
+      ...(user.school?.status ? { schoolStatus: user.school.status } : {}),
+      ...(user.approvalStatus ? { approvalStatus: user.approvalStatus } : {})
+    };
+
+    const authToken = buildToken(payload);
+    res.json({ message: "Password updated successfully", token: authToken, user: payload });
   } catch (error) {
     next(error);
   }

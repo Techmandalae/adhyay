@@ -20,6 +20,7 @@ import type {
   TeacherAnalyticsResponse
 } from "@/types/analytics";
 import type { NotificationDispatchSummary } from "@/types/notifications";
+import type { AuthUser } from "@/types/auth";
 
 const DEFAULT_API_BASE =
   process.env.NODE_ENV === "production"
@@ -230,7 +231,7 @@ export async function resetPassword(payload: {
   token: string;
   newPassword: string;
 }) {
-  return apiFetch<{ message: string }>(
+  return apiFetch<{ message: string; token?: string; user?: AuthUser }>(
     "/auth/reset-password",
     { method: "POST", body: JSON.stringify(payload) },
     null
@@ -900,9 +901,9 @@ export async function saveAcademicSetup(
 
 export async function uploadSchoolLogo(token: string, file: File) {
   const formData = new FormData();
-  formData.append("logo", file);
+  formData.append("file", file);
 
-  const response = await fetch(`${API_BASE}/admin/logo`, {
+  const response = await fetch("/api/upload-logo", {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData
@@ -920,15 +921,29 @@ export async function uploadSchoolLogo(token: string, file: File) {
     );
   }
 
-  return payload as { logoUrl: string };
+  return payload as { logoUrl: string; url?: string | null };
 }
 
 export async function deleteSchoolLogo(token: string) {
-  return apiFetch<{ logoUrl: string | null }>(
-    "/admin/logo",
-    { method: "DELETE" },
-    token
-  );
+  const response = await fetch("/api/upload-logo", {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+
+  const text = await response.text();
+  const payload = text ? (JSON.parse(text) as unknown) : null;
+
+  if (!response.ok) {
+    throw new ApiError(
+      (payload as { error?: string })?.error ??
+        (payload as { message?: string })?.message ??
+        `Request failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  return payload as { logoUrl: string | null; url?: string | null };
 }
 
 export async function importStudents(token: string, file: File) {

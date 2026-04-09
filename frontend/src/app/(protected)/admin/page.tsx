@@ -123,7 +123,6 @@ function ImportInstructions({ kind }: { kind: ImportKind }) {
       ? [
           studentSampleRow.name,
           studentSampleRow.email,
-          studentSampleRow.password,
           studentSampleRow.className,
           studentSampleRow.sectionName,
           studentSampleRow.parentEmail
@@ -131,7 +130,6 @@ function ImportInstructions({ kind }: { kind: ImportKind }) {
       : [
           teacherSampleRow.name,
           teacherSampleRow.email,
-          teacherSampleRow.password,
           teacherSampleRow.phone
         ];
 
@@ -467,7 +465,7 @@ export default function AdminDashboard() {
     try {
       const response = await uploadSchoolLogo(token, selectedFile);
       setLogoState({ status: "success", data: response });
-      setLogoPreviewUrl(URL.createObjectURL(selectedFile));
+      setLogoPreviewUrl(response.url ?? URL.createObjectURL(selectedFile));
       setLogoToast("Logo uploaded successfully");
       window.setTimeout(() => setLogoToast(null), 3000);
     } catch (error) {
@@ -483,9 +481,9 @@ export default function AdminDashboard() {
     if (!token) return;
     setLogoState({ status: "loading", data: logoState.data });
     try {
-      await deleteSchoolLogo(token);
+      const response = await deleteSchoolLogo(token);
       setLogoPreviewUrl(null);
-      setLogoState({ status: "success", data: { logoUrl: "" } });
+      setLogoState({ status: "success", data: { logoUrl: response.logoUrl ?? "" } });
       setLogoToast("Logo removed successfully");
       window.setTimeout(() => setLogoToast(null), 3000);
     } catch (error) {
