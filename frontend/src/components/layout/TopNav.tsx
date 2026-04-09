@@ -5,8 +5,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
-import { BrandLockup } from "@/components/layout/BrandLockup";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/ui/Logo";
 import { getRoleRoute } from "@/lib/auth";
 
 function getProfileHref(role?: string) {
@@ -41,32 +41,32 @@ export function TopNav() {
   }, [dashboardHref, profileHref, router]);
 
   return (
-    <header className="border-b border-border bg-surface px-6 py-4">
-      <div className="grid items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
-        <div className="hidden md:block" />
+    <header className="border-b border-border bg-surface px-6 py-3">
+      <div className="flex items-center justify-between gap-4">
+        <Link href={dashboardHref} className="flex items-center gap-2">
+          <Logo variant="full" size="md" />
+        </Link>
 
-        <BrandLockup href={dashboardHref} className="justify-center" />
-
-        <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
-        {user ? (
-          <>
-            {identityLabel ? (
-              <Link
-                href={profileHref}
-                className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition hover:bg-white"
-              >
-                {identityLabel}
-              </Link>
-            ) : null}
-            <Button variant="outline" onClick={signOut}>
-              Logout
-            </Button>
-          </>
-        ) : (
-          <Link href="/signin">
-            <Button>Sign in</Button>
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {user ? (
+            <>
+              {identityLabel ? (
+                <Link
+                  href={profileHref}
+                  className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition hover:bg-white"
+                >
+                  {identityLabel}
+                </Link>
+              ) : null}
+              <Button variant="outline" onClick={signOut}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Link href="/signin">
+              <Button>Sign in</Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>

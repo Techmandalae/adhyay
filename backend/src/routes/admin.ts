@@ -763,105 +763,99 @@ adminRouter.post("/academic-setup", async (req, res, next) => {
   try {
     const admin = req.user!;
     const payload = parsed.data;
+    const createdStandards = [];
 
-    const results = await prisma.$transaction(async (tx) => {
-      const createdStandards = [];
+    for (const klass of payload.classes) {
+      const standard = await prisma.academicClassStandard.upsert({
+        where: { schoolId_name: { schoolId: admin.schoolId, name: klass.name } },
+        update: { hasStreams: klass.hasStreams ?? false },
+        create: {
+          schoolId: admin.schoolId,
+          name: klass.name,
+          hasStreams: klass.hasStreams ?? false
+        }
+      });
 
-      for (const klass of payload.classes) {
-        const standard = await tx.academicClassStandard.upsert({
-          where: { schoolId_name: { schoolId: admin.schoolId, name: klass.name } },
-          update: { hasStreams: klass.hasStreams ?? false },
+      const sectionNames = klass.sections ?? [];
+      if (sectionNames.length > 0) {
+        await prisma.academicSection.createMany({
+          data: sectionNames.map((name) => ({
+            schoolId: admin.schoolId,
+            classStandardId: standard.id,
+            name
+          })),
+          skipDuplicates: true
+        });
+      }
+
+      const classLevel = getClassLevel(klass.name);
+      if (classLevel !== null) {
+        const academicClass = await prisma.academicClass.upsert({
+          where: { schoolId_classLevel: { schoolId: admin.schoolId, classLevel } },
+          update: {
+            name: klass.name,
+            classStandardId: standard.id
+          },
           create: {
             schoolId: admin.schoolId,
+            classLevel,
             name: klass.name,
-            hasStreams: klass.hasStreams ?? false
+            classStandardId: standard.id,
+            isSystem: false
           }
         });
 
-        const sectionNames = klass.sections ?? [];
-        if (sectionNames.length > 0) {
-          await tx.academicSection.createMany({
-            data: sectionNames.map((name) => ({
-              schoolId: admin.schoolId,
-              classStandardId: standard.id,
-              name
-            })),
-            skipDuplicates: true
-          });
-        }
-
-        const classLevel = getClassLevel(klass.name);
-        if (classLevel !== null) {
-          await tx.academicClass.upsert({
-            where: { schoolId_classLevel: { schoolId: admin.schoolId, classLevel } },
-            update: {
-              name: klass.name,
-              classStandardId: standard.id
-            },
-            create: {
-              schoolId: admin.schoolId,
-              classLevel,
-              name: klass.name,
-              classStandardId: standard.id,
-              isSystem: false
-            }
-          });
-
-          const subjectPool = buildSubjectPoolForSections(sectionNames, klass.hasStreams ?? false);
-          for (const subjectName of subjectPool) {
-            const subject = await tx.academicSubject.upsert({
+        const subjectPool = buildSubjectPoolForSections(sectionNames, klass.hasStreams ?? false);
+        await Promise.all(
+          subjectPool.map(async (subjectName) => {
+            const subject = await prisma.academicSubject.upsert({
               where: {
                 schoolId_classId_name: {
                   schoolId: admin.schoolId,
-                  classId: (await tx.academicClass.findUnique({
-                    where: { schoolId_classLevel: { schoolId: admin.schoolId, classLevel } },
-                    select: { id: true }
-                  }))!.id,
+                  classId: academicClass.id,
                   name: subjectName
                 }
               },
               update: {},
               create: {
                 schoolId: admin.schoolId,
-                classId: (await tx.academicClass.findUnique({
-                  where: { schoolId_classLevel: { schoolId: admin.schoolId, classLevel } },
-                  select: { id: true }
-                }))!.id,
+                classId: academicClass.id,
                 name: subjectName,
                 isSystem: false
               }
             });
 
-            const book = await tx.academicBook.findFirst({
-              where: { schoolId: admin.schoolId, subjectId: subject.id, type: "NCERT" }
-            });
-            if (!book) {
-              await tx.academicBook.create({
-                data: {
+            await prisma.academicBook.upsert({
+              where: {
+                schoolId_subjectId_name: {
                   schoolId: admin.schoolId,
                   subjectId: subject.id,
-                  name: `${subjectName} NCERT`,
-                  type: "NCERT",
-                  isSystem: false,
-                  chapters: {
-                    create: Array.from({ length: 5 }, (_val, idx) => ({
-                      title: `Chapter ${idx + 1}`,
-                      schoolId: admin.schoolId
-                    }))
-                  }
+                  name: `${subjectName} NCERT`
                 }
-              });
-            }
-          }
-        }
-
-        createdStandards.push(standard);
+              },
+              update: {},
+              create: {
+                schoolId: admin.schoolId,
+                subjectId: subject.id,
+                name: `${subjectName} NCERT`,
+                type: "NCERT",
+                isSystem: false,
+                chapters: {
+                  create: Array.from({ length: 5 }, (_val, idx) => ({
+                    title: `Chapter ${idx + 1}`,
+                    schoolId: admin.schoolId
+                  }))
+                }
+              }
+            });
+          })
+        );
       }
 
-      return createdStandards;
-    });
+      createdStandards.push(standard);
+    }
 
-    res.status(201).json({ items: results });
+    res.status(201).json({ items: createdStandards });
   } catch (error) {
     next(error);
   }

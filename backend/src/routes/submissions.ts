@@ -243,33 +243,33 @@ async function createSubmissionEvaluation(params: {
   timeTakenSeconds?: number;
   evaluation: EvaluationResult | null;
 }) {
-  return prisma.$transaction(async (tx) => {
-    const createdSubmission = await tx.examSubmission.create({
-      data: {
-        examId: params.examId,
-        studentId: params.studentId,
-        schoolId: params.schoolId,
-        submittedAt: new Date(),
-        ...(params.timeTakenSeconds !== undefined
-          ? { timeTakenSeconds: params.timeTakenSeconds }
-          : {}),
-        ...(params.file
-          ? {
-              filePath: params.file.path,
-              fileName: params.file.originalname,
-              fileMime: params.file.mimetype,
-              fileSize: params.file.size
-            }
-          : {}),
-        ...(params.structuredAnswers
-          ? { structuredAnswers: toPrismaJson(params.structuredAnswers) }
-          : {}),
-        ...(params.rawTextAnswer ? { rawTextAnswer: params.rawTextAnswer } : {}),
-        ...(params.extractedText ? { extractedText: params.extractedText } : {})
-      }
-    });
+  const createdSubmission = await prisma.examSubmission.create({
+    data: {
+      examId: params.examId,
+      studentId: params.studentId,
+      schoolId: params.schoolId,
+      submittedAt: new Date(),
+      ...(params.timeTakenSeconds !== undefined
+        ? { timeTakenSeconds: params.timeTakenSeconds }
+        : {}),
+      ...(params.file
+        ? {
+            filePath: params.file.path,
+            fileName: params.file.originalname,
+            fileMime: params.file.mimetype,
+            fileSize: params.file.size
+          }
+        : {}),
+      ...(params.structuredAnswers
+        ? { structuredAnswers: toPrismaJson(params.structuredAnswers) }
+        : {}),
+      ...(params.rawTextAnswer ? { rawTextAnswer: params.rawTextAnswer } : {}),
+      ...(params.extractedText ? { extractedText: params.extractedText } : {})
+    }
+  });
 
-    const createdEvaluation = await tx.examEvaluation.create({
+  try {
+    const createdEvaluation = await prisma.examEvaluation.create({
       data: {
         submissionId: createdSubmission.id,
         examId: params.examId,
@@ -287,7 +287,14 @@ async function createSubmissionEvaluation(params: {
     });
 
     return [createdSubmission, createdEvaluation] as const;
-  });
+  } catch (error) {
+    await prisma.examSubmission
+      .delete({
+        where: { id: createdSubmission.id }
+      })
+      .catch(() => undefined);
+    throw error;
+  }
 }
 
 submissionsRouter.post(

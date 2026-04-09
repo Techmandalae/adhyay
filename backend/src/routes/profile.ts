@@ -148,40 +148,38 @@ profileRouter.put("/", async (req, res, next) => {
         return next(new HttpError(400, "Invalid teacher profile payload"));
       }
 
-      const profile = await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            name: parsed.data.fullName,
-            email: parsed.data.email
-          }
-        });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: parsed.data.fullName,
+          email: parsed.data.email
+        }
+      });
 
-        return tx.teacherProfile.upsert({
-          where: { userId: user.id },
-          update: {
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            subject: parsed.data.subject,
-            location: parsed.data.location,
-            linkedin: parsed.data.linkedin?.trim() || null,
-            experience: parsed.data.experience,
-            education: parsed.data.education
-          },
-          create: {
-            schoolId: user.schoolId,
-            userId: user.id,
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            subject: parsed.data.subject,
-            location: parsed.data.location,
-            linkedin: parsed.data.linkedin?.trim() || null,
-            experience: parsed.data.experience,
-            education: parsed.data.education
-          }
-        });
+      const profile = await prisma.teacherProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          subject: parsed.data.subject,
+          location: parsed.data.location,
+          linkedin: parsed.data.linkedin?.trim() || null,
+          experience: parsed.data.experience,
+          education: parsed.data.education
+        },
+        create: {
+          schoolId: user.schoolId,
+          userId: user.id,
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          subject: parsed.data.subject,
+          location: parsed.data.location,
+          linkedin: parsed.data.linkedin?.trim() || null,
+          experience: parsed.data.experience,
+          education: parsed.data.education
+        }
       });
 
       return res.json({
@@ -218,28 +216,26 @@ profileRouter.put("/", async (req, res, next) => {
         return next(new HttpError(404, "Student profile not found"));
       }
 
-      const profile = await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            name: parsed.data.fullName,
-            email: parsed.data.email
-          }
-        });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: parsed.data.fullName,
+          email: parsed.data.email
+        }
+      });
 
-        return tx.studentProfile.update({
-          where: { userId: user.id },
-          data: {
-            fullName: parsed.data.fullName,
-            className: parsed.data.className,
-            sectionName: parsed.data.section,
-            rollNumber: parsed.data.rollNumber,
-            phoneNumber: parsed.data.phoneNumber,
-            email: parsed.data.email,
-            location: parsed.data.location,
-            dob
-          }
-        });
+      const profile = await prisma.studentProfile.update({
+        where: { userId: user.id },
+        data: {
+          fullName: parsed.data.fullName,
+          className: parsed.data.className,
+          sectionName: parsed.data.section,
+          rollNumber: parsed.data.rollNumber,
+          phoneNumber: parsed.data.phoneNumber,
+          email: parsed.data.email,
+          location: parsed.data.location,
+          dob
+        }
       });
 
       return res.json({
@@ -286,34 +282,32 @@ profileRouter.put("/", async (req, res, next) => {
         return next(new HttpError(400, "Invalid admin profile payload"));
       }
 
-      const profile = await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            name: parsed.data.fullName,
-            email: parsed.data.email
-          }
-        });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: parsed.data.fullName,
+          email: parsed.data.email
+        }
+      });
 
-        return tx.adminProfile.upsert({
-          where: { userId: user.id },
-          update: {
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            location: parsed.data.location,
-            contactNumber: parsed.data.contact
-          },
-          create: {
-            schoolId: user.schoolId,
-            userId: user.id,
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            location: parsed.data.location,
-            contactNumber: parsed.data.contact
-          }
-        });
+      const profile = await prisma.adminProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          location: parsed.data.location,
+          contactNumber: parsed.data.contact
+        },
+        create: {
+          schoolId: user.schoolId,
+          userId: user.id,
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          location: parsed.data.location,
+          contactNumber: parsed.data.contact
+        }
       });
 
       return res.json({
@@ -332,32 +326,30 @@ profileRouter.put("/", async (req, res, next) => {
         return next(new HttpError(400, "Invalid parent profile payload"));
       }
 
-      const profile = await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            name: parsed.data.fullName,
-            email: parsed.data.email
-          }
-        });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: parsed.data.fullName,
+          email: parsed.data.email
+        }
+      });
 
-        return tx.parentProfile.upsert({
-          where: { userId: user.id },
-          update: {
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            location: parsed.data.location
-          },
-          create: {
-            schoolId: user.schoolId,
-            userId: user.id,
-            fullName: parsed.data.fullName,
-            email: parsed.data.email,
-            contact: parsed.data.contact,
-            location: parsed.data.location
-          }
-        });
+      const profile = await prisma.parentProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          location: parsed.data.location
+        },
+        create: {
+          schoolId: user.schoolId,
+          userId: user.id,
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          contact: parsed.data.contact,
+          location: parsed.data.location
+        }
       });
 
       return res.json({

@@ -603,49 +603,45 @@ async function enforceUsageLimit(user: AuthUser, meta?: MetaBlob) {
   const { start, end } = getPeriodBounds(now);
   let notify = false;
 
-  const counter = await prisma.$transaction(async (tx) => {
-    const existing = await tx.usageCounter.findUnique({
-      where: { schoolId_periodKey: { schoolId: user.schoolId, periodKey } }
-    });
-
-    if (existing && existing.examCount >= limit) {
-      throw new HttpError(429, "Monthly exam limit reached");
-    }
-
-    const updated = await tx.usageCounter.upsert({
-      where: { schoolId_periodKey: { schoolId: user.schoolId, periodKey } },
-      update: {
-        examCount: { increment: 1 },
-        limitCount: limit
-      },
-      create: {
-        schoolId: user.schoolId,
-        periodKey,
-        periodStart: start,
-        periodEnd: end,
-        examCount: 1,
-        limitCount: limit
-      }
-    });
-
-    const usagePercent = updated.limitCount
-      ? updated.examCount / updated.limitCount
-      : 0;
-
-    if (
-      updated.limitCount &&
-      usagePercent >= env.NOTIFICATION_USAGE_THRESHOLD &&
-      !updated.limitNotifiedAt
-    ) {
-      notify = true;
-      await tx.usageCounter.update({
-        where: { id: updated.id },
-        data: { limitNotifiedAt: new Date() }
-      });
-    }
-
-    return updated;
+  const existing = await prisma.usageCounter.findUnique({
+    where: { schoolId_periodKey: { schoolId: user.schoolId, periodKey } }
   });
+
+  if (existing && existing.examCount >= limit) {
+    throw new HttpError(429, "Monthly exam limit reached");
+  }
+
+  const counter = await prisma.usageCounter.upsert({
+    where: { schoolId_periodKey: { schoolId: user.schoolId, periodKey } },
+    update: {
+      examCount: { increment: 1 },
+      limitCount: limit
+    },
+    create: {
+      schoolId: user.schoolId,
+      periodKey,
+      periodStart: start,
+      periodEnd: end,
+      examCount: 1,
+      limitCount: limit
+    }
+  });
+
+  const usagePercent = counter.limitCount
+    ? counter.examCount / counter.limitCount
+    : 0;
+
+  if (
+    counter.limitCount &&
+    usagePercent >= env.NOTIFICATION_USAGE_THRESHOLD &&
+    !counter.limitNotifiedAt
+  ) {
+    notify = true;
+    await prisma.usageCounter.update({
+      where: { id: counter.id },
+      data: { limitNotifiedAt: new Date() }
+    });
+  }
 
   return {
     exceeded: false,
@@ -1583,7 +1579,7 @@ examsRouter.get("/", requireTeacherOrAdmin, async (req, res, next) => {
       ]
     };
 
-    const [total, exams] = await prisma.$transaction([
+    const [total, exams] = await Promise.all([
       prisma.exam.count({ where }),
       prisma.exam.findMany({
         where,

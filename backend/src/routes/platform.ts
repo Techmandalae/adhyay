@@ -98,21 +98,17 @@ platformRouter.post("/schools/:id/approve", async (req, res, next) => {
         ? parsed.data.monthlyExamLimit
         : parsed.data.aiMonthlyLimit;
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedSchool = await tx.school.update({
-        where: { id: schoolId },
-        data: {
-          status: "ACTIVE",
-          ...(resolvedLimit !== undefined ? { aiMonthlyLimit: resolvedLimit } : {})
-        }
-      });
+    const updated = await prisma.school.update({
+      where: { id: schoolId },
+      data: {
+        status: "ACTIVE",
+        ...(resolvedLimit !== undefined ? { aiMonthlyLimit: resolvedLimit } : {})
+      }
+    });
 
-      await tx.user.updateMany({
-        where: { schoolId, role: "ADMIN" },
-        data: { approvalStatus: "APPROVED", isActive: true }
-      });
-
-      return updatedSchool;
+    await prisma.user.updateMany({
+      where: { schoolId, role: "ADMIN" },
+      data: { approvalStatus: "APPROVED", isActive: true }
     });
 
     res.json({ id: updated.id, status: updated.status, aiMonthlyLimit: updated.aiMonthlyLimit });

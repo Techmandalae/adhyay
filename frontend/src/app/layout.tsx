@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Space_Grotesk } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
-import { APP_DESCRIPTION, APP_NAME } from "@/lib/branding";
+import { APP_NAME } from "@/lib/branding";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -19,9 +19,14 @@ const bodyFont = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: APP_DESCRIPTION,
+  description: "Smart exam generation platform",
   icons: {
-    icon: "/logo-icon.png"
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/logo-icon.png"
+  },
+  openGraph: {
+    images: ["/logo-full.png"]
   }
 };
 
