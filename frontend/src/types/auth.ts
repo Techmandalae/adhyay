@@ -17,6 +17,7 @@ export interface AuthUser {
   email?: string;
   publicId?: string;
   emailVerified?: boolean;
+  mustChangePassword?: boolean;
   canPublish?: boolean;
   isIndependentTeacher?: boolean;
 }

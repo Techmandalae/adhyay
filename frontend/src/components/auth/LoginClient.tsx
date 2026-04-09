@@ -30,6 +30,7 @@ export function LoginClient() {
 
   useEffect(() => {
     router.prefetch("/dashboard");
+    router.prefetch("/change-password");
   }, [router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -50,7 +51,9 @@ export function LoginClient() {
       signIn(response.token);
       const decoded = decodeJwt(response.token);
       startTransition(() => {
-        router.replace(decoded?.role ? getRoleRoute(decoded.role) : next);
+        router.replace(
+          decoded?.mustChangePassword ? "/change-password" : decoded?.role ? getRoleRoute(decoded.role) : next
+        );
       });
     } catch (err) {
       const message =

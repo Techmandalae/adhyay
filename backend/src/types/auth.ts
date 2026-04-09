@@ -20,6 +20,7 @@ export type AuthUser = JwtPayload & {
   email?: string;
   publicId?: string;
   emailVerified?: boolean;
+  mustChangePassword?: boolean;
   canPublish?: boolean;
   isIndependentTeacher?: boolean;
   phone?: string;

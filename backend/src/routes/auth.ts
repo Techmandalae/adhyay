@@ -130,6 +130,10 @@ function hashToken(rawToken: string) {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
+function isMustChangePasswordToken(token: string) {
+  return token.startsWith("must-change-password:");
+}
+
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -341,6 +345,15 @@ authRouter.post("/reset-password", async (req, res, next) => {
     });
 
     await prisma.passwordResetToken.delete({ where: { token: record.token } });
+    await prisma.passwordResetToken.deleteMany({
+      where: {
+        email: user.email,
+        schoolId: user.schoolId,
+        token: {
+          startsWith: "must-change-password:"
+        }
+      }
+    });
 
     const parentPrimaryStudent = user.parentProfile?.children[0]?.student ?? null;
     const isIndependentTeacher = Boolean(
@@ -429,8 +442,92 @@ authRouter.post("/change-password", requireAuth, async (req, res, next) => {
       where: { id: existingUser.id },
       data: { passwordHash: hash }
     });
+    if (user.email) {
+      await prisma.passwordResetToken.deleteMany({
+        where: {
+          email: user.email,
+          schoolId: user.schoolId,
+          token: {
+            startsWith: "must-change-password:"
+          }
+        }
+      });
+    }
 
-    res.json({ message: "Password updated" });
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        teacherProfile: true,
+        studentProfile: true,
+        parentProfile: {
+          include: {
+            children: {
+              include: { student: true }
+            }
+          }
+        },
+        adminProfile: true,
+        school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+      }
+    });
+
+    if (!refreshedUser) {
+      return next(new HttpError(404, "User not found"));
+    }
+
+    const parentPrimaryStudent = refreshedUser.parentProfile?.children[0]?.student ?? null;
+    const isIndependentTeacher = Boolean(
+      refreshedUser.role === "TEACHER" &&
+        (refreshedUser.teacherProfile?.isIndependent || refreshedUser.school?.isIndependentWorkspace)
+    );
+    const payload: AuthUser = {
+      id: refreshedUser.id,
+      role: refreshedUser.role,
+      schoolId: refreshedUser.schoolId,
+      ...(refreshedUser.teacherProfile ? { teacherId: refreshedUser.teacherProfile.id } : {}),
+      ...(refreshedUser.studentProfile
+        ? {
+            studentId: refreshedUser.studentProfile.id,
+            classId: refreshedUser.studentProfile.classId,
+            classLevel: refreshedUser.studentProfile.classLevel,
+            ...(refreshedUser.studentProfile.sectionId
+              ? { sectionId: refreshedUser.studentProfile.sectionId }
+              : {})
+          }
+        : {}),
+      ...(refreshedUser.parentProfile ? { parentId: refreshedUser.parentProfile.id } : {}),
+      ...(refreshedUser.adminProfile ? { adminId: refreshedUser.adminProfile.id } : {}),
+      ...(refreshedUser.parentProfile
+        ? {
+            studentIds: refreshedUser.parentProfile.children.map((link) => link.studentId),
+            ...(parentPrimaryStudent
+              ? {
+                  classId: parentPrimaryStudent.classId,
+                  classLevel: parentPrimaryStudent.classLevel,
+                  ...(parentPrimaryStudent.sectionId
+                    ? { sectionId: parentPrimaryStudent.sectionId }
+                    : {})
+                }
+              : {})
+          }
+        : {}),
+      ...(refreshedUser.name ? { name: refreshedUser.name } : {}),
+      ...(refreshedUser.email ? { email: refreshedUser.email } : {}),
+      ...(refreshedUser.publicId ? { publicId: refreshedUser.publicId } : {}),
+      ...(refreshedUser.role === "TEACHER"
+        ? {
+            canPublish: !isIndependentTeacher,
+            isIndependentTeacher
+          }
+        : {}),
+      emailVerified: refreshedUser.isVerified || refreshedUser.emailVerified,
+      ...(refreshedUser.school?.meta ? { schoolMeta: refreshedUser.school.meta as Record<string, unknown> } : {}),
+      ...(refreshedUser.school?.status ? { schoolStatus: refreshedUser.school.status } : {}),
+      ...(refreshedUser.approvalStatus ? { approvalStatus: refreshedUser.approvalStatus } : {})
+    };
+
+    const token = buildToken(payload);
+    res.json({ message: "Password updated", token, user: payload });
   } catch (error) {
     next(error);
   }
@@ -671,6 +768,21 @@ authRouter.post("/login", async (req, res, next) => {
       return next(new HttpError(401, "Invalid email or password"));
     }
 
+    const mustChangePasswordRecord =
+      user.role === "SUPER_ADMIN"
+        ? null
+        : await prisma.passwordResetToken.findFirst({
+            where: {
+              email: user.email,
+              schoolId: user.schoolId,
+              expiresAt: { gt: new Date() },
+              token: {
+                startsWith: "must-change-password:"
+              }
+            },
+            select: { token: true }
+          });
+
     if (user.role !== "SUPER_ADMIN") {
       if (!(user.isVerified || user.emailVerified)) {
         return next(new HttpError(403, "Please verify your email using OTP"));
@@ -728,6 +840,7 @@ authRouter.post("/login", async (req, res, next) => {
             isIndependentTeacher
           }
         : {}),
+      ...(mustChangePasswordRecord ? { mustChangePassword: true } : {}),
       emailVerified: user.isVerified || user.emailVerified,
       ...(user.school?.meta ? { schoolMeta: user.school.meta as Record<string, unknown> } : {}),
       ...(user.school?.status ? { schoolStatus: user.school.status } : {}),

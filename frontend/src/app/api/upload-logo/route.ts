@@ -40,11 +40,22 @@ export async function POST(request: NextRequest) {
   const formData = new FormData();
   formData.append("logo", file);
 
-  const response = await fetch(`${API_BASE}/admin/logo`, {
-    method: "POST",
-    headers: getAuthHeader(request),
-    body: formData
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}/admin/logo`, {
+      method: "POST",
+      headers: getAuthHeader(request),
+      body: formData
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error: "Logo upload service is unavailable. Please try again."
+      },
+      { status: 502 }
+    );
+  }
 
   const payload = (await response.json().catch(() => ({}))) as {
     error?: { message?: string };
@@ -71,14 +82,25 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const response = await fetch(`${API_BASE}/admin/logo`, {
-    method: "DELETE",
-    headers: (() => {
-      const headers = getAuthHeader(request);
-      headers.set("Content-Type", "application/json");
-      return headers;
-    })()
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}/admin/logo`, {
+      method: "DELETE",
+      headers: (() => {
+        const headers = getAuthHeader(request);
+        headers.set("Content-Type", "application/json");
+        return headers;
+      })()
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error: "Logo removal service is unavailable. Please try again."
+      },
+      { status: 502 }
+    );
+  }
 
   const payload = (await response.json().catch(() => ({}))) as {
     error?: { message?: string };

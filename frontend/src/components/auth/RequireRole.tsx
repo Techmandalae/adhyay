@@ -28,6 +28,10 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
       router.replace(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
       return;
     }
+    if (user.mustChangePassword && pathname !== "/change-password") {
+      router.replace("/change-password");
+      return;
+    }
     if (roles && !roles.includes(user.role)) {
       router.replace(`/unauthorized?from=${encodeURIComponent(pathname ?? "/")}`);
     }
@@ -46,6 +50,10 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
   }
 
   if (!user) {
+    return null;
+  }
+
+  if (user.mustChangePassword && pathname !== "/change-password") {
     return null;
   }
 

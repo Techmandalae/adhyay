@@ -132,17 +132,56 @@ export async function sendPasswordResetEmail(to: string, link: string): Promise<
   });
 }
 
-export async function sendSetPasswordEmail(to: string, link: string): Promise<boolean> {
+export async function sendLoginDetailsEmail(params: {
+  to: string;
+  userId: string;
+  schoolId: string;
+  email: string;
+  tempPassword: string;
+}) {
   return sendWithResend({
-    to,
-    subject: "Welcome to Adhyay",
+    to: params.to,
+    subject: "Adhyay Login Details",
     html: `
-      <p>Your Adhyay account is ready.</p>
-      <p>Click the button below to set your password and access your dashboard.</p>
-      <p><a href="${link}">Set Password</a></p>
-      <p>This link expires in 7 days.</p>
+      <div style="margin:0;padding:30px 16px;background:#f4f6f8;font-family:Arial,sans-serif;">
+        <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:30px;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align:center;">
+            <img
+              src="https://adhyay.techmandalae.com/logo-full.png"
+              alt="Adhyay"
+              width="140"
+              style="max-width:100%;height:auto;"
+            />
+          </div>
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+
+          <h2 style="margin:0 0 14px;color:#1f4f66;font-size:24px;">Your Adhyay account is ready</h2>
+
+          <p style="margin:0 0 10px;font-size:14px;color:#555;"><strong>User ID:</strong> ${params.userId}</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#555;"><strong>School ID:</strong> ${params.schoolId || "Independent"}</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#555;"><strong>Email:</strong> ${params.email}</p>
+          <p style="margin:0 0 18px;font-size:14px;color:#555;"><strong>Password:</strong> ${params.tempPassword}</p>
+
+          <p style="margin:0 0 18px;font-size:14px;color:#555;line-height:1.6;">
+            Use the button below to open Adhyay and sign in with your temporary password.
+          </p>
+
+          <div style="margin:24px 0;text-align:center;">
+            <a
+              href="https://adhyay.techmandalae.com"
+              style="display:inline-block;padding:12px 24px;background:#ff6a3d;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;"
+            >
+              Open Adhyay
+            </a>
+          </div>
+
+          <p style="margin:0;font-size:13px;color:#888;">
+            This temporary password expires in 7 days. Please change it after login.
+          </p>
+        </div>
+      </div>
     `,
-    label: "Set password email"
+    label: "Login details email"
   });
 }
 

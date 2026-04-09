@@ -12,7 +12,7 @@ import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { requireAdmin } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
-import { sendSetPasswordEmail } from "../utils/email";
+import { sendLoginDetailsEmail } from "../utils/email";
 
 const csvParser = require("csv-parser") as () => NodeJS.ReadWriteStream;
 
@@ -179,8 +179,12 @@ function parseImportedClassLevel(value: string) {
   return Number.isFinite(level) ? level : null;
 }
 
-function createImportedPasswordHashSource(email: string) {
-  return `ImportedUser@${email.toLowerCase()}`;
+function generateTemporaryPassword() {
+  return `Temp@${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+function createMustChangePasswordToken() {
+  return `must-change-password:${crypto.randomBytes(16).toString("hex")}`;
 }
 
 function generatePublicId() {
@@ -201,29 +205,34 @@ async function sendUserOnboardingEmail(params: {
   schoolId: string;
   email: string;
   role: "TEACHER" | "STUDENT" | "PARENT";
+  tempPassword: string;
 }) {
-  const frontendBase =
-    env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
-
   await prisma.passwordResetToken.deleteMany({
     where: {
       email: params.email,
-      schoolId: params.schoolId
+      schoolId: params.schoolId,
+      token: {
+        startsWith: "must-change-password:"
+      }
     }
   });
 
-  const token = crypto.randomBytes(32).toString("hex");
   await prisma.passwordResetToken.create({
     data: {
       email: params.email,
       schoolId: params.schoolId,
-      token,
+      token: createMustChangePasswordToken(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     }
   });
 
-  const resetLink = `${frontendBase.replace(/\/+$/, "")}/set-password?token=${encodeURIComponent(token)}`;
-  const sent = await sendSetPasswordEmail(params.to, resetLink);
+  const sent = await sendLoginDetailsEmail({
+    to: params.to,
+    userId: params.userId,
+    schoolId: params.schoolId,
+    email: params.email,
+    tempPassword: params.tempPassword
+  });
 
   if (!sent) {
     console.warn("[email] onboarding email was not sent", {
@@ -254,9 +263,9 @@ function mapImportRows(rows: Record<string, unknown>[]): ParsedImportResult<z.in
 
   rows.forEach((row, index) => {
     const normalized = normalizeImportRow(row);
-      const candidate = {
-        name: firstNonEmptyValue(normalized, "name", "studentname"),
-        email: firstNonEmptyValue(normalized, "email", "studentemail"),
+    const candidate = {
+      name: firstNonEmptyValue(normalized, "name", "studentname"),
+      email: firstNonEmptyValue(normalized, "email", "studentemail"),
       password: firstNonEmptyValue(normalized, "password"),
       className: firstNonEmptyValue(normalized, "classname", "class"),
       sectionName: firstNonEmptyValue(normalized, "sectionname", "section"),
@@ -442,7 +451,8 @@ adminRouter.post("/users", async (req, res, next) => {
 
   try {
     const admin = req.user!;
-    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    const tempPassword = generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
     const publicId = await generateUniquePublicId();
 
     if (parsed.data.role === "STUDENT" && !parsed.data.classId) {
@@ -580,7 +590,8 @@ adminRouter.post("/users", async (req, res, next) => {
       userId: created.publicId,
       schoolId: admin.schoolId,
       email: created.email,
-      role: parsed.data.role
+      role: parsed.data.role,
+      tempPassword
     }).catch((error) => {
       console.error("Failed to send onboarding email", error);
     });
@@ -945,8 +956,8 @@ adminRouter.post(
           }
 
           const parentName = row.parentName?.trim() || `${row.name} Parent`;
-          const parentPassword = createImportedPasswordHashSource(row.parentEmail);
-          const studentPassword = createImportedPasswordHashSource(row.email);
+          const parentPassword = generateTemporaryPassword();
+          const studentPassword = generateTemporaryPassword();
           const parentPasswordHash = await bcrypt.hash(parentPassword, 12);
           const studentPasswordHash = await bcrypt.hash(studentPassword, 12);
 
@@ -1100,7 +1111,8 @@ adminRouter.post(
               userId: parent.publicId,
               schoolId: admin.schoolId,
               email: parent.email,
-              role: "PARENT"
+              role: "PARENT",
+              tempPassword: parentPassword
             }).catch((error) => {
               console.error("Failed to send parent onboarding email", error);
             }),
@@ -1109,7 +1121,8 @@ adminRouter.post(
               userId: student.publicId,
               schoolId: admin.schoolId,
               email: student.email,
-              role: "STUDENT"
+              role: "STUDENT",
+              tempPassword: studentPassword
             }).catch((error) => {
               console.error("Failed to send student onboarding email", error);
             })
@@ -1163,7 +1176,7 @@ adminRouter.post(
 
       for (const row of parsedRows.validRows) {
         try {
-          const teacherPassword = createImportedPasswordHashSource(row.email);
+          const teacherPassword = generateTemporaryPassword();
           const teacherPasswordHash = await bcrypt.hash(teacherPassword, 12);
 
           const teacher = await prisma.user.upsert({
@@ -1245,7 +1258,8 @@ adminRouter.post(
             userId: teacher.publicId,
             schoolId: admin.schoolId,
             email: teacher.email,
-            role: "TEACHER"
+            role: "TEACHER",
+            tempPassword: teacherPassword
           }).catch((error) => {
             console.error("Failed to send teacher onboarding email", error);
           });
