@@ -31,9 +31,7 @@ export function TopNav() {
   const dashboardHref = getRoleRoute(user?.role);
   const profileHref = getProfileHref(user?.role);
 
-  const identityLabel = user
-    ? `${user.name ?? user.email ?? "User"} | ID: ${user.publicId ?? user.id}`
-    : null;
+  const identityLabel = user ? user.name ?? user.email ?? "User" : null;
 
   useEffect(() => {
     router.prefetch(dashboardHref);

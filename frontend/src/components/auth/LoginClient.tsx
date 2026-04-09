@@ -1,19 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
-import { decodeJwt } from "@/lib/jwt";
-import { login } from "@/lib/api";
-import { getRoleRoute } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { StatusBlock } from "@/components/ui/StatusBlock";
-import Link from "next/link";
+import { getRoleRoute } from "@/lib/auth";
+import { login } from "@/lib/api";
 import { APP_NAME } from "@/lib/branding";
+import { decodeJwt } from "@/lib/jwt";
 
 export function LoginClient() {
   const { signIn } = useAuth();
@@ -21,6 +21,7 @@ export function LoginClient() {
   const params = useSearchParams();
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [schoolId, setSchoolId] = useState(params.get("schoolId") ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,7 @@ export function LoginClient() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+
     if (!email.trim() || !password.trim()) {
       setError("Email and password are required.");
       return;
@@ -52,13 +54,15 @@ export function LoginClient() {
       const decoded = decodeJwt(response.token);
       startTransition(() => {
         router.replace(
-          decoded?.mustChangePassword ? "/change-password" : decoded?.role ? getRoleRoute(decoded.role) : next
+          decoded?.mustChangePassword
+            ? "/change-password"
+            : decoded?.role
+              ? getRoleRoute(decoded.role)
+              : next
         );
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
-      setError(message);
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -92,15 +96,26 @@ export function LoginClient() {
               autoComplete="email"
               disabled={isLoading}
             />
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              disabled={isLoading}
-            />
+            <div className="grid gap-2">
+              <Input
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                placeholder="........"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                disabled={isLoading}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="text-sm font-medium text-accent transition hover:opacity-80"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? "Hide password" : "Show password"}
+                </button>
+              </div>
+            </div>
             {verified ? (
               <StatusBlock
                 title="Email verified"
@@ -128,6 +143,7 @@ export function LoginClient() {
                   setSchoolId("");
                   setEmail("");
                   setPassword("");
+                  setShowPassword(false);
                 }}
               >
                 Clear

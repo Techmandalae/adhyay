@@ -964,6 +964,7 @@ adminRouter.post(
           const parent = await prisma.user.upsert({
             where: { schoolId_email: { schoolId: admin.schoolId, email: row.parentEmail } },
             update: {
+              passwordHash: parentPasswordHash,
               isVerified: true,
               emailVerified: true,
               emailVerificationToken: null,
@@ -1013,6 +1014,7 @@ adminRouter.post(
           const student = await prisma.user.upsert({
             where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
             update: {
+              passwordHash: studentPasswordHash,
               isVerified: true,
               emailVerified: true,
               emailVerificationToken: null,
@@ -1182,6 +1184,7 @@ adminRouter.post(
           const teacher = await prisma.user.upsert({
             where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
             update: {
+              passwordHash: teacherPasswordHash,
               isVerified: true,
               emailVerified: true,
               emailVerificationToken: null,

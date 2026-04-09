@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE = (
+  process.env.API_BASE_URL ??
+  process.env.API_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   (process.env.NODE_ENV === "production"
@@ -30,55 +32,46 @@ function toPublicUrl(relativePath: string | null | undefined) {
 }
 
 export async function POST(request: NextRequest) {
-  const incoming = await request.formData();
-  const file = incoming.get("file");
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "No file" }, { status: 400 });
-  }
-
-  const formData = new FormData();
-  formData.append("logo", file);
-
-  let response: Response;
-
   try {
-    response = await fetch(`${API_BASE}/admin/logo`, {
+    const incoming = await request.formData();
+    const file = incoming.get("file");
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "No file" }, { status: 400 });
+    }
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    const response = await fetch(`${API_BASE}/admin/logo`, {
       method: "POST",
       headers: getAuthHeader(request),
       body: formData
     });
-  } catch {
-    return NextResponse.json(
-      {
-        error: "Logo upload service is unavailable. Please try again."
-      },
-      { status: 502 }
-    );
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: { message?: string };
+      message?: string;
+      logoUrl?: string;
+    };
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: payload.error?.message ?? payload.message ?? "Upload failed"
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({
+      logoUrl: payload.logoUrl ?? null,
+      url: toPublicUrl(payload.logoUrl)
+    });
+  } catch (error) {
+    console.error("Logo upload failed", error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
-
-  const payload = (await response.json().catch(() => ({}))) as {
-    error?: { message?: string };
-    message?: string;
-    logoUrl?: string;
-  };
-
-  if (!response.ok) {
-    return NextResponse.json(
-      {
-        error:
-          payload.error?.message ??
-          payload.message ??
-          `Request failed with status ${response.status}`
-      },
-      { status: response.status }
-    );
-  }
-
-  return NextResponse.json({
-    logoUrl: payload.logoUrl ?? null,
-    url: toPublicUrl(payload.logoUrl)
-  });
 }
 
 export async function DELETE(request: NextRequest) {
