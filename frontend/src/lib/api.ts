@@ -923,6 +923,14 @@ export async function uploadSchoolLogo(token: string, file: File) {
   return payload as { logoUrl: string };
 }
 
+export async function deleteSchoolLogo(token: string) {
+  return apiFetch<{ logoUrl: string | null }>(
+    "/admin/logo",
+    { method: "DELETE" },
+    token
+  );
+}
+
 export async function importStudents(token: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);

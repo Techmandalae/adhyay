@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
@@ -12,11 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   type AdminUser,
   type BulkImportResponse,
   createUser,
+  deleteSchoolLogo,
   getAcademicSetup,
   getAdminMetrics,
   importStudents,
@@ -293,6 +296,8 @@ export default function AdminDashboard() {
   const [academicSaveMessage, setAcademicSaveMessage] = useState<string | null>(null);
   const [academicToast, setAcademicToast] = useState<string | null>(null);
   const [isSavingAcademicSetup, setIsSavingAcademicSetup] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoToast, setLogoToast] = useState<string | null>(null);
   const [studentImportState, setStudentImportState] = useState<ImportState>(initialImportState);
   const [teacherImportState, setTeacherImportState] = useState<ImportState>(initialImportState);
   const [studentInputKey, setStudentInputKey] = useState(0);
@@ -457,15 +462,37 @@ export default function AdminDashboard() {
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!token || !event.target.files?.[0]) return;
+    const selectedFile = event.target.files[0];
     setLogoState({ status: "loading", data: null });
     try {
-      const response = await uploadSchoolLogo(token, event.target.files[0]);
+      const response = await uploadSchoolLogo(token, selectedFile);
       setLogoState({ status: "success", data: response });
+      setLogoPreviewUrl(URL.createObjectURL(selectedFile));
+      setLogoToast("Logo uploaded successfully");
+      window.setTimeout(() => setLogoToast(null), 3000);
     } catch (error) {
       setLogoState({
         status: "error",
         data: null,
         error: error instanceof Error ? error.message : "Failed to upload logo"
+      });
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!token) return;
+    setLogoState({ status: "loading", data: logoState.data });
+    try {
+      await deleteSchoolLogo(token);
+      setLogoPreviewUrl(null);
+      setLogoState({ status: "success", data: { logoUrl: "" } });
+      setLogoToast("Logo removed successfully");
+      window.setTimeout(() => setLogoToast(null), 3000);
+    } catch (error) {
+      setLogoState({
+        status: "error",
+        data: logoState.data,
+        error: error instanceof Error ? error.message : "Failed to remove logo"
       });
     }
   };
@@ -526,8 +553,7 @@ export default function AdminDashboard() {
         status: "success",
         result: response
       }));
-      await fetchUsers();
-      await fetchMetrics();
+      await Promise.all([fetchUsers(), fetchMetrics()]);
     } catch (error) {
       setStudentImportState((current) => ({
         ...current,
@@ -547,8 +573,7 @@ export default function AdminDashboard() {
         status: "success",
         result: response
       }));
-      await fetchUsers();
-      await fetchMetrics();
+      await Promise.all([fetchUsers(), fetchMetrics()]);
     } catch (error) {
       setTeacherImportState((current) => ({
         ...current,
@@ -565,6 +590,11 @@ export default function AdminDashboard() {
           {academicToast}
         </div>
       ) : null}
+      {logoToast ? (
+        <div className="fixed right-6 top-24 z-50 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-[var(--shadow)]">
+          {logoToast}
+        </div>
+      ) : null}
       <div className="mx-auto grid max-w-6xl gap-8">
         <SectionHeader
           eyebrow="Admin workspace"
@@ -576,23 +606,35 @@ export default function AdminDashboard() {
         <div className="grid gap-6 lg:grid-cols-3">
           <Card>
             <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">Exams generated</p>
-            <p className="mt-3 text-3xl font-semibold text-accent">
-              {metricsState.data?.totalExamsGenerated ?? "—"}
-            </p>
+            {metricsState.status === "loading" ? (
+              <Skeleton className="mt-3 h-10 w-24" />
+            ) : (
+              <p className="mt-3 text-3xl font-semibold text-accent">
+                {metricsState.data?.totalExamsGenerated ?? "—"}
+              </p>
+            )}
             <p className="mt-2 text-xs text-ink-soft">Across the current school workspace.</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">Active teachers</p>
-            <p className="mt-3 text-3xl font-semibold text-accent-cool">
-              {metricsState.data?.activeTeachers ?? "—"}
-            </p>
+            {metricsState.status === "loading" ? (
+              <Skeleton className="mt-3 h-10 w-24" />
+            ) : (
+              <p className="mt-3 text-3xl font-semibold text-accent-cool">
+                {metricsState.data?.activeTeachers ?? "—"}
+              </p>
+            )}
             <p className="mt-2 text-xs text-ink-soft">Teachers with approved active access.</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">User records</p>
-            <p className="mt-3 text-3xl font-semibold text-accent-warm">
-              {usersState.data?.length ?? "—"}
-            </p>
+            {usersState.status === "loading" ? (
+              <Skeleton className="mt-3 h-10 w-24" />
+            ) : (
+              <p className="mt-3 text-3xl font-semibold text-accent-warm">
+                {usersState.data?.length ?? "—"}
+              </p>
+            )}
             <p className="mt-2 text-xs text-ink-soft">Teachers, students, and parents in this school.</p>
           </Card>
         </div>
@@ -626,13 +668,36 @@ export default function AdminDashboard() {
             title="Upload school logo"
             subtitle="The school logo is used for exports while the app branding stays consistent in the UI."
           />
-          <Input label="School logo" type="file" accept="image/*" onChange={handleLogoUpload} />
-          {logoState.status === "success" && logoState.data?.logoUrl ? (
-            <StatusBlock
-              tone="positive"
-              title="Logo uploaded"
-              description={`Stored at ${logoState.data.logoUrl}`}
-            />
+          {logoPreviewUrl ? (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-white/80 p-4">
+              <Image
+                src={logoPreviewUrl}
+                alt="School logo preview"
+                width={160}
+                height={80}
+                unoptimized
+                className="h-20 w-auto object-contain"
+              />
+              <div className="flex flex-wrap justify-center gap-3">
+                <Input label="Replace logo" type="file" accept="image/*" onChange={handleLogoUpload} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleRemoveLogo}
+                  disabled={logoState.status === "loading"}
+                >
+                  {logoState.status === "loading" ? "Updating..." : "Remove Logo"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Input label="School logo" type="file" accept="image/*" onChange={handleLogoUpload} />
+          )}
+          {logoState.status === "loading" ? (
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <p className="text-sm text-ink-soft">Uploading logo...</p>
+            </div>
           ) : null}
           {logoState.status === "error" ? (
             <StatusBlock tone="negative" title="Logo upload failed" description={logoState.error ?? ""} />
@@ -801,7 +866,13 @@ export default function AdminDashboard() {
             <StatusBlock tone="negative" title="User fetch failed" description={usersState.error ?? ""} />
           ) : null}
 
-          {usersState.data ? (
+          {usersState.status === "loading" && !usersState.data ? (
+            <div className="grid gap-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : usersState.data ? (
             <DataTable
               columns={["Role", "Email", "Name", "Active", "Profile ID", "Class", "Actions"]}
               rows={usersState.data.map((user) => [

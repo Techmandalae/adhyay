@@ -19,7 +19,7 @@ const bodyFont = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Smart exam generation platform",
+  description: "Smart exam generation",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

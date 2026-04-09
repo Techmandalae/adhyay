@@ -222,7 +222,7 @@ async function sendUserOnboardingEmail(params: {
     }
   });
 
-  const resetLink = `${frontendBase.replace(/\/+$/, "")}/reset-password/${token}`;
+  const resetLink = `${frontendBase.replace(/\/+$/, "")}/set-password?token=${encodeURIComponent(token)}`;
   const sent = await sendPasswordResetEmail(params.to, resetLink);
 
   if (!sent) {
@@ -1299,6 +1299,20 @@ adminRouter.post(
     }
   }
 );
+
+adminRouter.delete("/logo", async (req, res, next) => {
+  try {
+    const admin = req.user!;
+    const updated = await prisma.school.update({
+      where: { id: admin.schoolId },
+      data: { logoUrl: null }
+    });
+
+    res.json({ logoUrl: updated.logoUrl });
+  } catch (error) {
+    next(error);
+  }
+});
 
 adminRouter.get("/academic-setup", async (req, res, next) => {
   try {

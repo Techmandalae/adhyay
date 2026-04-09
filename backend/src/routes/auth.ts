@@ -253,8 +253,9 @@ const handlePasswordResetRequest = async (
         }
       });
 
-      const frontendBase = env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
-      const resetLink = `${frontendBase.replace(/\/+$/, "")}/reset-password/${token}`;
+      const frontendBase =
+        env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
+      const resetLink = `${frontendBase.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
 
       await sendPasswordResetEmail(user.email, resetLink);
 
