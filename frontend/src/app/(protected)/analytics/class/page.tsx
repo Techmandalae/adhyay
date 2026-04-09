@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BarChart } from "@/components/analytics/BarChart";
@@ -97,6 +98,7 @@ export default function ClassAnalyticsPage() {
             title="Role-aware performance overview"
             subtitle="Teachers, students, and admins all land on the same route, but each role gets the analytics that match its scope."
           />
+          <AdminWorkspaceTabs />
 
           <Card className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

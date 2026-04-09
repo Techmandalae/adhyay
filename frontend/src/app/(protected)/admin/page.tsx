@@ -1,36 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { BarChart } from "@/components/analytics/BarChart";
-import { DataTable } from "@/components/analytics/DataTable";
-import { MetricGrid } from "@/components/analytics/MetricGrid";
+import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DataTable } from "@/components/analytics/DataTable";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
+  type AdminUser,
+  type BulkImportResponse,
   createUser,
-  getAdminAnalytics,
-  getAdminMetrics,
-  getExams,
   getAcademicSetup,
+  getAdminMetrics,
   importStudents,
   importTeachers,
-  saveAcademicSetup,
-  uploadSchoolLogo,
   linkParentToStudent,
   listUsers,
-  updateUser
+  saveAcademicSetup,
+  updateUser,
+  uploadSchoolLogo
 } from "@/lib/api";
-import type { AdminAnalyticsResponse } from "@/types/analytics";
-import type { ExamSummary } from "@/types/exam";
-import type { EvaluationSummary } from "@/types/evaluation";
-import type { AdminUser } from "@/lib/api";
+import {
+  buildImportPreview,
+  downloadErrorCsv,
+  downloadSampleCsv,
+  studentImportColumns,
+  studentSampleRow,
+  teacherImportColumns,
+  teacherSampleRow,
+  type ImportKind,
+  type ImportPreviewResult
+} from "@/lib/imports";
 
 type AsyncState<T> = {
   status: "idle" | "loading" | "error" | "success";
@@ -38,30 +45,223 @@ type AsyncState<T> = {
   error?: string;
 };
 
+type ImportState = {
+  status: "idle" | "parsing" | "ready" | "uploading" | "success" | "error";
+  file: File | null;
+  preview: ImportPreviewResult | null;
+  result: BulkImportResponse | null;
+  message?: string;
+};
+
+const initialImportState: ImportState = {
+  status: "idle",
+  file: null,
+  preview: null,
+  result: null
+};
+
+function PreviewTable({ kind, preview }: { kind: ImportKind; preview: ImportPreviewResult }) {
+  const columns =
+    kind === "students"
+      ? ["Name", "Email", "Class", "Section", "Parent Email", "Status"]
+      : ["Name", "Email", "Phone", "Subject", "Status"];
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-border">
+      <table className="min-w-full border-collapse text-sm">
+        <thead className="bg-surface-muted">
+          <tr>
+            {columns.map((column) => (
+              <th key={column} className="px-4 py-3 text-left font-semibold text-foreground">
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {preview.rows.map((row) => (
+            <tr
+              key={`${kind}-${row.rowNumber}`}
+              className={
+                row.status === "valid"
+                  ? "border-t border-emerald-100 bg-emerald-50/70"
+                  : "border-t border-rose-100 bg-rose-50/80"
+              }
+            >
+              <td className="px-4 py-3">{row.values.name || "-"}</td>
+              <td className="px-4 py-3">{row.values.email || "-"}</td>
+              {kind === "students" ? (
+                <>
+                  <td className="px-4 py-3">{row.values.className || "-"}</td>
+                  <td className="px-4 py-3">{row.values.sectionName || "-"}</td>
+                  <td className="px-4 py-3">{row.values.parentEmail || "-"}</td>
+                </>
+              ) : (
+                <>
+                  <td className="px-4 py-3">{row.values.phone || "-"}</td>
+                  <td className="px-4 py-3">{row.values.subject || "-"}</td>
+                </>
+              )}
+              <td className="px-4 py-3 font-medium">
+                {row.status === "valid" ? "Valid" : row.errors.join(", ")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ImportInstructions({ kind }: { kind: ImportKind }) {
+  const columns = kind === "students" ? [...studentImportColumns] : [...teacherImportColumns];
+  const sampleValues =
+    kind === "students"
+      ? [
+          studentSampleRow.name,
+          studentSampleRow.email,
+          studentSampleRow.password,
+          studentSampleRow.className,
+          studentSampleRow.sectionName,
+          studentSampleRow.parentEmail
+        ]
+      : [
+          teacherSampleRow.name,
+          teacherSampleRow.email,
+          teacherSampleRow.password,
+          teacherSampleRow.phone
+        ];
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface-muted p-4">
+      <p className="text-sm font-semibold text-foreground">Required CSV Format</p>
+      <p className="mt-2 text-sm text-ink-soft">{columns.join(", ")}</p>
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.24em] text-ink-soft">
+        Example row
+      </p>
+      <code className="mt-2 block overflow-x-auto rounded-xl bg-white px-3 py-2 text-xs text-foreground">
+        {sampleValues.join(", ")}
+      </code>
+    </div>
+  );
+}
+
+function BulkImportCard({
+  kind,
+  title,
+  subtitle,
+  state,
+  inputKey,
+  onFileSelect,
+  onConfirm,
+  onCancel
+}: {
+  kind: ImportKind;
+  title: string;
+  subtitle: string;
+  state: ImportState;
+  inputKey: number;
+  onFileSelect: (event: ChangeEvent<HTMLInputElement>) => void;
+  onConfirm: () => Promise<void>;
+  onCancel: () => void;
+}) {
+  const preview = state.preview;
+  const canUpload = Boolean(preview?.validCount && state.status !== "uploading");
+  const hasInvalidRows = Boolean(preview?.invalidCount);
+
+  return (
+    <Card className="space-y-5">
+      <SectionHeader eyebrow="Bulk import" title={title} subtitle={subtitle} />
+      <ImportInstructions kind={kind} />
+      <div className="flex flex-wrap gap-3">
+        <Button type="button" variant="outline" onClick={() => downloadSampleCsv(kind)}>
+          Download Sample CSV
+        </Button>
+      </div>
+      <Input
+        key={inputKey}
+        label="Select file"
+        type="file"
+        accept=".csv,.xlsx,.xls"
+        onChange={onFileSelect}
+      />
+
+      {state.status === "parsing" ? (
+        <StatusBlock title="Parsing file" description="Validating rows and building preview." />
+      ) : null}
+
+      {state.status === "error" && state.message ? (
+        <StatusBlock tone="negative" title="Import setup failed" description={state.message} />
+      ) : null}
+
+      {preview ? (
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-white/80 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-ink-soft">Total rows</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{preview.totalRows}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-emerald-700">Valid rows</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-700">{preview.validCount}</p>
+            </div>
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-rose-700">Invalid rows</p>
+              <p className="mt-2 text-2xl font-semibold text-rose-700">{preview.invalidCount}</p>
+            </div>
+          </div>
+
+          <PreviewTable kind={kind} preview={preview} />
+
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" onClick={onConfirm} disabled={!canUpload}>
+              {state.status === "uploading" ? "Uploading..." : "Confirm Upload"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => downloadErrorCsv(kind, preview.rows)}
+              disabled={!hasInvalidRows}
+            >
+              Download Error CSV
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {state.result ? (
+        <StatusBlock
+          tone={state.result.failedCount ? "negative" : "positive"}
+          title={state.result.message}
+          description={`Imported ${state.result.importedCount} of ${state.result.totalRows ?? state.result.importedCount} rows.`}
+        />
+      ) : null}
+
+      {state.result?.errors?.length ? (
+        <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <p className="font-semibold">Row-level upload errors</p>
+          {state.result.errors.slice(0, 6).map((error) => (
+            <p key={`${kind}-${error.rowNumber}-${error.message}`}>
+              Row {error.rowNumber}: {error.message}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
 export default function AdminDashboard() {
   const { token } = useAuth();
   const router = useRouter();
-  const [examsState, setExamsState] = useState<AsyncState<ExamSummary[]>>({
-    status: "idle",
-    data: null
-  });
-  const [pendingState, setPendingState] = useState<AsyncState<EvaluationSummary[]>>({
-    status: "idle",
-    data: null
-  });
   const [metricsState, setMetricsState] = useState<
     AsyncState<{ totalExamsGenerated: number; activeTeachers: number }>
   >({
     status: "idle",
     data: null
-  });
-  const [analyticsState, setAnalyticsState] = useState<AsyncState<AdminAnalyticsResponse>>({
-    status: "idle",
-    data: null
-  });
-  const [analyticsFilters, setAnalyticsFilters] = useState({
-    startDate: "",
-    endDate: ""
   });
   const [usersState, setUsersState] = useState<AsyncState<AdminUser[]>>({
     status: "idle",
@@ -78,9 +278,9 @@ export default function AdminDashboard() {
     parentId: "",
     studentId: ""
   });
-  const [academicSetupState, setAcademicSetupState] = useState<AsyncState<
-    Array<{ name: string; hasStreams: boolean; sections: string[] }>
-  >>({
+  const [academicSetupState, setAcademicSetupState] = useState<
+    AsyncState<Array<{ name: string; hasStreams: boolean; sections: string[] }>>
+  >({
     status: "idle",
     data: null
   });
@@ -91,18 +291,12 @@ export default function AdminDashboard() {
     data: null
   });
   const [academicSaveMessage, setAcademicSaveMessage] = useState<string | null>(null);
-  const [importState, setImportState] = useState<AsyncState<{ message: string; importedCount: number }>>({
-    status: "idle",
-    data: null
-  });
-  const [teacherImportState, setTeacherImportState] = useState<
-    AsyncState<{ message: string; importedCount: number }>
-  >({
-    status: "idle",
-    data: null
-  });
+  const [studentImportState, setStudentImportState] = useState<ImportState>(initialImportState);
+  const [teacherImportState, setTeacherImportState] = useState<ImportState>(initialImportState);
+  const [studentInputKey, setStudentInputKey] = useState(0);
+  const [teacherInputKey, setTeacherInputKey] = useState(0);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     if (!token) return;
     setMetricsState({ status: "loading", data: null });
     try {
@@ -115,48 +309,9 @@ export default function AdminDashboard() {
         error: error instanceof Error ? error.message : "Failed to load metrics"
       });
     }
-  };
-
-  useEffect(() => {
-    if (!token) return;
-    void fetchMetrics();
   }, [token]);
 
-  const fetchAnalytics = async () => {
-    if (!token) return;
-    setExamsState({ status: "loading", data: null });
-    try {
-      const exams = await getExams(token);
-      setExamsState({ status: "success", data: exams.items });
-    } catch (error) {
-      setExamsState({
-        status: "error",
-        data: null,
-        error: error instanceof Error ? error.message : "Failed to load exams"
-      });
-    }
-
-  };
-
-  const fetchAdminAnalytics = async () => {
-    if (!token) return;
-    setAnalyticsState({ status: "loading", data: null });
-    try {
-      const payload = await getAdminAnalytics(token, {
-        startDate: analyticsFilters.startDate || undefined,
-        endDate: analyticsFilters.endDate || undefined
-      });
-      setAnalyticsState({ status: "success", data: payload });
-    } catch (error) {
-      setAnalyticsState({
-        status: "error",
-        data: null,
-        error: error instanceof Error ? error.message : "Failed to load analytics"
-      });
-    }
-  };
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!token) return;
     setUsersState({ status: "loading", data: null });
     try {
@@ -169,7 +324,13 @@ export default function AdminDashboard() {
         error: error instanceof Error ? error.message : "Failed to load users"
       });
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    void fetchMetrics();
+    void fetchUsers();
+  }, [fetchMetrics, fetchUsers, token]);
 
   const handleCreateUser = async () => {
     if (!token) return;
@@ -254,15 +415,15 @@ export default function AdminDashboard() {
 
   const handleSaveAcademicSetup = async () => {
     if (!token) return;
-    const classes = Array.from({ length: 12 }, (_v, idx) => idx + 1)
+    const classes = Array.from({ length: 12 }, (_value, index) => index + 1)
       .filter((level) => selectedClasses[level])
       .map((level) => {
         const hasStreams = level >= 11;
-        const rawSections = sectionInputs[level] ?? "";
-        const sections = rawSections
+        const sections = (sectionInputs[level] ?? "")
           .split(",")
           .map((value) => value.trim())
           .filter(Boolean);
+
         return {
           name: `Class ${level}`,
           hasStreams,
@@ -287,7 +448,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!token || !event.target.files?.[0]) return;
     setLogoState({ status: "loading", data: null });
     try {
@@ -302,50 +463,103 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleStudentImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!token || !event.target.files?.[0]) return;
-    setImportState({ status: "loading", data: null });
+  const handlePreviewSelection = async (
+    kind: ImportKind,
+    event: ChangeEvent<HTMLInputElement>,
+    setState: Dispatch<SetStateAction<ImportState>>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setState({
+      status: "parsing",
+      file,
+      preview: null,
+      result: null
+    });
+
     try {
-      const response = await importStudents(token, event.target.files[0]);
-      setImportState({ status: "success", data: response });
-      await fetchUsers();
-    } catch (error) {
-      setImportState({
-        status: "error",
-        data: null,
-        error: error instanceof Error ? error.message : "Failed to import students"
+      const preview = await buildImportPreview(kind, file);
+      setState({
+        status: "ready",
+        file,
+        preview,
+        result: null
       });
-    } finally {
-      event.target.value = "";
+    } catch (error) {
+      setState({
+        status: "error",
+        file: null,
+        preview: null,
+        result: null,
+        message: error instanceof Error ? error.message : "Failed to parse import file"
+      });
     }
   };
 
-  const handleTeacherImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!token || !event.target.files?.[0]) return;
-    setTeacherImportState({ status: "loading", data: null });
+  const resetImportState = (
+    kind: ImportKind,
+    setState: Dispatch<SetStateAction<ImportState>>
+  ) => {
+    setState(initialImportState);
+    if (kind === "students") {
+      setStudentInputKey((value) => value + 1);
+      return;
+    }
+    setTeacherInputKey((value) => value + 1);
+  };
+
+  const handleStudentImport = async () => {
+    if (!token || !studentImportState.file) return;
+    setStudentImportState((current) => ({ ...current, status: "uploading", result: null }));
     try {
-      const response = await importTeachers(token, event.target.files[0]);
-      setTeacherImportState({ status: "success", data: response });
+      const response = await importStudents(token, studentImportState.file);
+      setStudentImportState((current) => ({
+        ...current,
+        status: "success",
+        result: response
+      }));
       await fetchUsers();
+      await fetchMetrics();
     } catch (error) {
-      setTeacherImportState({
+      setStudentImportState((current) => ({
+        ...current,
         status: "error",
-        data: null,
-        error: error instanceof Error ? error.message : "Failed to import teachers"
-      });
-    } finally {
-      event.target.value = "";
+        message: error instanceof Error ? error.message : "Failed to import students"
+      }));
+    }
+  };
+
+  const handleTeacherImport = async () => {
+    if (!token || !teacherImportState.file) return;
+    setTeacherImportState((current) => ({ ...current, status: "uploading", result: null }));
+    try {
+      const response = await importTeachers(token, teacherImportState.file);
+      setTeacherImportState((current) => ({
+        ...current,
+        status: "success",
+        result: response
+      }));
+      await fetchUsers();
+      await fetchMetrics();
+    } catch (error) {
+      setTeacherImportState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to import teachers"
+      }));
     }
   };
 
   return (
     <RequireRole roles={["ADMIN", "SUPER_ADMIN"]}>
-      <div className="mx-auto grid max-w-6xl gap-10">
+      <div className="mx-auto grid max-w-6xl gap-8">
         <SectionHeader
-          eyebrow="Admin insights"
-          title="School-wide oversight"
-          subtitle="Monitor usage, manage imports, and track exam volume."
+          eyebrow="Admin workspace"
+          title="User management"
+          subtitle="Import users with preview validation, manage accounts, and configure your school setup."
         />
+        <AdminWorkspaceTabs />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Card>
@@ -353,29 +567,71 @@ export default function AdminDashboard() {
             <p className="mt-3 text-3xl font-semibold text-accent">
               {metricsState.data?.totalExamsGenerated ?? "—"}
             </p>
-            <p className="mt-2 text-xs text-ink-soft">Across all teachers in the current school.</p>
-          </Card>
-          <Card>
-            <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">Pending reviews</p>
-            <p className="mt-3 text-3xl font-semibold text-accent-cool">
-              {pendingState.data?.length ?? "—"}
-            </p>
-            <p className="mt-2 text-xs text-ink-soft">Awaiting teacher review.</p>
+            <p className="mt-2 text-xs text-ink-soft">Across the current school workspace.</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">Active teachers</p>
-            <p className="mt-3 text-3xl font-semibold text-accent-warm">
+            <p className="mt-3 text-3xl font-semibold text-accent-cool">
               {metricsState.data?.activeTeachers ?? "—"}
             </p>
-            <p className="mt-2 text-xs text-ink-soft">Approved teachers with active access.</p>
+            <p className="mt-2 text-xs text-ink-soft">Teachers with approved active access.</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">User records</p>
+            <p className="mt-3 text-3xl font-semibold text-accent-warm">
+              {usersState.data?.length ?? "—"}
+            </p>
+            <p className="mt-2 text-xs text-ink-soft">Teachers, students, and parents in this school.</p>
           </Card>
         </div>
 
-        <Card id="academic-setup" className="space-y-4">
+        <div className="grid gap-8 xl:grid-cols-2">
+          <BulkImportCard
+            kind="students"
+            title="Import students"
+            subtitle="Normalize headers, validate rows, preview the file, then upload only when ready."
+            state={studentImportState}
+            inputKey={studentInputKey}
+            onFileSelect={(event) => void handlePreviewSelection("students", event, setStudentImportState)}
+            onConfirm={handleStudentImport}
+            onCancel={() => resetImportState("students", setStudentImportState)}
+          />
+          <BulkImportCard
+            kind="teachers"
+            title="Import teachers"
+            subtitle="Preview teacher records before upload so bad rows never block the whole file."
+            state={teacherImportState}
+            inputKey={teacherInputKey}
+            onFileSelect={(event) => void handlePreviewSelection("teachers", event, setTeacherImportState)}
+            onConfirm={handleTeacherImport}
+            onCancel={() => resetImportState("teachers", setTeacherImportState)}
+          />
+        </div>
+
+        <Card className="space-y-4">
+          <SectionHeader
+            eyebrow="Branding"
+            title="Upload school logo"
+            subtitle="The school logo is used for exports while the app branding stays consistent in the UI."
+          />
+          <Input label="School logo" type="file" accept="image/*" onChange={handleLogoUpload} />
+          {logoState.status === "success" && logoState.data?.logoUrl ? (
+            <StatusBlock
+              tone="positive"
+              title="Logo uploaded"
+              description={`Stored at ${logoState.data.logoUrl}`}
+            />
+          ) : null}
+          {logoState.status === "error" ? (
+            <StatusBlock tone="negative" title="Logo upload failed" description={logoState.error ?? ""} />
+          ) : null}
+        </Card>
+
+        <Card className="space-y-4">
           <SectionHeader
             eyebrow="Academic setup"
-            title="Define classes & sections"
-            subtitle="Select classes that exist in your school and add sections or streams."
+            title="Define classes and sections"
+            subtitle="Load the current setup, update classes, and save sections or streams."
           />
           <div className="flex flex-wrap gap-3">
             <Button onClick={loadAcademicSetup} disabled={!token}>
@@ -400,29 +656,24 @@ export default function AdminDashboard() {
             />
           ) : null}
           <div className="grid gap-4">
-            {Array.from({ length: 12 }, (_val, index) => index + 1).map((level) => {
+            {Array.from({ length: 12 }, (_value, index) => index + 1).map((level) => {
               const isSelected = Boolean(selectedClasses[level]);
               const isStreamClass = level >= 11;
               return (
-                <div
-                  key={level}
-                  className="rounded-2xl border border-border bg-white/70 p-4 text-sm"
-                >
+                <div key={level} className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
                   <label className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={(event) =>
-                        setSelectedClasses({
-                          ...selectedClasses,
+                        setSelectedClasses((current) => ({
+                          ...current,
                           [level]: event.target.checked
-                        })
+                        }))
                       }
                     />
                     <span className="font-semibold">Class {level}</span>
-                    <span className="text-xs text-ink-soft">
-                      {isStreamClass ? "Streams" : "Sections"}
-                    </span>
+                    <span className="text-xs text-ink-soft">{isStreamClass ? "Streams" : "Sections"}</span>
                   </label>
                   {isSelected ? (
                     <div className="mt-3">
@@ -435,10 +686,10 @@ export default function AdminDashboard() {
                         }
                         value={sectionInputs[level] ?? ""}
                         onChange={(event) =>
-                          setSectionInputs({
-                            ...sectionInputs,
+                          setSectionInputs((current) => ({
+                            ...current,
                             [level]: event.target.value
-                          })
+                          }))
                         }
                       />
                     </div>
@@ -449,87 +700,13 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        <Card className="space-y-4">
+        <Card id="users" className="space-y-6">
           <SectionHeader
-            eyebrow="Branding"
-            title="Upload school logo"
-            subtitle="The logo appears on PDF exam exports."
-          />
-          <Input label="School logo" type="file" accept="image/*" onChange={handleLogoUpload} />
-          {logoState.status === "success" && logoState.data?.logoUrl ? (
-            <StatusBlock
-              tone="positive"
-              title="Logo uploaded"
-              description={`Stored at ${logoState.data.logoUrl}`}
-            />
-          ) : null}
-          {logoState.status === "error" ? (
-            <StatusBlock tone="negative" title="Logo upload failed" description={logoState.error ?? ""} />
-          ) : null}
-        </Card>
-
-        <Card className="space-y-4">
-          <SectionHeader
-            eyebrow="Bulk import"
-            title="Import students from CSV or Excel"
-            subtitle="Create students, create/reuse parent accounts by email, and auto-link children."
-          />
-          <Input
-            label="Student import file"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleStudentImport}
-          />
-          {importState.status === "success" && importState.data ? (
-            <StatusBlock
-              tone="positive"
-              title={importState.data.message}
-              description={`Imported ${importState.data.importedCount} students.`}
-            />
-          ) : null}
-          {importState.status === "error" ? (
-            <StatusBlock
-              tone="negative"
-              title="Student import failed"
-              description={importState.error ?? ""}
-            />
-          ) : null}
-        </Card>
-
-        <Card className="space-y-4">
-          <SectionHeader
-            eyebrow="Bulk import"
-            title="Import teachers from CSV or Excel"
-            subtitle="Create teacher accounts automatically from name, contact, email, and subject."
-          />
-          <Input
-            label="Teacher import file"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleTeacherImport}
-          />
-          {teacherImportState.status === "success" && teacherImportState.data ? (
-            <StatusBlock
-              tone="positive"
-              title={teacherImportState.data.message}
-              description={`Imported ${teacherImportState.data.importedCount} teachers.`}
-            />
-          ) : null}
-          {teacherImportState.status === "error" ? (
-            <StatusBlock
-              tone="negative"
-              title="Teacher import failed"
-              description={teacherImportState.error ?? ""}
-            />
-          ) : null}
-        </Card>
-
-        <Card id="users" className="space-y-4">
-          <SectionHeader
-            eyebrow="User management"
+            eyebrow="User operations"
             title="Manage teachers, students, and parents"
-            subtitle="Create users, disable access, and link parents to students."
+            subtitle="Create accounts manually, link parents to students, and activate or deactivate access."
           />
+
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-4 rounded-2xl border border-border bg-white/70 p-4">
               <p className="text-sm font-semibold text-ink">Create user</p>
@@ -538,21 +715,21 @@ export default function AdminDashboard() {
                   label="Role (TEACHER/STUDENT/PARENT)"
                   value={createForm.role}
                   onChange={(event) =>
-                    setCreateForm({ ...createForm, role: event.target.value.toUpperCase() })
+                    setCreateForm((current) => ({ ...current, role: event.target.value.toUpperCase() }))
                   }
                 />
                 <Input
                   label="Email"
                   value={createForm.email}
                   onChange={(event) =>
-                    setCreateForm({ ...createForm, email: event.target.value })
+                    setCreateForm((current) => ({ ...current, email: event.target.value }))
                   }
                 />
                 <Input
                   label="Name"
                   value={createForm.name}
                   onChange={(event) =>
-                    setCreateForm({ ...createForm, name: event.target.value })
+                    setCreateForm((current) => ({ ...current, name: event.target.value }))
                   }
                 />
                 <Input
@@ -560,7 +737,7 @@ export default function AdminDashboard() {
                   type="password"
                   value={createForm.password}
                   onChange={(event) =>
-                    setCreateForm({ ...createForm, password: event.target.value })
+                    setCreateForm((current) => ({ ...current, password: event.target.value }))
                   }
                 />
                 {createForm.role === "STUDENT" ? (
@@ -568,7 +745,7 @@ export default function AdminDashboard() {
                     label="Class ID"
                     value={createForm.classId}
                     onChange={(event) =>
-                      setCreateForm({ ...createForm, classId: event.target.value })
+                      setCreateForm((current) => ({ ...current, classId: event.target.value }))
                     }
                   />
                 ) : null}
@@ -585,14 +762,14 @@ export default function AdminDashboard() {
                   label="Parent profile ID"
                   value={linkForm.parentId}
                   onChange={(event) =>
-                    setLinkForm({ ...linkForm, parentId: event.target.value })
+                    setLinkForm((current) => ({ ...current, parentId: event.target.value }))
                   }
                 />
                 <Input
                   label="Student profile ID"
                   value={linkForm.studentId}
                   onChange={(event) =>
-                    setLinkForm({ ...linkForm, studentId: event.target.value })
+                    setLinkForm((current) => ({ ...current, studentId: event.target.value }))
                   }
                 />
                 <Button onClick={handleLinkParent} disabled={!token}>
@@ -603,24 +780,18 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={fetchUsers} disabled={!token}>
-              Refresh user list
+            <Button onClick={fetchUsers} disabled={!token || usersState.status === "loading"}>
+              {usersState.status === "loading" ? "Refreshing..." : "Refresh user list"}
             </Button>
           </div>
+
           {usersState.status === "error" ? (
             <StatusBlock tone="negative" title="User fetch failed" description={usersState.error ?? ""} />
           ) : null}
+
           {usersState.data ? (
             <DataTable
-              columns={[
-                "Role",
-                "Email",
-                "Name",
-                "Active",
-                "Profile ID",
-                "Class",
-                "Actions"
-              ]}
+              columns={["Role", "Email", "Name", "Active", "Profile ID", "Class", "Actions"]}
               rows={usersState.data.map((user) => [
                 user.role,
                 user.email,
@@ -628,188 +799,17 @@ export default function AdminDashboard() {
                 user.isActive ? "Yes" : "No",
                 user.teacherId ?? user.studentId ?? user.parentId ?? "-",
                 user.classLevel ? `Class ${user.classLevel}` : "-",
-                (
-                  <Button
-                    key={user.id}
-                    variant="ghost"
-                    onClick={() => handleDeactivate(user.id, user.isActive)}
-                  >
-                    {user.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                )
+                <Button
+                  key={user.id}
+                  variant="ghost"
+                  onClick={() => void handleDeactivate(user.id, user.isActive)}
+                >
+                  {user.isActive ? "Deactivate" : "Activate"}
+                </Button>
               ])}
             />
           ) : (
             <p className="text-sm text-ink-soft">No users loaded yet.</p>
-          )}
-        </Card>
-
-        <Card className="space-y-4">
-          <SectionHeader
-            eyebrow="Operations"
-            title="Pull latest usage metrics"
-            subtitle="Refresh analytics from the backend."
-          />
-          <Button onClick={fetchAnalytics} disabled={!token}>
-            Refresh analytics
-          </Button>
-          {examsState.status === "error" ? (
-            <StatusBlock tone="negative" title="Exam fetch failed" description={examsState.error ?? ""} />
-          ) : null}
-          {pendingState.status === "error" ? (
-            <StatusBlock
-              tone="negative"
-              title="Pending fetch failed"
-              description={pendingState.error ?? ""}
-            />
-          ) : null}
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
-              <p className="font-semibold">Teacher onboarding</p>
-              <p className="mt-2 text-ink-soft">
-                Use CSV imports or direct teacher registration instead of approval queues.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
-              <p className="font-semibold">Usage metrics</p>
-              <p className="mt-2 text-ink-soft">
-                Connect subscription and billing data for richer dashboards.
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <Card className="space-y-4">
-            <SectionHeader
-              eyebrow="Analytics"
-              title="School-wide performance"
-              subtitle="Review usage, quality, and activity trends."
-            />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                label="Start date"
-                type="date"
-                value={analyticsFilters.startDate}
-                onChange={(event) =>
-                  setAnalyticsFilters({ ...analyticsFilters, startDate: event.target.value })
-                }
-              />
-              <Input
-                label="End date"
-                type="date"
-                value={analyticsFilters.endDate}
-                onChange={(event) =>
-                  setAnalyticsFilters({ ...analyticsFilters, endDate: event.target.value })
-                }
-              />
-            </div>
-            <Button onClick={fetchAdminAnalytics} disabled={!token}>
-              Refresh admin analytics
-            </Button>
-            {analyticsState.status === "loading" ? (
-              <p className="text-sm text-ink-soft">Loading analytics...</p>
-            ) : null}
-            {analyticsState.status === "error" ? (
-              <StatusBlock
-                tone="negative"
-                title="Analytics unavailable"
-                description={analyticsState.error ?? ""}
-              />
-            ) : null}
-            {analyticsState.data ? (
-              <MetricGrid
-                metrics={[
-                  {
-                    label: "Total exams",
-                    value: analyticsState.data.summary.totalExams,
-                    tone: "accent"
-                  },
-                  {
-                    label: "Submissions",
-                    value: analyticsState.data.summary.totalSubmissions
-                  },
-                  {
-                    label: "Average %",
-                    value: analyticsState.data.summary.averagePercentage,
-                    tone: "cool"
-                  }
-                ]}
-              />
-            ) : null}
-          </Card>
-
-          <Card className="space-y-4">
-            <SectionHeader eyebrow="Quality" title="Evaluation quality" />
-            {analyticsState.data ? (
-              <MetricGrid
-                metrics={[
-                  {
-                    label: "Override rate",
-                    value: Math.round(analyticsState.data.evaluationQuality.overrideRate * 100),
-                    tone: "warm"
-                  },
-                  {
-                    label: "Avg % score",
-                    value: analyticsState.data.evaluationQuality.averagePercentage,
-                    tone: "cool"
-                  },
-                  {
-                    label: "Score delta",
-                    value: analyticsState.data.evaluationQuality.averageScoreDelta
-                  }
-                ]}
-              />
-            ) : (
-              <p className="text-sm text-ink-soft">Load analytics to see quality metrics.</p>
-            )}
-          </Card>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="space-y-4">
-            <SectionHeader eyebrow="Volume" title="Exam volume by subject" />
-            {analyticsState.data ? (
-              <BarChart
-                data={analyticsState.data.examVolume.bySubject.map((item, index) => ({
-                  label: item.topic,
-                  value: item.count,
-                  tone: index % 3 === 0 ? "accent" : index % 3 === 1 ? "cool" : "warm"
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-ink-soft">No exam volume data yet.</p>
-            )}
-          </Card>
-          <Card className="space-y-4">
-            <SectionHeader eyebrow="Difficulty" title="Exam volume by difficulty" />
-            {analyticsState.data ? (
-              <BarChart
-                data={analyticsState.data.examVolume.byDifficulty.map((item, index) => ({
-                  label: item.topic,
-                  value: item.count,
-                  tone: index % 2 === 0 ? "cool" : "warm"
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-ink-soft">No difficulty data yet.</p>
-            )}
-          </Card>
-        </div>
-
-        <Card className="space-y-4">
-          <SectionHeader eyebrow="Teachers" title="Teacher activity" />
-          {analyticsState.data ? (
-            <DataTable
-              columns={["Teacher", "Exams", "Reviews"]}
-              rows={analyticsState.data.teacherActivity.map((item) => [
-                item.teacherId,
-                item.examsCreated,
-                item.evaluationsReviewed
-              ])}
-            />
-          ) : (
-            <p className="text-sm text-ink-soft">No activity data yet.</p>
           )}
         </Card>
       </div>

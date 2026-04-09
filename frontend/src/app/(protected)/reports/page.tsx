@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MetricGrid } from "@/components/analytics/MetricGrid";
@@ -119,6 +120,7 @@ export default function ReportsPage() {
             title="Animated performance report"
             subtitle="This page adds motion and chart animation without changing any backend contracts."
           />
+          <AdminWorkspaceTabs />
 
           <div className="flex flex-wrap gap-3">
             <Button onClick={loadReport} disabled={!token || status.state === "loading"}>

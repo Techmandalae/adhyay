@@ -326,6 +326,20 @@ export type ParentRequest = {
   approvalStatus: string;
 };
 
+export type BulkImportError = {
+  rowNumber: number;
+  message: string;
+  values?: Record<string, string>;
+};
+
+export type BulkImportResponse = {
+  message: string;
+  importedCount: number;
+  totalRows?: number;
+  failedCount?: number;
+  errors?: BulkImportError[];
+};
+
 export type ExamTemplate = {
   id: string;
   name: string;
@@ -932,7 +946,7 @@ export async function importStudents(token: string, file: File) {
     );
   }
 
-  return payload as { message: string; importedCount: number };
+  return payload as BulkImportResponse;
 }
 
 export async function importTeachers(token: string, file: File) {
@@ -958,7 +972,7 @@ export async function importTeachers(token: string, file: File) {
     );
   }
 
-  return payload as { message: string; importedCount: number };
+  return payload as BulkImportResponse;
 }
 
 export async function getAcademicSubjects(token: string | null, classId: string) {

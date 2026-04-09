@@ -4,6 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { decodeJwt } from "@/lib/jwt";
 import { login } from "@/lib/api";
 import { getRoleRoute } from "@/lib/auth";
@@ -62,7 +63,8 @@ export function LoginClient() {
 
   return (
     <div className="app-shell min-h-screen px-6 py-16">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl space-y-8">
+        <AuthPageHeader />
         <Card className="bg-white/80">
           <p className="text-xs uppercase tracking-[0.35em] text-accent">Secure entry</p>
           <h1 className="mt-3 font-display text-3xl font-semibold">Sign in</h1>

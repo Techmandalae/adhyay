@@ -87,27 +87,41 @@ const academicSetupSchema = z
 
 const importStudentRowSchema = z
   .object({
-    rollNumber: z.string().trim().min(1),
-    studentName: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    email: z.string().trim().email(),
+    password: z.string().trim().min(6).default("Temp@123"),
     className: z.string().trim().min(1),
     sectionName: z.string().trim().min(1),
-    studentEmail: z.string().trim().email(),
-    parentName: z.string().trim().min(1),
     parentEmail: z.string().trim().email(),
-    phone: z.string().trim().min(1),
-    location: z.string().trim().min(1),
-    dob: z.string().trim().min(1)
+    parentName: z.string().trim().min(1).optional(),
+    rollNumber: z.string().trim().optional(),
+    phone: z.string().trim().optional(),
+    location: z.string().trim().optional(),
+    dob: z.string().trim().optional()
   })
   .strict();
 
 const importTeacherRowSchema = z
   .object({
     name: z.string().trim().min(1),
-    contact: z.string().trim().min(1),
     email: z.string().trim().email(),
-    subject: z.string().trim().min(1)
+    password: z.string().trim().min(6).default("Temp@123"),
+    phone: z.string().trim().optional(),
+    subject: z.string().trim().optional()
   })
   .strict();
+
+type ImportIssue = {
+  rowNumber: number;
+  message: string;
+  values: Record<string, string>;
+};
+
+type ParsedImportResult<T> = {
+  validRows: Array<T & { rowNumber: number; values: Record<string, string> }>;
+  errors: ImportIssue[];
+  totalRows: number;
+};
 
 const STREAM_SUBJECTS: Record<string, string[]> = {
   Science: ["Physics", "Chemistry", "Mathematics", "Biology"],
@@ -137,7 +151,22 @@ function buildSubjectPoolForSections(sections: string[], hasStreams: boolean) {
 }
 
 function normalizeImportKey(value: string) {
-  return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return value.trim().toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeImportRow(row: Record<string, unknown>) {
+  return Object.entries(row).reduce<Record<string, string>>((acc, [key, value]) => {
+    acc[normalizeImportKey(key)] =
+      typeof value === "string" ? value.trim() : String(value ?? "").trim();
+    return acc;
+  }, {});
+}
+
+function firstNonEmptyValue(
+  row: Record<string, string>,
+  ...keys: string[]
+) {
+  return keys.map((key) => row[key]).find((value) => typeof value === "string" && value.trim().length > 0);
 }
 
 function parseImportedClassLevel(value: string) {
@@ -214,47 +243,97 @@ async function parseCsvRows(buffer: Buffer) {
   });
 }
 
-function mapImportRows(rows: Record<string, unknown>[]) {
-  return rows.map((row) => {
-    const normalized = Object.entries(row).reduce<Record<string, string>>((acc, [key, value]) => {
-      acc[normalizeImportKey(key)] = typeof value === "string" ? value.trim() : String(value ?? "").trim();
-      return acc;
-    }, {});
+function mapImportRows(rows: Record<string, unknown>[]): ParsedImportResult<z.infer<typeof importStudentRowSchema>> {
+  const errors: ImportIssue[] = [];
+  const validRows: Array<
+    z.infer<typeof importStudentRowSchema> & { rowNumber: number; values: Record<string, string> }
+  > = [];
 
-    return importStudentRowSchema.parse({
-      rollNumber: normalized.rollnumber,
-      studentName: normalized.studentname,
-      className: normalized.class,
-      sectionName: normalized.section,
-      studentEmail: normalized.studentemail,
-      parentName: normalized.parentname,
-      parentEmail: normalized.parentemail,
-      phone: normalized.phone,
-      location: normalized.location,
-      dob: normalized.dob
+  rows.forEach((row, index) => {
+    const normalized = normalizeImportRow(row);
+    const candidate = {
+      name: firstNonEmptyValue(normalized, "name", "studentname"),
+      email: firstNonEmptyValue(normalized, "email", "studentemail"),
+      password: firstNonEmptyValue(normalized, "password") ?? "Temp@123",
+      className: firstNonEmptyValue(normalized, "classname", "class"),
+      sectionName: firstNonEmptyValue(normalized, "sectionname", "section"),
+      parentEmail: firstNonEmptyValue(normalized, "parentemail"),
+      parentName: firstNonEmptyValue(normalized, "parentname"),
+      rollNumber: firstNonEmptyValue(normalized, "rollnumber"),
+      phone: firstNonEmptyValue(normalized, "phone", "phonenumber"),
+      location: firstNonEmptyValue(normalized, "location"),
+      dob: firstNonEmptyValue(normalized, "dob", "dateofbirth")
+    };
+
+    const parsed = importStudentRowSchema.safeParse(candidate);
+    if (!parsed.success) {
+      errors.push({
+        rowNumber: index + 2,
+        message: parsed.error.issues.map((issue) => issue.message).join("; "),
+        values: normalized
+      });
+      return;
+    }
+
+    validRows.push({
+      ...parsed.data,
+      rowNumber: index + 2,
+      values: normalized
     });
   });
+
+  return {
+    validRows,
+    errors,
+    totalRows: rows.length
+  };
 }
 
-function mapTeacherImportRows(rows: Record<string, unknown>[]) {
-  return rows.map((row) => {
-    const normalized = Object.entries(row).reduce<Record<string, string>>((acc, [key, value]) => {
-      acc[normalizeImportKey(key)] = typeof value === "string" ? value.trim() : String(value ?? "").trim();
-      return acc;
-    }, {});
+function mapTeacherImportRows(
+  rows: Record<string, unknown>[]
+): ParsedImportResult<z.infer<typeof importTeacherRowSchema>> {
+  const errors: ImportIssue[] = [];
+  const validRows: Array<
+    z.infer<typeof importTeacherRowSchema> & { rowNumber: number; values: Record<string, string> }
+  > = [];
 
-    return importTeacherRowSchema.parse({
-      name: normalized.name,
-      contact: normalized.contact,
-      email: normalized.email,
-      subject: normalized.subject
+  rows.forEach((row, index) => {
+    const normalized = normalizeImportRow(row);
+    const candidate = {
+      name: firstNonEmptyValue(normalized, "name"),
+      email: firstNonEmptyValue(normalized, "email"),
+      password: firstNonEmptyValue(normalized, "password") ?? "Temp@123",
+      phone: firstNonEmptyValue(normalized, "phone", "contact"),
+      subject: firstNonEmptyValue(normalized, "subject")
+    };
+
+    const parsed = importTeacherRowSchema.safeParse(candidate);
+    if (!parsed.success) {
+      errors.push({
+        rowNumber: index + 2,
+        message: parsed.error.issues.map((issue) => issue.message).join("; "),
+        values: normalized
+      });
+      return;
+    }
+
+    validRows.push({
+      ...parsed.data,
+      rowNumber: index + 2,
+      values: normalized
     });
   });
+
+  return {
+    validRows,
+    errors,
+    totalRows: rows.length
+  };
 }
 
 async function parseImportFile(
   file: { buffer: Buffer; originalname: string },
-  mapper: (rows: Record<string, unknown>[]) => unknown[]
+  mapper: (rows: Record<string, unknown>[]) => unknown
 ) {
   const extension = path.extname(file.originalname || "").toLowerCase();
   if (extension === ".csv") {
@@ -802,218 +881,237 @@ adminRouter.post(
         return next(new HttpError(400, "Import file is required"));
       }
 
-      const parsedRows = await parseImportFile(file, mapImportRows) as z.infer<
-        typeof importStudentRowSchema
-      >[];
+      const parsedRows = (await parseImportFile(file, mapImportRows)) as ParsedImportResult<
+        z.infer<typeof importStudentRowSchema>
+      >;
       let importedCount = 0;
+      const errors = [...parsedRows.errors];
 
-      for (const row of parsedRows) {
-        const classLevel = parseImportedClassLevel(row.className);
-        if (classLevel === null) {
-          throw new HttpError(400, `Invalid class value for ${row.studentEmail}`);
-        }
+      for (const row of parsedRows.validRows) {
+        try {
+          const classLevel = parseImportedClassLevel(row.className);
+          if (classLevel === null) {
+            throw new Error(`Invalid class value for ${row.email}`);
+          }
 
-        const academicClass = await prisma.academicClass.findFirst({
-          where: { schoolId: admin.schoolId, classLevel },
-          select: { id: true, classLevel: true, classStandardId: true }
-        });
+          const academicClass = await prisma.academicClass.findFirst({
+            where: { schoolId: admin.schoolId, classLevel },
+            select: { id: true, classLevel: true, classStandardId: true }
+          });
 
-        if (!academicClass || !academicClass.classStandardId) {
-          throw new HttpError(404, `Class not found for ${row.className}`);
-        }
+          if (!academicClass || !academicClass.classStandardId) {
+            throw new Error(`Class not found for ${row.className}`);
+          }
 
-        const section = await prisma.academicSection.findFirst({
-          where: {
-            schoolId: admin.schoolId,
-            classStandardId: academicClass.classStandardId,
-            name: row.sectionName
-          },
-          select: { id: true }
-        });
+          const section = await prisma.academicSection.findFirst({
+            where: {
+              schoolId: admin.schoolId,
+              classStandardId: academicClass.classStandardId,
+              name: row.sectionName
+            },
+            select: { id: true }
+          });
 
-        if (!section) {
-          throw new HttpError(404, `Section not found for ${row.sectionName}`);
-        }
+          if (!section) {
+            throw new Error(`Section not found for ${row.sectionName}`);
+          }
 
-        const dob = new Date(row.dob);
-        if (Number.isNaN(dob.getTime())) {
-          throw new HttpError(400, `Invalid DOB for ${row.studentEmail}`);
-        }
+          const dob = row.dob ? new Date(row.dob) : null;
+          if (row.dob && (!dob || Number.isNaN(dob.getTime()))) {
+            throw new Error(`Invalid date of birth for ${row.email}`);
+          }
 
-        const parentPassword = createImportedPasswordHashSource(row.parentEmail);
-        const studentPassword = createImportedPasswordHashSource(row.studentEmail);
-        const parentPasswordHash = await bcrypt.hash(parentPassword, 12);
-        const studentPasswordHash = await bcrypt.hash(studentPassword, 12);
+          const parentName = row.parentName?.trim() || `${row.name} Parent`;
+          const parentPassword = createImportedPasswordHashSource(row.parentEmail);
+          const studentPassword = row.password;
+          const parentPasswordHash = await bcrypt.hash(parentPassword, 12);
+          const studentPasswordHash = await bcrypt.hash(studentPassword, 12);
 
-        const parent = await prisma.user.upsert({
-          where: { schoolId_email: { schoolId: admin.schoolId, email: row.parentEmail } },
-          update: {
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            name: row.parentName,
-            role: "PARENT",
-            approvalStatus: "APPROVED",
-            isActive: true,
-            parentProfile: {
-              upsert: {
-                update: {
-                  fullName: row.parentName,
-                  email: row.parentEmail
-                },
+          const parent = await prisma.user.upsert({
+            where: { schoolId_email: { schoolId: admin.schoolId, email: row.parentEmail } },
+            update: {
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              name: parentName,
+              role: "PARENT",
+              approvalStatus: "APPROVED",
+              isActive: true,
+              parentProfile: {
+                upsert: {
+                  update: {
+                    fullName: parentName,
+                    email: row.parentEmail
+                  },
+                  create: {
+                    schoolId: admin.schoolId,
+                    fullName: parentName,
+                    email: row.parentEmail
+                  }
+                }
+              }
+            },
+            create: {
+              publicId: await generateUniquePublicId(),
+              schoolId: admin.schoolId,
+              email: row.parentEmail,
+              passwordHash: parentPasswordHash,
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              role: "PARENT",
+              name: parentName,
+              approvalStatus: "APPROVED",
+              isActive: true,
+              parentProfile: {
                 create: {
                   schoolId: admin.schoolId,
-                  fullName: row.parentName,
+                  fullName: parentName,
                   email: row.parentEmail
                 }
               }
-            }
-          },
-          create: {
-            publicId: await generateUniquePublicId(),
-            schoolId: admin.schoolId,
-            email: row.parentEmail,
-            passwordHash: parentPasswordHash,
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            role: "PARENT",
-            name: row.parentName,
-            approvalStatus: "APPROVED",
-            isActive: true,
-            parentProfile: {
-              create: {
-                schoolId: admin.schoolId,
-                fullName: row.parentName,
-                email: row.parentEmail
-              }
-            }
-          },
-          include: { parentProfile: true }
-        });
+            },
+            include: { parentProfile: true }
+          });
 
-        const student = await prisma.user.upsert({
-          where: { schoolId_email: { schoolId: admin.schoolId, email: row.studentEmail } },
-          update: {
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            name: row.studentName,
-            role: "STUDENT",
-            approvalStatus: "APPROVED",
-            isActive: true,
-            studentProfile: {
-              upsert: {
-                update: {
-                  fullName: row.studentName,
+          const student = await prisma.user.upsert({
+            where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
+            update: {
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              name: row.name,
+              role: "STUDENT",
+              approvalStatus: "APPROVED",
+              isActive: true,
+              studentProfile: {
+                upsert: {
+                  update: {
+                    fullName: row.name,
+                    className: row.className,
+                    sectionName: row.sectionName,
+                    classId: academicClass.id,
+                    classLevel: academicClass.classLevel,
+                    sectionId: section.id,
+                    rollNumber: row.rollNumber?.trim() || null,
+                    phoneNumber: row.phone?.trim() ?? "",
+                    email: row.email,
+                    location: row.location?.trim() ?? "",
+                    dob
+                  },
+                  create: {
+                    schoolId: admin.schoolId,
+                    fullName: row.name,
+                    className: row.className,
+                    sectionName: row.sectionName,
+                    classId: academicClass.id,
+                    classLevel: academicClass.classLevel,
+                    sectionId: section.id,
+                    rollNumber: row.rollNumber?.trim() || null,
+                    phoneNumber: row.phone?.trim() ?? "",
+                    email: row.email,
+                    location: row.location?.trim() ?? "",
+                    dob
+                  }
+                }
+              }
+            },
+            create: {
+              publicId: await generateUniquePublicId(),
+              schoolId: admin.schoolId,
+              email: row.email,
+              passwordHash: studentPasswordHash,
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              role: "STUDENT",
+              name: row.name,
+              approvalStatus: "APPROVED",
+              isActive: true,
+              studentProfile: {
+                create: {
+                  schoolId: admin.schoolId,
+                  fullName: row.name,
                   className: row.className,
                   sectionName: row.sectionName,
                   classId: academicClass.id,
                   classLevel: academicClass.classLevel,
                   sectionId: section.id,
-                  rollNumber: row.rollNumber,
-                  phoneNumber: row.phone,
-                  email: row.studentEmail,
-                  location: row.location,
-                  dob
-                },
-                create: {
-                  schoolId: admin.schoolId,
-                  fullName: row.studentName,
-                  className: row.className,
-                  sectionName: row.sectionName,
-                  classId: academicClass.id,
-                  classLevel: academicClass.classLevel,
-                  sectionId: section.id,
-                  rollNumber: row.rollNumber,
-                  phoneNumber: row.phone,
-                  email: row.studentEmail,
-                  location: row.location,
+                  rollNumber: row.rollNumber?.trim() || null,
+                  phoneNumber: row.phone?.trim() ?? "",
+                  email: row.email,
+                  location: row.location?.trim() ?? "",
                   dob
                 }
               }
-            }
-          },
-          create: {
-            publicId: await generateUniquePublicId(),
-            schoolId: admin.schoolId,
-            email: row.studentEmail,
-            passwordHash: studentPasswordHash,
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            role: "STUDENT",
-            name: row.studentName,
-            approvalStatus: "APPROVED",
-            isActive: true,
-            studentProfile: {
-              create: {
-                schoolId: admin.schoolId,
-                fullName: row.studentName,
-                className: row.className,
-                sectionName: row.sectionName,
-                classId: academicClass.id,
-                classLevel: academicClass.classLevel,
-                sectionId: section.id,
-                rollNumber: row.rollNumber,
-                phoneNumber: row.phone,
-                email: row.studentEmail,
-                location: row.location,
-                dob
+            },
+            include: { studentProfile: true }
+          });
+
+          if (!parent.parentProfile || !student.studentProfile) {
+            throw new Error("Failed to create parent/student profiles during import");
+          }
+
+          await prisma.parentStudent.upsert({
+            where: {
+              parentId_studentId: {
+                parentId: parent.parentProfile.id,
+                studentId: student.studentProfile.id
               }
-            }
-          },
-          include: { studentProfile: true }
-        });
-
-        if (!parent.parentProfile || !student.studentProfile) {
-          throw new HttpError(500, "Failed to create parent/student profiles during import");
-        }
-
-        await prisma.parentStudent.upsert({
-          where: {
-            parentId_studentId: {
+            },
+            update: {},
+            create: {
+              schoolId: admin.schoolId,
               parentId: parent.parentProfile.id,
               studentId: student.studentProfile.id
             }
-          },
-          update: {},
-          create: {
-            schoolId: admin.schoolId,
-            parentId: parent.parentProfile.id,
-            studentId: student.studentProfile.id
-          }
-        });
+          });
 
-        await Promise.all([
-          sendImportedLoginEmail({
-            to: parent.email,
-            userId: parent.publicId,
-            schoolId: admin.schoolId,
-            email: parent.email,
-            password: parentPassword
-          }).catch((error) => {
-            console.error("Failed to send parent import email", error);
-          }),
-          sendImportedLoginEmail({
-            to: student.email,
-            userId: student.publicId,
-            schoolId: admin.schoolId,
-            email: student.email,
-            password: studentPassword
-          }).catch((error) => {
-            console.error("Failed to send student import email", error);
-          })
-        ]);
+          await Promise.all([
+            sendImportedLoginEmail({
+              to: parent.email,
+              userId: parent.publicId,
+              schoolId: admin.schoolId,
+              email: parent.email,
+              password: parentPassword
+            }).catch((error) => {
+              console.error("Failed to send parent import email", error);
+            }),
+            sendImportedLoginEmail({
+              to: student.email,
+              userId: student.publicId,
+              schoolId: admin.schoolId,
+              email: student.email,
+              password: studentPassword
+            }).catch((error) => {
+              console.error("Failed to send student import email", error);
+            })
+          ]);
 
-        importedCount += 1;
+          importedCount += 1;
+        } catch (error) {
+          errors.push({
+            rowNumber: row.rowNumber,
+            message: error instanceof Error ? error.message : "Student import failed",
+            values: row.values
+          });
+        }
       }
 
-      res.json({ message: "Students imported successfully", importedCount });
+      res.json({
+        message:
+          errors.length > 0
+            ? "Student import completed with some row errors"
+            : "Students imported successfully",
+        importedCount,
+        totalRows: parsedRows.totalRows,
+        failedCount: errors.length,
+        errors
+      });
     } catch (error) {
       next(error);
     }
@@ -1034,103 +1132,121 @@ adminRouter.post(
         return next(new HttpError(400, "Import file is required"));
       }
 
-      const parsedRows = await parseImportFile(file, mapTeacherImportRows) as z.infer<
-        typeof importTeacherRowSchema
-      >[];
+      const parsedRows = (await parseImportFile(file, mapTeacherImportRows)) as ParsedImportResult<
+        z.infer<typeof importTeacherRowSchema>
+      >;
       let importedCount = 0;
+      const errors = [...parsedRows.errors];
 
-      for (const row of parsedRows) {
-        const teacherPassword = createImportedPasswordHashSource(row.email);
-        const teacherPasswordHash = await bcrypt.hash(teacherPassword, 12);
+      for (const row of parsedRows.validRows) {
+        try {
+          const teacherPassword = row.password;
+          const teacherPasswordHash = await bcrypt.hash(teacherPassword, 12);
 
-        const teacher = await prisma.user.upsert({
-          where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
-          update: {
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            name: row.name,
-            role: "TEACHER",
-            approvalStatus: "APPROVED",
-            isActive: true,
-            teacherProfile: {
-              upsert: {
-                update: {
-                  fullName: row.name,
-                  email: row.email,
-                  contact: row.contact,
-                  subject: row.subject
-                },
+          const teacher = await prisma.user.upsert({
+            where: { schoolId_email: { schoolId: admin.schoolId, email: row.email } },
+            update: {
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              name: row.name,
+              role: "TEACHER",
+              approvalStatus: "APPROVED",
+              isActive: true,
+              teacherProfile: {
+                upsert: {
+                  update: {
+                    fullName: row.name,
+                    email: row.email,
+                    contact: row.phone ?? "",
+                    subject: row.subject ?? ""
+                  },
+                  create: {
+                    schoolId: admin.schoolId,
+                    fullName: row.name,
+                    email: row.email,
+                    contact: row.phone ?? "",
+                    subject: row.subject ?? ""
+                  }
+                }
+              }
+            },
+            create: {
+              publicId: await generateUniquePublicId(),
+              schoolId: admin.schoolId,
+              email: row.email,
+              passwordHash: teacherPasswordHash,
+              isVerified: true,
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              role: "TEACHER",
+              name: row.name,
+              approvalStatus: "APPROVED",
+              isActive: true,
+              teacherProfile: {
                 create: {
                   schoolId: admin.schoolId,
                   fullName: row.name,
                   email: row.email,
-                  contact: row.contact,
-                  subject: row.subject
+                  contact: row.phone ?? "",
+                  subject: row.subject ?? ""
                 }
               }
+            },
+            include: {
+              teacherProfile: true
             }
-          },
-          create: {
-            publicId: await generateUniquePublicId(),
-            schoolId: admin.schoolId,
-            email: row.email,
-            passwordHash: teacherPasswordHash,
-            isVerified: true,
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-            role: "TEACHER",
-            name: row.name,
-            approvalStatus: "APPROVED",
-            isActive: true,
-            teacherProfile: {
-              create: {
-                schoolId: admin.schoolId,
-                fullName: row.name,
-                email: row.email,
-                contact: row.contact,
-                subject: row.subject
-              }
-            }
-          },
-          include: {
-            teacherProfile: true
-          }
-        });
-
-        if (teacher.teacherProfile) {
-          const classes = await prisma.academicClass.findMany({
-            where: { schoolId: admin.schoolId },
-            select: { id: true }
           });
-          if (classes.length > 0) {
-            await prisma.teacherClass.createMany({
-              data: classes.map((klass) => ({
-                schoolId: admin.schoolId,
-                teacherId: teacher.teacherProfile!.id,
-                classId: klass.id
-              })),
-              skipDuplicates: true
+
+          if (teacher.teacherProfile) {
+            const classes = await prisma.academicClass.findMany({
+              where: { schoolId: admin.schoolId },
+              select: { id: true }
             });
+            if (classes.length > 0) {
+              await prisma.teacherClass.createMany({
+                data: classes.map((klass) => ({
+                  schoolId: admin.schoolId,
+                  teacherId: teacher.teacherProfile!.id,
+                  classId: klass.id
+                })),
+                skipDuplicates: true
+              });
+            }
           }
+
+          await sendImportedLoginEmail({
+            to: teacher.email,
+            userId: teacher.publicId,
+            schoolId: admin.schoolId,
+            email: teacher.email,
+            password: teacherPassword
+          }).catch((error) => {
+            console.error("Failed to send teacher import email", error);
+          });
+
+          importedCount += 1;
+        } catch (error) {
+          errors.push({
+            rowNumber: row.rowNumber,
+            message: error instanceof Error ? error.message : "Teacher import failed",
+            values: row.values
+          });
         }
-
-        await sendImportedLoginEmail({
-          to: teacher.email,
-          userId: teacher.publicId,
-          schoolId: admin.schoolId,
-          email: teacher.email,
-          password: teacherPassword
-        }).catch((error) => {
-          console.error("Failed to send teacher import email", error);
-        });
-
-        importedCount += 1;
       }
 
-      res.json({ message: "Teachers imported successfully", importedCount });
+      res.json({
+        message:
+          errors.length > 0
+            ? "Teacher import completed with some row errors"
+            : "Teachers imported successfully",
+        importedCount,
+        totalRows: parsedRows.totalRows,
+        failedCount: errors.length,
+        errors
+      });
     } catch (error) {
       next(error);
     }

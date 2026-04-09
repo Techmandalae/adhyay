@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { AuthPageHeader } from "@/components/layout/AuthPageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -53,7 +54,8 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="app-shell min-h-screen px-6 py-16">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl space-y-8">
+        <AuthPageHeader />
         <Card className="bg-white/80">
           <p className="text-xs uppercase tracking-[0.35em] text-accent">Password recovery</p>
           <h1 className="mt-3 font-display text-3xl font-semibold">Reset password</h1>

@@ -693,7 +693,7 @@ authRouter.post("/register-school", async (req, res, next) => {
         name: payload.schoolName,
         email: schoolEmail,
         location: payload.location,
-        status: "PENDING",
+        status: "ACTIVE",
         isIndependentWorkspace: false,
         aiMonthlyLimit: 0,
         domain: payload.domain ?? null
