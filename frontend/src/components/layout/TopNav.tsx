@@ -44,7 +44,7 @@ export function TopNav() {
     <header className="border-b border-border bg-surface px-6 py-3">
       <div className="flex items-center justify-between gap-4">
         <Link href={dashboardHref} className="flex items-center gap-2">
-          <Logo variant="full" size="md" />
+          <Logo variant="full" size="md" className="h-14 w-auto" />
         </Link>
 
         <div className="flex flex-wrap items-center justify-end gap-3">

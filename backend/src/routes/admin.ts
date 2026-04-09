@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
@@ -6,12 +7,12 @@ import bcrypt from "bcrypt";
 import { Readable } from "stream";
 import XLSX from "xlsx";
 import { z } from "zod";
-import { Resend } from "resend";
 
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { requireAdmin } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
+import { sendPasswordResetEmail } from "../utils/email";
 
 const csvParser = require("csv-parser") as () => NodeJS.ReadWriteStream;
 
@@ -194,42 +195,44 @@ async function generateUniquePublicId() {
   return publicId;
 }
 
-function getResendClient() {
-  const apiKey = env.RESEND_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  return new Resend(apiKey);
-}
-
-async function sendImportedLoginEmail(params: {
+async function sendUserOnboardingEmail(params: {
   to: string;
   userId: string;
   schoolId: string;
   email: string;
-  password: string;
+  role: "TEACHER" | "STUDENT" | "PARENT";
 }) {
-  const resend = getResendClient();
-  if (!resend) {
-    return;
-  }
+  const frontendBase =
+    env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
 
-  const loginUrl = env.FRONTEND_URL ?? env.CORS_ORIGIN.split(",")[0]?.trim() ?? "http://localhost:3000";
-
-  await resend.emails.send({
-    from: "Adhyay <onboarding@resend.dev>",
-    to: params.to,
-    subject: "Adhyay Login Details",
-    html: `
-      <p>Your Adhyay account is ready.</p>
-      <p>User ID: ${params.userId}</p>
-      <p>School ID: ${params.schoolId || "Independent"}</p>
-      <p>Email: ${params.email}</p>
-      <p>Password: ${params.password}</p>
-      <p>Login here: <a href="${loginUrl}">${loginUrl}</a></p>
-    `
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      email: params.email,
+      schoolId: params.schoolId
+    }
   });
+
+  const token = crypto.randomBytes(32).toString("hex");
+  await prisma.passwordResetToken.create({
+    data: {
+      email: params.email,
+      schoolId: params.schoolId,
+      token,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    }
+  });
+
+  const resetLink = `${frontendBase.replace(/\/+$/, "")}/reset-password/${token}`;
+  const sent = await sendPasswordResetEmail(params.to, resetLink);
+
+  if (!sent) {
+    console.warn("[email] onboarding email was not sent", {
+      email: params.email,
+      schoolId: params.schoolId,
+      userId: params.userId,
+      role: params.role
+    });
+  }
 }
 
 async function parseCsvRows(buffer: Buffer) {
@@ -571,6 +574,16 @@ adminRouter.post("/users", async (req, res, next) => {
         });
       }
     }
+
+    void sendUserOnboardingEmail({
+      to: created.email,
+      userId: created.publicId,
+      schoolId: admin.schoolId,
+      email: created.email,
+      role: parsed.data.role
+    }).catch((error) => {
+      console.error("Failed to send onboarding email", error);
+    });
   } catch (error) {
     next(error);
   }
@@ -763,9 +776,7 @@ adminRouter.post("/academic-setup", async (req, res, next) => {
   try {
     const admin = req.user!;
     const payload = parsed.data;
-    const createdStandards = [];
-
-    for (const klass of payload.classes) {
+    const createdStandards = await Promise.all(payload.classes.map(async (klass) => {
       const standard = await prisma.academicClassStandard.upsert({
         where: { schoolId_name: { schoolId: admin.schoolId, name: klass.name } },
         update: { hasStreams: klass.hasStreams ?? false },
@@ -806,38 +817,56 @@ adminRouter.post("/academic-setup", async (req, res, next) => {
         });
 
         const subjectPool = buildSubjectPoolForSections(sectionNames, klass.hasStreams ?? false);
-        await Promise.all(
-          subjectPool.map(async (subjectName) => {
-            const subject = await prisma.academicSubject.upsert({
-              where: {
-                schoolId_classId_name: {
-                  schoolId: admin.schoolId,
-                  classId: academicClass.id,
-                  name: subjectName
-                }
-              },
-              update: {},
-              create: {
-                schoolId: admin.schoolId,
-                classId: academicClass.id,
-                name: subjectName,
-                isSystem: false
-              }
-            });
+        const existingSubjects = await prisma.academicSubject.findMany({
+          where: {
+            schoolId: admin.schoolId,
+            classId: academicClass.id,
+            name: { in: subjectPool }
+          },
+          select: { id: true, name: true }
+        });
 
-            await prisma.academicBook.upsert({
-              where: {
-                schoolId_subjectId_name: {
-                  schoolId: admin.schoolId,
-                  subjectId: subject.id,
-                  name: `${subjectName} NCERT`
-                }
-              },
-              update: {},
-              create: {
+        const existingSubjectNames = new Set(existingSubjects.map((subject) => subject.name));
+        const newSubjectNames = subjectPool.filter((subjectName) => !existingSubjectNames.has(subjectName));
+
+        if (newSubjectNames.length > 0) {
+          await prisma.academicSubject.createMany({
+            data: newSubjectNames.map((subjectName) => ({
+              schoolId: admin.schoolId,
+              classId: academicClass.id,
+              name: subjectName,
+              isSystem: false
+            })),
+            skipDuplicates: true
+          });
+        }
+
+        const subjects = await prisma.academicSubject.findMany({
+          where: {
+            schoolId: admin.schoolId,
+            classId: academicClass.id,
+            name: { in: subjectPool }
+          },
+          select: { id: true, name: true }
+        });
+
+        for (const subject of subjects) {
+          const bookName = `${subject.name} NCERT`;
+          const existingBook = await prisma.academicBook.findFirst({
+            where: {
+              schoolId: admin.schoolId,
+              subjectId: subject.id,
+              name: bookName
+            },
+            select: { id: true }
+          });
+
+          if (!existingBook) {
+            await prisma.academicBook.create({
+              data: {
                 schoolId: admin.schoolId,
                 subjectId: subject.id,
-                name: `${subjectName} NCERT`,
+                name: bookName,
                 type: "NCERT",
                 isSystem: false,
                 chapters: {
@@ -848,12 +877,12 @@ adminRouter.post("/academic-setup", async (req, res, next) => {
                 }
               }
             });
-          })
-        );
+          }
+        }
       }
 
-      createdStandards.push(standard);
-    }
+      return standard;
+    }));
 
     res.status(201).json({ items: createdStandards });
   } catch (error) {
@@ -1066,23 +1095,23 @@ adminRouter.post(
           });
 
           await Promise.all([
-            sendImportedLoginEmail({
+            sendUserOnboardingEmail({
               to: parent.email,
               userId: parent.publicId,
               schoolId: admin.schoolId,
               email: parent.email,
-              password: parentPassword
+              role: "PARENT"
             }).catch((error) => {
-              console.error("Failed to send parent import email", error);
+              console.error("Failed to send parent onboarding email", error);
             }),
-            sendImportedLoginEmail({
+            sendUserOnboardingEmail({
               to: student.email,
               userId: student.publicId,
               schoolId: admin.schoolId,
               email: student.email,
-              password: studentPassword
+              role: "STUDENT"
             }).catch((error) => {
-              console.error("Failed to send student import email", error);
+              console.error("Failed to send student onboarding email", error);
             })
           ]);
 
@@ -1211,14 +1240,14 @@ adminRouter.post(
             }
           }
 
-          await sendImportedLoginEmail({
+          await sendUserOnboardingEmail({
             to: teacher.email,
             userId: teacher.publicId,
             schoolId: admin.schoolId,
             email: teacher.email,
-            password: teacherPassword
+            role: "TEACHER"
           }).catch((error) => {
-            console.error("Failed to send teacher import email", error);
+            console.error("Failed to send teacher onboarding email", error);
           });
 
           importedCount += 1;

@@ -291,6 +291,8 @@ export default function AdminDashboard() {
     data: null
   });
   const [academicSaveMessage, setAcademicSaveMessage] = useState<string | null>(null);
+  const [academicToast, setAcademicToast] = useState<string | null>(null);
+  const [isSavingAcademicSetup, setIsSavingAcademicSetup] = useState(false);
   const [studentImportState, setStudentImportState] = useState<ImportState>(initialImportState);
   const [teacherImportState, setTeacherImportState] = useState<ImportState>(initialImportState);
   const [studentInputKey, setStudentInputKey] = useState(0);
@@ -431,13 +433,16 @@ export default function AdminDashboard() {
         };
       });
 
+    setIsSavingAcademicSetup(true);
     setAcademicSetupState({ status: "loading", data: academicSetupState.data });
     try {
       await saveAcademicSetup(token, { classes });
       setAcademicSetupState({ status: "success", data: classes });
       setAcademicSaveMessage("Academic setup saved successfully");
+      setAcademicToast("Academic setup saved successfully");
       await loadAcademicSetup();
       router.refresh();
+      window.setTimeout(() => setAcademicToast(null), 3000);
       window.setTimeout(() => setAcademicSaveMessage(null), 3000);
     } catch (error) {
       setAcademicSetupState({
@@ -445,6 +450,8 @@ export default function AdminDashboard() {
         data: academicSetupState.data,
         error: error instanceof Error ? error.message : "Failed to save academic setup"
       });
+    } finally {
+      setIsSavingAcademicSetup(false);
     }
   };
 
@@ -553,6 +560,11 @@ export default function AdminDashboard() {
 
   return (
     <RequireRole roles={["ADMIN", "SUPER_ADMIN"]}>
+      {academicToast ? (
+        <div className="fixed right-6 top-6 z-50 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-[var(--shadow)]">
+          {academicToast}
+        </div>
+      ) : null}
       <div className="mx-auto grid max-w-6xl gap-8">
         <SectionHeader
           eyebrow="Admin workspace"
@@ -640,9 +652,9 @@ export default function AdminDashboard() {
             <Button
               variant="outline"
               onClick={handleSaveAcademicSetup}
-              disabled={!token || academicSetupState.status === "loading"}
+              disabled={!token || isSavingAcademicSetup}
             >
-              Save academic setup
+              {isSavingAcademicSetup ? "Saving..." : "Save academic setup"}
             </Button>
           </div>
           {academicSaveMessage ? (

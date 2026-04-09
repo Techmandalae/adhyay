@@ -13,9 +13,9 @@ export type LogoProps = {
 };
 
 const sizeMap = {
-  sm: { width: 32, height: 32, className: "h-8 w-auto" },
-  md: { width: 80, height: 32, className: "h-8 w-auto" },
-  lg: { width: 140, height: 56, className: "h-14 w-auto" }
+  sm: { width: 40, height: 40, className: "h-10 w-auto" },
+  md: { width: 120, height: 48, className: "h-12 w-auto" },
+  lg: { width: 200, height: 80, className: "h-20 w-auto" }
 } as const;
 
 export function Logo({
