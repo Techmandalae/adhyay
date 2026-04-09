@@ -8,6 +8,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/components/auth/AuthProvider";
+import DashboardTabs from "@/components/common/DashboardTabs";
 import { getExams, getPendingEvaluations, getTeacherAnalytics } from "@/lib/api";
 
 type DashboardState = {
@@ -82,6 +83,7 @@ export function TeacherDashboard() {
         title="Generate exams and track review workload"
         subtitle="The new dashboard keeps generation, evaluation, analytics, and reporting on dedicated pages."
       />
+      <DashboardTabs />
 
       <div className="flex flex-wrap gap-3">
         <Link href="/exams/new">

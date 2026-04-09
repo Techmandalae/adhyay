@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+
 const API_BASE = (
   process.env.API_BASE_URL ??
   process.env.API_URL ??
@@ -40,6 +42,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file" }, { status: 400 });
     }
 
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: "File too large (max 2MB)" },
+        { status: 400 }
+      );
+    }
+
     const formData = new FormData();
     formData.append("logo", file);
 
@@ -75,10 +84,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  let response: Response;
-
   try {
-    response = await fetch(`${API_BASE}/admin/logo`, {
+    const response = await fetch(`${API_BASE}/admin/logo`, {
       method: "DELETE",
       headers: (() => {
         const headers = getAuthHeader(request);
@@ -86,35 +93,27 @@ export async function DELETE(request: NextRequest) {
         return headers;
       })()
     });
-  } catch {
-    return NextResponse.json(
-      {
-        error: "Logo removal service is unavailable. Please try again."
-      },
-      { status: 502 }
-    );
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: { message?: string };
+      message?: string;
+      logoUrl?: string | null;
+    };
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: payload.error?.message ?? payload.message ?? "Logo removal failed"
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({
+      logoUrl: payload.logoUrl ?? null,
+      url: toPublicUrl(payload.logoUrl)
+    });
+  } catch (error) {
+    console.error("Logo removal failed", error);
+    return NextResponse.json({ error: "Logo removal failed" }, { status: 500 });
   }
-
-  const payload = (await response.json().catch(() => ({}))) as {
-    error?: { message?: string };
-    message?: string;
-    logoUrl?: string | null;
-  };
-
-  if (!response.ok) {
-    return NextResponse.json(
-      {
-        error:
-          payload.error?.message ??
-          payload.message ??
-          `Request failed with status ${response.status}`
-      },
-      { status: response.status }
-    );
-  }
-
-  return NextResponse.json({
-    logoUrl: payload.logoUrl ?? null,
-    url: toPublicUrl(payload.logoUrl)
-  });
 }

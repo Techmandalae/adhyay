@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import DashboardTabs from "@/components/common/DashboardTabs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -81,6 +82,7 @@ export function AdminDashboard() {
         title="Monitor teachers, students, and exam volume"
         subtitle="The landing view is now a cleaner control panel, while operational workflows stay on their own pages."
       />
+      <DashboardTabs />
 
       <div className="flex flex-wrap gap-3">
         <Link href="/admin">

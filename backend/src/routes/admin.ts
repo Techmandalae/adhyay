@@ -69,7 +69,12 @@ const logoStorage = multer.diskStorage({
   }
 });
 
-const uploadLogo = multer({ storage: logoStorage });
+const uploadLogo = multer({
+  storage: logoStorage,
+  limits: {
+    fileSize: Math.min(env.UPLOAD_MAX_BYTES, 2 * 1024 * 1024)
+  }
+});
 const uploadStudentImport = multer();
 
 const academicSetupSchema = z

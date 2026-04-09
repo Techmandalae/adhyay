@@ -74,6 +74,10 @@ function parseClassLevel(name: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function buildFallbackClassId(classLevel: number | null | undefined) {
+  return classLevel && Number.isFinite(classLevel) ? `default-${classLevel}` : null;
+}
+
 function splitBooksByType(books: Array<{ id: string; name: string; type: "NCERT" | "REFERENCE"; subjectId: string }>) {
   return {
     ncertBooks: books.filter((book) => book.type === "NCERT"),
@@ -315,7 +319,7 @@ router.get(
 
       const classRecord = await prisma.academicClass.findFirst({
         where: { id: classId, schoolId: user.schoolId },
-        select: { id: true, classStandardId: true }
+        select: { id: true, classStandardId: true, classLevel: true, name: true }
       });
 
       if (!classRecord) {
@@ -333,6 +337,19 @@ router.get(
 
       console.log("Subjects:", subjects);
       if (subjects.length === 0) {
+        const fallbackClassId =
+          buildFallbackClassId(classRecord.classLevel) ??
+          buildFallbackClassId(parseClassLevel(classRecord.name));
+
+        if (fallbackClassId) {
+          return res.json({
+            items: buildFallbackSubjects(fallbackClassId).map((subject) => ({
+              ...subject,
+              classId: classRecord.id
+            }))
+          });
+        }
+
         console.log("No subjects found for class:", classId);
       }
 
@@ -472,6 +489,27 @@ router.get(
         },
       });
 
+      if (subjects.length === 0 && !classId.startsWith("default-")) {
+        const classRecord = await prisma.academicClass.findFirst({
+          where: { id: classId, schoolId: user.schoolId },
+          select: { id: true, classLevel: true, name: true }
+        });
+
+        const fallbackClassId = classRecord
+          ? buildFallbackClassId(classRecord.classLevel) ??
+            buildFallbackClassId(parseClassLevel(classRecord.name))
+          : null;
+
+        if (fallbackClassId && classRecord) {
+          return res.json({
+            items: buildFallbackSubjects(fallbackClassId).map((subject) => ({
+              ...subject,
+              classId: classRecord.id
+            }))
+          });
+        }
+      }
+
       res.json({ items: subjects });
     } catch (error) {
       next(error);
@@ -565,7 +603,14 @@ router.get(
         typeof req.query.classId === "string" ? req.query.classId : "";
       const subjectId =
         typeof req.query.subjectId === "string" ? req.query.subjectId : "";
-      const isIndependent = classId.startsWith("default-");
+      const fallbackClassId = classId.startsWith("default-")
+        ? classId
+        : bookId.startsWith("default-")
+          ? (bookId.split("::")[0] ?? "")
+          : subjectId.startsWith("default-")
+            ? (subjectId.split("::")[0] ?? "")
+            : "";
+      const isIndependent = Boolean(fallbackClassId);
 
       const book = isIndependent
         ? null
@@ -599,7 +644,7 @@ router.get(
 
       if (chapters.length === 0 && isIndependent) {
         console.log("Fallback -> loading chapters from JSON");
-        return res.json(buildFallbackChaptersFromContext(classId, subjectId, bookId));
+        return res.json(buildFallbackChaptersFromContext(fallbackClassId, subjectId, bookId));
       }
 
       res.json({ subjectId: book!.subjectId, bookName: book!.name, items: chapters });
@@ -631,7 +676,14 @@ router.get(
         typeof req.query.classId === "string" ? req.query.classId : "";
       const subjectId =
         typeof req.query.subjectId === "string" ? req.query.subjectId : "";
-      const isIndependent = classId.startsWith("default-");
+      const fallbackClassId = classId.startsWith("default-")
+        ? classId
+        : bookId.startsWith("default-")
+          ? (bookId.split("::")[0] ?? "")
+          : subjectId.startsWith("default-")
+            ? (subjectId.split("::")[0] ?? "")
+            : "";
+      const isIndependent = Boolean(fallbackClassId);
 
       const book = isIndependent
         ? null
@@ -663,7 +715,7 @@ router.get(
 
       if (chapters.length === 0 && isIndependent) {
         console.log("Fallback -> loading chapters from JSON");
-        return res.json(buildFallbackChaptersFromContext(classId, subjectId, bookId));
+        return res.json(buildFallbackChaptersFromContext(fallbackClassId, subjectId, bookId));
       }
 
       res.json({ subjectId: book!.subjectId, bookName: book!.name, items: chapters });
