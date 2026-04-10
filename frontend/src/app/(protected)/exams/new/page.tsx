@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PageLocalNav } from "@/components/common/PageLocalNav";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { GenerationLoader } from "@/components/ui/GenerationLoader";
@@ -323,6 +324,14 @@ export default function NewExamPage() {
             eyebrow="Exam generation"
             title="Create a new exam"
             subtitle="Use the streamlined generator and keep history, analytics, and reports on separate pages."
+          />
+
+          <PageLocalNav
+            items={[
+              { label: "Back to history", href: "/exams/history" },
+              { label: "Analytics", href: "/analytics/class" },
+              { label: "Reports", href: "/reports" }
+            ]}
           />
 
           {catalogError ? (

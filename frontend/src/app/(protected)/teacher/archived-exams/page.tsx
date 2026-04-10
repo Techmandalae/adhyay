@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PageLocalNav } from "@/components/common/PageLocalNav";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -99,9 +99,13 @@ export default function ArchivedExamsPage() {
         />
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/exams/history">
-            <Button variant="outline">Back to exam history</Button>
-          </Link>
+          <PageLocalNav
+            items={[
+              { label: "Back to history", href: "/exams/history" },
+              { label: "Create exam", href: "/exams/new" },
+              { label: "Reports", href: "/reports" }
+            ]}
+          />
           <Button variant="outline" onClick={() => void loadArchivedExams()} disabled={!token}>
             Refresh archived exams
           </Button>

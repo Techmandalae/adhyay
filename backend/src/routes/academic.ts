@@ -584,9 +584,22 @@ router.get(
       if (!classId || typeof classId !== "string") {
         return next(new HttpError(400, "classId is required"));
       }
-      const isIndependent = classId.startsWith("default-");
+      const isIndependent =
+        classId.startsWith("default-") || subjectId.includes("::");
       const resolvedSubjectId =
-        isIndependent && !subjectId.includes("::") ? `${classId}::${subjectId}` : subjectId;
+        subjectId.includes("::")
+          ? subjectId
+          : isIndependent
+            ? `${classId}::${subjectId}`
+            : subjectId;
+
+      if (isIndependent) {
+        const fallback = buildFallbackBooks(resolvedSubjectId);
+        return res.json({
+          ...splitBooksByType([...fallback.ncertBooks, ...fallback.referenceBooks]),
+          items: [...fallback.ncertBooks, ...fallback.referenceBooks]
+        });
+      }
 
       const subject = isIndependent
         ? null
@@ -609,12 +622,6 @@ router.get(
           subjectId: true
         },
       });
-
-      if (books.length === 0 && isIndependent) {
-        console.log("Fallback -> loading books from JSON");
-        const fallback = buildFallbackBooks(resolvedSubjectId);
-        books = [...fallback.ncertBooks, ...fallback.referenceBooks];
-      }
 
       res.json({
         ...splitBooksByType(books),

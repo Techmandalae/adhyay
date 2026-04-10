@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MetricGrid } from "@/components/analytics/MetricGrid";
+import { PageLocalNav } from "@/components/common/PageLocalNav";
 import { AnimatedBarReportChart } from "@/components/reports/AnimatedBarReportChart";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -118,6 +119,12 @@ export default function ReportsPage() {
             eyebrow="Reports"
             title="Animated performance report"
             subtitle="This page adds motion and chart animation without changing any backend contracts."
+          />
+          <PageLocalNav
+            items={[
+              { label: "Back to dashboard", href: "/dashboard" },
+              { label: "Analytics", href: "/analytics/class" }
+            ]}
           />
           <div className="flex flex-wrap gap-3">
             <Button onClick={loadReport} disabled={!token || status.state === "loading"}>

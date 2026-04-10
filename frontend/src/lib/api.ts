@@ -1027,9 +1027,16 @@ export async function getAcademicBooksBySubjectId(
   subjectId: string
 ) {
   const query = new URLSearchParams({ classId, subjectId });
-  return apiFetchCached<{ ncertBooks: AcademicBook[]; referenceBooks: AcademicBook[] }>(
-    `/academic/books?${query}`,
-    token
+  return fetchWithCache<{ ncertBooks: AcademicBook[]; referenceBooks: AcademicBook[] }>(
+    `/api/books?${query}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(token)
+      },
+      ttlMs: GET_CACHE_TTL_MS
+    }
   );
 }
 

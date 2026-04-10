@@ -50,16 +50,10 @@ export function TopNav() {
         <div className="flex flex-wrap items-center justify-end gap-3">
           {user ? (
             <>
-              <Link href="/dashboard">
-                <Button variant="outline">Dashboard</Button>
-              </Link>
               {identityLabel ? (
-                <Link
-                  href={profileHref}
-                  className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition hover:bg-white"
-                >
+                <span className="rounded-full px-3 py-2 text-sm font-medium text-foreground">
                   {identityLabel}
-                </Link>
+                </span>
               ) : null}
               <Button variant="outline" onClick={signOut}>
                 Logout

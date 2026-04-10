@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PageLocalNav } from "@/components/common/PageLocalNav";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageFade } from "@/components/ui/PageFade";
@@ -152,15 +152,16 @@ export default function ExamHistoryPage() {
           />
 
           <div className="flex flex-wrap gap-3">
-            <Link href="/exams/new">
-              <Button>New Exam</Button>
-            </Link>
+            <PageLocalNav
+              items={[
+                { label: "New exam", href: "/exams/new" },
+                { label: "Archived exams", href: "/teacher/archived-exams" },
+                { label: "Reports", href: "/reports" }
+              ]}
+            />
             <Button variant="outline" onClick={() => void refreshExams()} disabled={!token}>
               Refresh history
             </Button>
-            <Link href="/teacher/archived-exams">
-              <Button variant="ghost">Archived exams</Button>
-            </Link>
           </div>
 
           {actionState.status === "error" ? (
