@@ -5,6 +5,16 @@ import type {
   TeacherCatalogResponse
 } from "@/types/academic";
 
+function extractClassLevel(value: string) {
+  const match = value.match(/(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const level = Number(match[1]);
+  return Number.isFinite(level) ? level : null;
+}
+
 export function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): AcademicClass[] {
   return catalog.flatMap((item) => {
     if (item.sections.length === 0) {
@@ -64,13 +74,34 @@ export function normalizeTeacherCatalog(
 }
 
 export function normalizeSubjectsResponse(
-  response: { items?: AcademicSubject[] } | AcademicSubject[]
+  response: { items?: AcademicSubject[] } | AcademicSubject[],
+  classIdOverride?: string
 ): AcademicSubject[] {
   const subjects = Array.isArray(response) ? response : response.items || [];
 
   return subjects.map((subject) => ({
     id: subject.id,
     name: subject.name,
-    classId: subject.classId
+    classId: classIdOverride ?? subject.classId
   }));
+}
+
+export function getFallbackClassIdFromOption(
+  option?: Pick<AcademicClass, "classLevel" | "className" | "label"> | null
+) {
+  const level =
+    option?.classLevel ??
+    extractClassLevel(option?.className ?? option?.label ?? "");
+  return level ? `default-${level}` : null;
+}
+
+export function isValidAcademicSubject(
+  subjects: AcademicSubject[],
+  subjectId: string | null | undefined
+) {
+  if (!subjectId) {
+    return false;
+  }
+
+  return subjects.some((subject) => subject.id === subjectId);
 }

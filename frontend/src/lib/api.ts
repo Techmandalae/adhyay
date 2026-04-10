@@ -900,6 +900,10 @@ export async function saveAcademicSetup(
 }
 
 export async function uploadSchoolLogo(token: string, file: File) {
+  if (file.size > 2 * 1024 * 1024) {
+    throw new ApiError("Max 2MB", 400);
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 

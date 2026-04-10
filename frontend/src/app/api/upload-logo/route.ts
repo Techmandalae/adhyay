@@ -52,19 +52,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const formData = new FormData();
-    formData.append(
-      "logo",
-      new Blob([buffer], { type: file.type || "application/octet-stream" }),
-      file.name || `logo-${Date.now()}.png`
-    );
+    if (file.type && !file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+    }
 
-    const response = await fetch(`${API_BASE}/admin/logo`, {
-      method: "POST",
-      headers: getAuthHeader(request),
-      body: formData
-    });
+    const formData = new FormData();
+    formData.append("logo", file, file.name || `logo-${Date.now()}.png`);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/admin/logo`, {
+        method: "POST",
+        headers: getAuthHeader(request),
+        body: formData,
+        cache: "no-store",
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
@@ -87,7 +95,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Logo upload failed", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error && error.name === "AbortError"
+            ? "Upload timed out"
+            : "Upload failed"
+      },
+      { status: 500 }
+    );
   }
 }
 

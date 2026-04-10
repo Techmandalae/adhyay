@@ -21,7 +21,12 @@ import {
   getTeacherCatalog,
   getTemplates
 } from "@/lib/api";
-import { normalizeSubjectsResponse, normalizeTeacherCatalog } from "@/lib/catalog";
+import {
+  getFallbackClassIdFromOption,
+  isValidAcademicSubject,
+  normalizeSubjectsResponse,
+  normalizeTeacherCatalog
+} from "@/lib/catalog";
 import type { AcademicBook, AcademicChapter, AcademicClass, AcademicSubject } from "@/types/academic";
 import type { GenerateExamInput } from "@/types/exam";
 
@@ -206,6 +211,7 @@ export default function NewExamPage() {
 
   const handleClassChange = async (optionId: string) => {
     const selectedOption = classOptions.find((item) => item.id === optionId);
+    const fallbackClassId = getFallbackClassIdFromOption(selectedOption);
     setExamForm((current) => ({
       ...current,
       classId: selectedOption?.classId ?? "",
@@ -230,7 +236,7 @@ export default function NewExamPage() {
 
     try {
       const response = await getSubjects(token, selectedOption.classId);
-      setClassSubjects(normalizeSubjectsResponse(response));
+      setClassSubjects(normalizeSubjectsResponse(response, fallbackClassId ?? undefined));
     } catch {
       setClassSubjects([]);
     }
@@ -287,6 +293,10 @@ export default function NewExamPage() {
   const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!token) {
+      return;
+    }
+    if (!isValidAcademicSubject(classSubjects, examForm.subjectId)) {
+      setStatus({ state: "error", message: "Please select a valid subject." });
       return;
     }
 

@@ -34,15 +34,19 @@ import {
   downloadAnswerKeyPdf,
   reviewEvaluation
 } from "@/lib/api";
+import {
+  getFallbackClassIdFromOption,
+  isValidAcademicSubject,
+  normalizeSubjectsResponse,
+  normalizeTeacherCatalog
+} from "@/lib/catalog";
 import { summarizeNotifications } from "@/lib/notifications";
 import type { TeacherAnalyticsResponse } from "@/types/analytics";
 import type {
   AcademicChapter,
   AcademicClass,
-  AcademicCatalogClass,
   AcademicSubject,
-  AcademicBook,
-  TeacherCatalogResponse
+  AcademicBook
 } from "@/types/academic";
 import type {
   ExamSummary,
@@ -81,89 +85,6 @@ const generationSteps = [
   "Structuring exam...",
   "Finalizing paper..."
 ];
-
-function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): AcademicClass[] {
-  return catalog.flatMap((item) => {
-    if (item.sections.length === 0) {
-      return [
-        {
-          id: item.classId,
-          label: item.className,
-          classId: item.classId,
-          classLevel: item.classLevel ?? 0,
-          sectionId: "",
-          sectionName: "",
-          classStandardId: item.classId,
-          className: item.className
-        }
-      ];
-    }
-
-    return item.sections.map((section) => {
-      const suffix = /^[A-Z]$/.test(section.name) ? section.name : ` ${section.name}`;
-      return {
-        id: section.id,
-        label: `${item.className}${suffix}`,
-        classId: item.classId,
-        classLevel: item.classLevel ?? 0,
-        sectionId: section.id,
-        sectionName: section.name,
-        classStandardId: item.classId,
-        className: item.className
-      };
-    });
-  });
-}
-
-function normalizeTeacherCatalog(
-  response: TeacherCatalogResponse
-): { catalogClasses: AcademicCatalogClass[]; classOptions: AcademicClass[] } {
-  if (Array.isArray(response)) {
-    console.log("Catalog classes:", response.map((item) => ({
-      id: item.classId,
-      name: item.className
-    })));
-    return {
-      catalogClasses: response,
-      classOptions: buildCatalogClassOptions(response)
-    };
-  }
-
-  const classes = response.classes || [];
-  console.log("Catalog classes:", classes);
-
-  const catalogClasses: AcademicCatalogClass[] = classes.map((cls, index) => ({
-    classId: cls.id,
-    className: cls.name,
-    classLevel: index + 1,
-    sections: [],
-    subjects: []
-  }));
-
-  return {
-    catalogClasses,
-    classOptions: buildCatalogClassOptions(catalogClasses)
-  };
-}
-
-function normalizeSubjectsResponse(
-  response: { items?: AcademicSubject[] } | AcademicSubject[]
-): AcademicSubject[] {
-  const subjects = Array.isArray(response) ? response : response.items || [];
-
-  console.log("Subjects API response:", response);
-
-  if (!subjects || subjects.length === 0) {
-    console.warn("No subjects returned");
-    return [];
-  }
-
-  return subjects.map((subject) => ({
-    id: subject.id,
-    name: subject.name,
-    classId: subject.classId
-  }));
-}
 
 export default function TeacherDashboard() {
   const { token, user } = useAuth();
@@ -504,6 +425,7 @@ export default function TeacherDashboard() {
 
   const handleClassChange = async (sectionId: string) => {
     const selectedOption = classOptions.find((item) => item.id === sectionId);
+    const fallbackClassId = getFallbackClassIdFromOption(selectedOption);
     setExamForm((current) => ({
       ...current,
       classId: selectedOption?.classId ?? "",
@@ -533,7 +455,7 @@ export default function TeacherDashboard() {
 
     try {
       const response = await getSubjects(token, selectedOption.classId);
-      setClassSubjects(normalizeSubjectsResponse(response));
+      setClassSubjects(normalizeSubjectsResponse(response, fallbackClassId ?? undefined));
     } catch {
       setClassSubjects([]);
     }
@@ -632,6 +554,14 @@ export default function TeacherDashboard() {
   const handleGenerateExam = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!token || !isTeacher) return;
+    if (!isValidAcademicSubject(classSubjects, examForm.subjectId)) {
+      setExamStatus({
+        status: "error",
+        data: null,
+        error: "Please select a valid subject"
+      });
+      return;
+    }
     if (examForm.mode !== "REFERENCE_ONLY" && selectedChapters.length === 0) {
       window.alert("Please select at least one chapter");
       return;

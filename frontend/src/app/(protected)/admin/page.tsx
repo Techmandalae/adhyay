@@ -55,12 +55,49 @@ type ImportState = {
   message?: string;
 };
 
+type AcademicSetupDraft = Array<{
+  name: string;
+  hasStreams: boolean;
+  sections: string[];
+}>;
+
 const initialImportState: ImportState = {
   status: "idle",
   file: null,
   preview: null,
   result: null
 };
+
+function buildAcademicSetupDraft(
+  selectedClasses: Record<number, boolean>,
+  sectionInputs: Record<number, string>
+): AcademicSetupDraft {
+  return Array.from({ length: 12 }, (_value, index) => index + 1)
+    .filter((level) => selectedClasses[level])
+    .map((level) => {
+      const hasStreams = level >= 11;
+      const sections = (sectionInputs[level] ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      return {
+        name: `Class ${level}`,
+        hasStreams,
+        sections: sections.length > 0 ? sections : hasStreams ? ["Science", "Commerce", "Arts"] : ["A"]
+      };
+    });
+}
+
+function normalizeAcademicSetupDraft(items: AcademicSetupDraft): AcademicSetupDraft {
+  return items
+    .map((item) => ({
+      name: item.name,
+      hasStreams: item.hasStreams,
+      sections: [...item.sections].sort((left, right) => left.localeCompare(right))
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
 
 function PreviewTable({ kind, preview }: { kind: ImportKind; preview: ImportPreviewResult }) {
   const columns =
@@ -213,7 +250,7 @@ function BulkImportCard({
 
           <PreviewTable kind={kind} preview={preview} />
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button type="button" onClick={onConfirm} disabled={!canUpload}>
               {state.status === "uploading" ? "Uploading..." : "Confirm Upload"}
             </Button>
@@ -293,10 +330,12 @@ export default function AdminDashboard() {
     status: "idle",
     data: null
   });
-  const [academicSaveMessage, setAcademicSaveMessage] = useState<string | null>(null);
   const [academicToast, setAcademicToast] = useState<string | null>(null);
   const [isSavingAcademicSetup, setIsSavingAcademicSetup] = useState(false);
   const [isAcademicSetupSaved, setIsAcademicSetupSaved] = useState(false);
+  const [isAcademicSetupUpdated, setIsAcademicSetupUpdated] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "view">("edit");
+  const [savedAcademicSetup, setSavedAcademicSetup] = useState<AcademicSetupDraft>([]);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [logoToast, setLogoToast] = useState<string | null>(null);
   const [studentImportState, setStudentImportState] = useState<ImportState>(initialImportState);
@@ -416,6 +455,9 @@ export default function AdminDashboard() {
       setSelectedClasses(selections);
       setSectionInputs(sections);
       setIsAcademicSetupSaved(classes.length > 0);
+      setIsAcademicSetupUpdated(false);
+      setSavedAcademicSetup(classes);
+      setViewMode(classes.length > 0 ? "view" : "edit");
       setAcademicSetupState({ status: "success", data: classes });
     } catch (error) {
       setAcademicSetupState({
@@ -428,21 +470,8 @@ export default function AdminDashboard() {
 
   const handleSaveAcademicSetup = async () => {
     if (!token) return;
-    const classes = Array.from({ length: 12 }, (_value, index) => index + 1)
-      .filter((level) => selectedClasses[level])
-      .map((level) => {
-        const hasStreams = level >= 11;
-        const sections = (sectionInputs[level] ?? "")
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean);
-
-        return {
-          name: `Class ${level}`,
-          hasStreams,
-          sections: sections.length > 0 ? sections : hasStreams ? ["Science", "Commerce", "Arts"] : ["A"]
-        };
-      });
+    const classes = currentAcademicSetupDraft;
+    const isUpdate = savedAcademicSetup.length > 0;
 
     setIsSavingAcademicSetup(true);
     setAcademicSetupState({ status: "loading", data: academicSetupState.data });
@@ -450,12 +479,14 @@ export default function AdminDashboard() {
       await saveAcademicSetup(token, { classes });
       setAcademicSetupState({ status: "success", data: classes });
       setIsAcademicSetupSaved(classes.length > 0);
-      setAcademicSaveMessage("Academic setup saved successfully");
-      setAcademicToast("Academic setup saved successfully");
-      await loadAcademicSetup();
+      setIsAcademicSetupUpdated(isUpdate);
+      setSavedAcademicSetup(classes);
+      setViewMode("view");
+      setAcademicToast(
+        isUpdate ? "Academic setup updated successfully" : "Academic setup saved successfully"
+      );
       router.refresh();
       window.setTimeout(() => setAcademicToast(null), 3000);
-      window.setTimeout(() => setAcademicSaveMessage(null), 3000);
     } catch (error) {
       setAcademicSetupState({
         status: "error",
@@ -478,6 +509,14 @@ export default function AdminDashboard() {
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!token || !event.target.files?.[0]) return;
     const selectedFile = event.target.files[0];
+    if (selectedFile.size > 2 * 1024 * 1024) {
+      setLogoState({
+        status: "error",
+        data: null,
+        error: "Max 2MB"
+      });
+      return;
+    }
     setLogoState({ status: "loading", data: null });
     try {
       const response = await uploadSchoolLogo(token, selectedFile);
@@ -621,6 +660,16 @@ export default function AdminDashboard() {
   const pageSize = 20;
   const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
   const paginatedUsers = filteredUsers.slice((userPage - 1) * pageSize, userPage * pageSize);
+  const currentAcademicSetupDraft = useMemo(
+    () => buildAcademicSetupDraft(selectedClasses, sectionInputs),
+    [sectionInputs, selectedClasses]
+  );
+  const hasUnsavedAcademicChanges = useMemo(
+    () =>
+      JSON.stringify(normalizeAcademicSetupDraft(currentAcademicSetupDraft)) !==
+      JSON.stringify(normalizeAcademicSetupDraft(savedAcademicSetup)),
+    [currentAcademicSetupDraft, savedAcademicSetup]
+  );
 
   return (
     <RequireRole roles={["ADMIN", "SUPER_ADMIN"]}>
@@ -749,24 +798,41 @@ export default function AdminDashboard() {
           />
           <div className="flex flex-wrap gap-3">
             <Button onClick={loadAcademicSetup} disabled={!token}>
-              Load academic setup
+              Load setup
             </Button>
             <Button
               variant="outline"
               onClick={handleSaveAcademicSetup}
               disabled={!token || isSavingAcademicSetup}
             >
-              {isSavingAcademicSetup ? "Saving..." : "Save academic setup"}
+              {isSavingAcademicSetup ? "Saving..." : "Save setup"}
             </Button>
-            {isAcademicSetupSaved ? (
-              <Button type="button" disabled className="cursor-default bg-emerald-600 text-white hover:bg-emerald-600">
-                Academic Setup Saved ✓
-              </Button>
+            <Button
+              type="button"
+              variant={viewMode === "view" ? "primary" : "ghost"}
+              onClick={() => setViewMode("view")}
+              disabled={!savedAcademicSetup.length && !currentAcademicSetupDraft.length}
+            >
+              Saved Scholarly Structure
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "edit" ? "outline" : "ghost"}
+              onClick={() => setViewMode("edit")}
+            >
+              Edit setup
+            </Button>
+            {!hasUnsavedAcademicChanges && isAcademicSetupSaved && !isAcademicSetupUpdated ? (
+              <span className="text-sm font-semibold text-emerald-600">
+                ✔ Academic Setup Saved
+              </span>
+            ) : null}
+            {!hasUnsavedAcademicChanges && isAcademicSetupUpdated ? (
+              <span className="text-sm font-semibold text-sky-600">
+                ✔ Academic Setup Updated
+              </span>
             ) : null}
           </div>
-          {academicSaveMessage ? (
-            <StatusBlock tone="positive" title={academicSaveMessage} description="Updated setup is now active." />
-          ) : null}
           {academicSetupState.status === "error" ? (
             <StatusBlock
               tone="negative"
@@ -774,49 +840,72 @@ export default function AdminDashboard() {
               description={academicSetupState.error ?? ""}
             />
           ) : null}
-          <div className="grid gap-4">
-            {Array.from({ length: 12 }, (_value, index) => index + 1).map((level) => {
-              const isSelected = Boolean(selectedClasses[level]);
-              const isStreamClass = level >= 11;
-              return (
-                <div key={level} className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(event) =>
-                        setSelectedClasses((current) => ({
-                          ...current,
-                          [level]: event.target.checked
-                        }))
-                      }
-                    />
-                    <span className="font-semibold">Class {level}</span>
-                    <span className="text-xs text-ink-soft">{isStreamClass ? "Streams" : "Sections"}</span>
-                  </label>
-                  {isSelected ? (
-                    <div className="mt-3">
-                      <Input
-                        label={isStreamClass ? "Streams (comma separated)" : "Sections (comma separated)"}
-                        helperText={
-                          isStreamClass
-                            ? "Defaults to Science, Commerce, Arts if left blank."
-                            : "Defaults to A if left blank."
-                        }
-                        value={sectionInputs[level] ?? ""}
+          {viewMode === "view" ? (
+            savedAcademicSetup.length > 0 ? (
+              <div className="grid gap-3">
+                {savedAcademicSetup.map((klass) => (
+                  <div
+                    key={klass.name}
+                    className="rounded-2xl border border-border bg-white/80 px-4 py-3 text-sm"
+                  >
+                    <p className="font-semibold text-foreground">{klass.name}</p>
+                    <p className="mt-1 text-ink-soft">
+                      {klass.sections.length > 0 ? klass.sections.join(", ") : "No sections saved"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <StatusBlock
+                title="No saved scholarly structure"
+                description="Load or save the academic setup to view the read-only structure."
+              />
+            )
+          ) : (
+            <div className="grid gap-4">
+              {Array.from({ length: 12 }, (_value, index) => index + 1).map((level) => {
+                const isSelected = Boolean(selectedClasses[level]);
+                const isStreamClass = level >= 11;
+                return (
+                  <div key={level} className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
                         onChange={(event) =>
-                          setSectionInputs((current) => ({
+                          setSelectedClasses((current) => ({
                             ...current,
-                            [level]: event.target.value
+                            [level]: event.target.checked
                           }))
                         }
                       />
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+                      <span className="font-semibold">Class {level}</span>
+                      <span className="text-xs text-ink-soft">{isStreamClass ? "Streams" : "Sections"}</span>
+                    </label>
+                    {isSelected ? (
+                      <div className="mt-3">
+                        <Input
+                          label={isStreamClass ? "Streams (comma separated)" : "Sections (comma separated)"}
+                          helperText={
+                            isStreamClass
+                              ? "Defaults to Science, Commerce, Arts if left blank."
+                              : "Defaults to A if left blank."
+                          }
+                          value={sectionInputs[level] ?? ""}
+                          onChange={(event) =>
+                            setSectionInputs((current) => ({
+                              ...current,
+                              [level]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         <Card id="users" className="space-y-6">
