@@ -796,7 +796,7 @@ export default function AdminDashboard() {
             title="Define classes and sections"
             subtitle="Load the current setup, update classes, and save sections or streams."
           />
-          <div className="flex flex-wrap gap-3">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <Button onClick={loadAcademicSetup} disabled={!token}>
               Load setup
             </Button>
