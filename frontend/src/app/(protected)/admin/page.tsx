@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { DataTable } from "@/components/analytics/DataTable";
@@ -599,8 +598,6 @@ export default function AdminDashboard() {
           title="User management"
           subtitle="Import users with preview validation, manage accounts, and configure your school setup."
         />
-        <AdminWorkspaceTabs />
-
         <div className="grid gap-6 lg:grid-cols-3">
           <Card>
             <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">Exams generated</p>

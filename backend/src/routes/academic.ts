@@ -326,6 +326,21 @@ router.get(
         return next(new HttpError(404, "Class not found"));
       }
 
+      if (user.role === "TEACHER") {
+        const fallbackClassId =
+          buildFallbackClassId(classRecord.classLevel) ??
+          buildFallbackClassId(parseClassLevel(classRecord.name));
+
+        if (fallbackClassId) {
+          return res.json({
+            items: buildFallbackSubjects(fallbackClassId).map((subject) => ({
+              ...subject,
+              classId: classRecord.id
+            }))
+          });
+        }
+      }
+
       const subjects = await prisma.academicSubject.findMany({
         where: {
           classId: classRecord.id,
@@ -377,7 +392,15 @@ router.get(
       if (!subjectId) {
         return res.status(400).json({ error: "subjectId required" });
       }
-      const isIndependent = subjectId.startsWith("default-");
+      const isIndependent = subjectId.includes("::") || subjectId.startsWith("default-");
+
+      if (user.role === "TEACHER" && isIndependent) {
+        const fallback = buildFallbackBooks(subjectId);
+        return res.json({
+          ncertBooks: fallback.ncertBooks,
+          referenceBooks: fallback.referenceBooks
+        });
+      }
 
       const subject = user.schoolId
         ? await prisma.academicSubject.findFirst({
@@ -477,6 +500,27 @@ router.get(
       const user = req.user;
       if (!user) {
         return next(new HttpError(401, "Authentication required"));
+      }
+
+      if (user.role === "TEACHER" && !classId.startsWith("default-")) {
+        const classRecord = await prisma.academicClass.findFirst({
+          where: { id: classId, schoolId: user.schoolId },
+          select: { id: true, classLevel: true, name: true }
+        });
+
+        const fallbackClassId = classRecord
+          ? buildFallbackClassId(classRecord.classLevel) ??
+            buildFallbackClassId(parseClassLevel(classRecord.name))
+          : null;
+
+        if (fallbackClassId && classRecord) {
+          return res.json({
+            items: buildFallbackSubjects(fallbackClassId).map((subject) => ({
+              ...subject,
+              classId: classRecord.id
+            }))
+          });
+        }
       }
 
       const subjects = await prisma.academicSubject.findMany({

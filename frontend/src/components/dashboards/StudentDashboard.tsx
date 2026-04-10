@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
-import DashboardTabs from "@/components/common/DashboardTabs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -83,8 +82,6 @@ export function StudentDashboard() {
         title="Track assignments, submissions, and scores"
         subtitle="Assigned exams, submission progress, and reports are now separated into clearer pages."
       />
-      <DashboardTabs />
-
       <div className="flex flex-wrap gap-3">
         <Link href="/student/results">
           <Button>Results</Button>

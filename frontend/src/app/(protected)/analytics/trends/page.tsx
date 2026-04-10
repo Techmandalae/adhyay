@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 
-import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
-import DashboardTabs from "@/components/common/DashboardTabs";
 import { BarChart } from "@/components/analytics/BarChart";
 import { TrendChart } from "@/components/analytics/TrendChart";
 import { Button } from "@/components/ui/Button";
@@ -79,9 +77,6 @@ export default function TrendAnalyticsPage() {
             title="Progress and activity trends"
             subtitle="Use this page for movement over time, separate from the broader class overview."
           />
-          <DashboardTabs />
-          <AdminWorkspaceTabs />
-
           <Card className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Input

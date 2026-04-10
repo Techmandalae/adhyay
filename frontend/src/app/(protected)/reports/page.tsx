@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
-import DashboardTabs from "@/components/common/DashboardTabs";
 import { MetricGrid } from "@/components/analytics/MetricGrid";
 import { AnimatedBarReportChart } from "@/components/reports/AnimatedBarReportChart";
 import { Button } from "@/components/ui/Button";
@@ -121,9 +119,6 @@ export default function ReportsPage() {
             title="Animated performance report"
             subtitle="This page adds motion and chart animation without changing any backend contracts."
           />
-          <DashboardTabs />
-          <AdminWorkspaceTabs />
-
           <div className="flex flex-wrap gap-3">
             <Button onClick={loadReport} disabled={!token || status.state === "loading"}>
               {status.state === "loading" ? "Refreshing..." : "Refresh report"}

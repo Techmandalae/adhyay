@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
 
 const API_BASE = (
