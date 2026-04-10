@@ -12,6 +12,7 @@ import { analyticsRouter } from "./routes/analytics";
 import academicRouter, { catalogRouter } from "./routes/academic";
 import { adminRouter } from "./routes/admin";
 import { examsRouter } from "./routes/exams";
+import { feedbackRouter } from "./routes/feedback";
 import { healthRouter } from "./routes/health";
 import { parentRouter } from "./routes/parent";
 import { platformRouter } from "./routes/platform";
@@ -120,6 +121,7 @@ export function createApp() {
   app.use("/academic", academicRouter);
   app.use("/exams", examsRouter);
   app.use("/analytics", analyticsRouter);
+  app.use("/feedback", feedbackRouter);
   app.use(catalogRouter);
   app.use(submissionsRouter);
 

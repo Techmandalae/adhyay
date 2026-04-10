@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -257,6 +257,9 @@ function BulkImportCard({
 export default function AdminDashboard() {
   const { token } = useAuth();
   const router = useRouter();
+  const [activeUserTab, setActiveUserTab] = useState<AdminUser["role"]>("STUDENT");
+  const [userSearch, setUserSearch] = useState("");
+  const [userPage, setUserPage] = useState(1);
   const [metricsState, setMetricsState] = useState<
     AsyncState<{ totalExamsGenerated: number; activeTeachers: number }>
   >({
@@ -293,6 +296,7 @@ export default function AdminDashboard() {
   const [academicSaveMessage, setAcademicSaveMessage] = useState<string | null>(null);
   const [academicToast, setAcademicToast] = useState<string | null>(null);
   const [isSavingAcademicSetup, setIsSavingAcademicSetup] = useState(false);
+  const [isAcademicSetupSaved, setIsAcademicSetupSaved] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [logoToast, setLogoToast] = useState<string | null>(null);
   const [studentImportState, setStudentImportState] = useState<ImportState>(initialImportState);
@@ -335,6 +339,10 @@ export default function AdminDashboard() {
     void fetchMetrics();
     void fetchUsers();
   }, [fetchMetrics, fetchUsers, token]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [activeUserTab, userSearch]);
 
   const handleCreateUser = async () => {
     if (!token) return;
@@ -386,7 +394,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const loadAcademicSetup = async () => {
+  const loadAcademicSetup = useCallback(async () => {
     if (!token) return;
     setAcademicSetupState({ status: "loading", data: null });
     try {
@@ -407,6 +415,7 @@ export default function AdminDashboard() {
       });
       setSelectedClasses(selections);
       setSectionInputs(sections);
+      setIsAcademicSetupSaved(classes.length > 0);
       setAcademicSetupState({ status: "success", data: classes });
     } catch (error) {
       setAcademicSetupState({
@@ -415,7 +424,7 @@ export default function AdminDashboard() {
         error: error instanceof Error ? error.message : "Failed to load academic setup"
       });
     }
-  };
+  }, [token]);
 
   const handleSaveAcademicSetup = async () => {
     if (!token) return;
@@ -440,6 +449,7 @@ export default function AdminDashboard() {
     try {
       await saveAcademicSetup(token, { classes });
       setAcademicSetupState({ status: "success", data: classes });
+      setIsAcademicSetupSaved(classes.length > 0);
       setAcademicSaveMessage("Academic setup saved successfully");
       setAcademicToast("Academic setup saved successfully");
       await loadAcademicSetup();
@@ -456,6 +466,14 @@ export default function AdminDashboard() {
       setIsSavingAcademicSetup(false);
     }
   };
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    void loadAcademicSetup();
+  }, [loadAcademicSetup, token]);
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!token || !event.target.files?.[0]) return;
@@ -579,6 +597,30 @@ export default function AdminDashboard() {
       }));
     }
   };
+
+  const filteredUsers = useMemo(() => {
+    const items = usersState.data ?? [];
+    const search = userSearch.trim().toLowerCase();
+
+    return items.filter((user) => {
+      if (user.role !== activeUserTab) {
+        return false;
+      }
+
+      if (!search) {
+        return true;
+      }
+
+      return [user.email, user.name ?? "", user.teacherId ?? "", user.studentId ?? "", user.parentId ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
+    });
+  }, [activeUserTab, userSearch, usersState.data]);
+
+  const pageSize = 20;
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const paginatedUsers = filteredUsers.slice((userPage - 1) * pageSize, userPage * pageSize);
 
   return (
     <RequireRole roles={["ADMIN", "SUPER_ADMIN"]}>
@@ -716,6 +758,11 @@ export default function AdminDashboard() {
             >
               {isSavingAcademicSetup ? "Saving..." : "Save academic setup"}
             </Button>
+            {isAcademicSetupSaved ? (
+              <Button type="button" disabled className="cursor-default bg-emerald-600 text-white hover:bg-emerald-600">
+                Academic Setup Saved ✓
+              </Button>
+            ) : null}
           </div>
           {academicSaveMessage ? (
             <StatusBlock tone="positive" title={academicSaveMessage} description="Updated setup is now active." />
@@ -855,6 +902,26 @@ export default function AdminDashboard() {
             <Button onClick={fetchUsers} disabled={!token || usersState.status === "loading"}>
               {usersState.status === "loading" ? "Refreshing..." : "Refresh user list"}
             </Button>
+            <Input
+              label="Search user"
+              placeholder="Search by name, email, or profile ID"
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+              className="min-w-[260px]"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {(["STUDENT", "TEACHER", "PARENT"] as const).map((role) => (
+                <Button
+                  key={role}
+                  type="button"
+                  variant={activeUserTab === role ? "primary" : "outline"}
+                  onClick={() => setActiveUserTab(role)}
+                >
+                {role === "STUDENT" ? "Students" : role === "TEACHER" ? "Teachers" : "Parents"}
+              </Button>
+            ))}
           </div>
 
           {usersState.status === "error" ? (
@@ -868,24 +935,51 @@ export default function AdminDashboard() {
               <Skeleton className="h-12 w-full" />
             </div>
           ) : usersState.data ? (
-            <DataTable
-              columns={["Role", "Email", "Name", "Active", "Profile ID", "Class", "Actions"]}
-              rows={usersState.data.map((user) => [
-                user.role,
-                user.email,
-                user.name ?? "-",
-                user.isActive ? "Yes" : "No",
-                user.teacherId ?? user.studentId ?? user.parentId ?? "-",
-                user.classLevel ? `Class ${user.classLevel}` : "-",
-                <Button
-                  key={user.id}
-                  variant="ghost"
-                  onClick={() => void handleDeactivate(user.id, user.isActive)}
-                >
-                  {user.isActive ? "Deactivate" : "Activate"}
-                </Button>
-              ])}
-            />
+            <div className="space-y-4">
+              <DataTable
+                columns={["Role", "Email", "Name", "Active", "Profile ID", "Class", "Actions"]}
+                rows={paginatedUsers.map((user) => [
+                  user.role,
+                  user.email,
+                  user.name ?? "-",
+                  user.isActive ? "Yes" : "No",
+                  user.teacherId ?? user.studentId ?? user.parentId ?? "-",
+                  user.classLevel ? `Class ${user.classLevel}` : "-",
+                  <Button
+                    key={user.id}
+                    variant="ghost"
+                    onClick={() => void handleDeactivate(user.id, user.isActive)}
+                  >
+                    {user.isActive ? "Deactivate" : "Activate"}
+                  </Button>
+                ])}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-ink-soft">
+                  Showing {paginatedUsers.length} of {filteredUsers.length} {activeUserTab.toLowerCase()} users.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={userPage <= 1}
+                    onClick={() => setUserPage((current) => Math.max(1, current - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={userPage >= totalUserPages}
+                    onClick={() =>
+                      setUserPage((current) => Math.min(totalUserPages, current + 1))
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : (
             <p className="text-sm text-ink-soft">No users loaded yet.</p>
           )}

@@ -611,3 +611,16 @@ model PasswordResetToken {
   @@index([schoolId])
   @@index([expiresAt])
 }
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String
+  message   String
+  rating    Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([role])
+  @@index([createdAt])
+}

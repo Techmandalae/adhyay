@@ -203,7 +203,6 @@ export default function TeacherDashboard() {
     classLevel: "",
     difficulty: ""
   });
-  const [catalogClasses, setCatalogClasses] = useState<AcademicCatalogClass[]>([]);
   const [classOptions, setClassOptions] = useState<Array<AcademicClass>>([]);
   const [classSubjects, setClassSubjects] = useState<AcademicSubject[]>([]);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
@@ -313,7 +312,6 @@ export default function TeacherDashboard() {
         const response = await getTeacherCatalog(token);
         if (!isActive) return;
         const normalized = normalizeTeacherCatalog(response);
-        setCatalogClasses(normalized.catalogClasses);
         setClassOptions(normalized.classOptions);
         setAcademicStatus({ status: "success", data: null });
       } catch (error) {
@@ -330,6 +328,116 @@ export default function TeacherDashboard() {
       isActive = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !examForm.classId || !examForm.subjectId) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadBooks = async () => {
+      try {
+        const response = await getAcademicBooksBySubjectId(
+          token,
+          examForm.classId ?? "",
+          examForm.subjectId ?? ""
+        );
+
+        if (!isActive) {
+          return;
+        }
+
+        setNcertBooks(response.ncertBooks);
+        setReferenceBooks(response.referenceBooks);
+        setExamForm((current) => ({
+          ...current,
+          ncertBookIds: [],
+          referenceBookIds: [],
+          ncertChapters: [],
+          chapterIds: [],
+          bookIds: []
+        }));
+        setSelectedChapters([]);
+        setChapters([]);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setNcertBooks([]);
+        setReferenceBooks([]);
+        setChapters([]);
+      }
+    };
+
+    void loadBooks();
+
+    return () => {
+      isActive = false;
+    };
+  }, [token, examForm.classId, examForm.subjectId]);
+
+  useEffect(() => {
+    if (
+      !token ||
+      !examForm.classId ||
+      !examForm.subjectId ||
+      examForm.mode === "REFERENCE_ONLY" ||
+      examForm.ncertBookIds.length === 0
+    ) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadChapters = async () => {
+      try {
+        const responses = await Promise.all(
+          examForm.ncertBookIds.map((bookId) =>
+            getAcademicChapters(token, bookId, examForm.classId ?? "", examForm.subjectId ?? "")
+          )
+        );
+        if (!isActive) {
+          return;
+        }
+        const unique = new Map<string, AcademicChapter>();
+        responses.forEach((response) => {
+          response.items.forEach((chapter) => {
+            if (!unique.has(chapter.id)) {
+              unique.set(chapter.id, {
+                ...chapter,
+                bookName: response.bookName
+              });
+            }
+          });
+        });
+        setChapters(
+          Array.from(unique.values()).sort((left, right) => {
+            const leftKey = `${left.bookName ?? ""} ${left.title}`;
+            const rightKey = `${right.bookName ?? ""} ${right.title}`;
+            return leftKey.localeCompare(rightKey);
+          })
+        );
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setChapters([]);
+      }
+    };
+
+    void loadChapters();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    token,
+    examForm.classId,
+    examForm.subjectId,
+    examForm.mode,
+    examForm.ncertBookIds
+  ]);
 
   useEffect(() => {
     if (!token) {
@@ -426,7 +534,7 @@ export default function TeacherDashboard() {
     try {
       const response = await getSubjects(token, selectedOption.classId);
       setClassSubjects(normalizeSubjectsResponse(response));
-    } catch (_error) {
+    } catch {
       setClassSubjects([]);
     }
   };
@@ -449,23 +557,6 @@ export default function TeacherDashboard() {
     setReferenceBooks([]);
     setSelectedChapters([]);
     setChapters([]);
-
-    if (!token || !nextSubjectId) {
-      return;
-    }
-
-    try {
-      const response = await getAcademicBooksBySubjectId(
-        token,
-        examForm.classId ?? "",
-        nextSubjectId
-      );
-      setNcertBooks(response.ncertBooks);
-      setReferenceBooks(response.referenceBooks);
-    } catch (_error) {
-      setNcertBooks([]);
-      setReferenceBooks([]);
-    }
   };
 
   const handleModeChange = (mode: GenerateExamInput["mode"]) => {
@@ -505,44 +596,6 @@ export default function TeacherDashboard() {
       bookIds: [...new Set([...bookIds, ...(current.referenceBookIds ?? [])])]
     }));
     setSelectedChapters([]);
-
-    if (examForm.mode === "REFERENCE_ONLY" || bookIds.length === 0) {
-      setChapters([]);
-      return;
-    }
-
-    if (!token) {
-      setChapters([]);
-      return;
-    }
-
-    try {
-      const responses = await Promise.all(
-        bookIds.map((bookId) =>
-          getAcademicChapters(token, bookId, examForm.classId, examForm.subjectId)
-        )
-      );
-      const unique = new Map<string, AcademicChapter>();
-      responses.forEach((response) => {
-        response.items.forEach((chapter) => {
-          if (!unique.has(chapter.id)) {
-            unique.set(chapter.id, {
-              ...chapter,
-              bookName: response.bookName
-            });
-          }
-        });
-      });
-      setChapters(
-        Array.from(unique.values()).sort((left, right) => {
-          const leftKey = `${left.bookName ?? ""} ${left.title}`;
-          const rightKey = `${right.bookName ?? ""} ${right.title}`;
-          return leftKey.localeCompare(rightKey);
-        })
-      );
-    } catch (_error) {
-      setChapters([]);
-    }
   };
 
   const handleReferenceBookChange = (bookIds: string[]) => {

@@ -915,6 +915,8 @@ export async function uploadSchoolLogo(token: string, file: File) {
   if (!response.ok) {
     throw new ApiError(
       (payload as { error?: { message?: string } })?.error?.message ??
+        (payload as { error?: string })?.error ??
+        (payload as { message?: string })?.message ??
         `Request failed with status ${response.status}`,
       response.status,
       payload

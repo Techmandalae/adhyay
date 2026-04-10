@@ -52,8 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const buffer = Buffer.from(await file.arrayBuffer());
     const formData = new FormData();
-    formData.append("logo", file);
+    formData.append(
+      "logo",
+      new Blob([buffer], { type: file.type || "application/octet-stream" }),
+      file.name || `logo-${Date.now()}.png`
+    );
 
     const response = await fetch(`${API_BASE}/admin/logo`, {
       method: "POST",

@@ -98,6 +98,111 @@ export default function NewExamPage() {
     };
   }, [token]);
 
+  useEffect(() => {
+    if (!token || !examForm.classId || !examForm.subjectId) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadBooks = async () => {
+      try {
+        const response = await getAcademicBooksBySubjectId(
+          token,
+          examForm.classId ?? "",
+          examForm.subjectId ?? ""
+        );
+
+        if (!isActive) {
+          return;
+        }
+
+        setNcertBooks(response.ncertBooks);
+        setReferenceBooks(response.referenceBooks);
+        setExamForm((current) => ({
+          ...current,
+          ncertBookIds: [],
+          referenceBookIds: [],
+          chapterIds: [],
+          ncertChapters: [],
+          bookIds: []
+        }));
+        setSelectedChapters([]);
+        setChapters([]);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setNcertBooks([]);
+        setReferenceBooks([]);
+        setChapters([]);
+      }
+    };
+
+    void loadBooks();
+
+    return () => {
+      isActive = false;
+    };
+  }, [token, examForm.classId, examForm.subjectId]);
+
+  useEffect(() => {
+    if (
+      !token ||
+      !examForm.classId ||
+      !examForm.subjectId ||
+      examForm.mode === "REFERENCE_ONLY" ||
+      examForm.ncertBookIds.length === 0
+    ) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadChapters = async () => {
+      try {
+        const responses = await Promise.all(
+          examForm.ncertBookIds.map((bookId) =>
+            getAcademicChapters(token, bookId, examForm.classId ?? "", examForm.subjectId ?? "")
+          )
+        );
+
+        if (!isActive) {
+          return;
+        }
+
+        const unique = new Map<string, AcademicChapter>();
+        responses.forEach((response) => {
+          response.items.forEach((chapter) => {
+            unique.set(chapter.id, {
+              ...chapter,
+              bookName: response.bookName
+            });
+          });
+        });
+
+        setChapters(Array.from(unique.values()));
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setChapters([]);
+      }
+    };
+
+    void loadChapters();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    token,
+    examForm.classId,
+    examForm.subjectId,
+    examForm.mode,
+    examForm.ncertBookIds
+  ]);
+
   const handleClassChange = async (optionId: string) => {
     const selectedOption = classOptions.find((item) => item.id === optionId);
     setExamForm((current) => ({
@@ -146,19 +251,6 @@ export default function NewExamPage() {
     setReferenceBooks([]);
     setChapters([]);
     setSelectedChapters([]);
-
-    if (!token || !subjectId || !examForm.classId) {
-      return;
-    }
-
-    try {
-      const response = await getAcademicBooksBySubjectId(token, examForm.classId, subjectId);
-      setNcertBooks(response.ncertBooks);
-      setReferenceBooks(response.referenceBooks);
-    } catch {
-      setNcertBooks([]);
-      setReferenceBooks([]);
-    }
   };
 
   const handleNcertBooksChange = async (selectedBookIds: string[]) => {
@@ -170,33 +262,6 @@ export default function NewExamPage() {
       bookIds: [...new Set([...selectedBookIds, ...(current.referenceBookIds ?? [])])]
     }));
     setSelectedChapters([]);
-
-    if (!token || selectedBookIds.length === 0 || examForm.mode === "REFERENCE_ONLY") {
-      setChapters([]);
-      return;
-    }
-
-    try {
-      const responses = await Promise.all(
-        selectedBookIds.map((bookId) =>
-          getAcademicChapters(token, bookId, examForm.classId, examForm.subjectId)
-        )
-      );
-
-      const unique = new Map<string, AcademicChapter>();
-      responses.forEach((response) => {
-        response.items.forEach((chapter) => {
-          unique.set(chapter.id, {
-            ...chapter,
-            bookName: response.bookName
-          });
-        });
-      });
-
-      setChapters(Array.from(unique.values()));
-    } catch {
-      setChapters([]);
-    }
   };
 
   const handleReferenceBooksChange = (selectedBookIds: string[]) => {

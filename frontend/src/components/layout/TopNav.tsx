@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import FeedbackModal from "@/components/common/FeedbackModal";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { getRoleRoute } from "@/lib/auth";
@@ -26,8 +27,9 @@ function getProfileHref(role?: string) {
 }
 
 export function TopNav() {
-  const { user, signOut } = useAuth();
+  const { token, user, signOut } = useAuth();
   const router = useRouter();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const dashboardHref = getRoleRoute(user?.role);
   const profileHref = getProfileHref(user?.role);
 
@@ -48,6 +50,9 @@ export function TopNav() {
         <div className="flex flex-wrap items-center justify-end gap-3">
           {user ? (
             <>
+              <Link href="/dashboard">
+                <Button variant="outline">Dashboard</Button>
+              </Link>
               {identityLabel ? (
                 <Link
                   href={profileHref}
@@ -67,6 +72,23 @@ export function TopNav() {
           )}
         </div>
       </div>
+      {user ? (
+        <>
+          <Button
+            type="button"
+            className="fixed bottom-6 right-6 z-50 shadow-[0_18px_40px_rgba(255,107,53,0.35)]"
+            onClick={() => setFeedbackOpen(true)}
+          >
+            Feedback
+          </Button>
+          <FeedbackModal
+            open={feedbackOpen}
+            onClose={() => setFeedbackOpen(false)}
+            token={token}
+            user={user}
+          />
+        </>
+      ) : null}
     </header>
   );
 }
