@@ -910,7 +910,7 @@ export async function uploadSchoolLogo(token: string, file: File) {
   }
 
   const formData = new FormData();
-  formData.append("logo", file, file.name);
+  formData.append("file", file, file.name);
 
   const response = await fetch("/api/upload-logo", {
     method: "POST",

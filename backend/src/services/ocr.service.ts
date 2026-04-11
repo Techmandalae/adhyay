@@ -4,8 +4,16 @@ import { PDFParse } from "pdf-parse";
 import sharp from "sharp";
 import Tesseract from "tesseract.js";
 
-async function preprocessImage(filePath: string) {
-  return sharp(filePath)
+async function toBuffer(input: Buffer | string) {
+  if (Buffer.isBuffer(input)) {
+    return input;
+  }
+
+  return fs.readFile(input);
+}
+
+async function preprocessImage(input: Buffer | string) {
+  return sharp(await toBuffer(input))
     .rotate()
     .grayscale()
     .normalize()
@@ -14,14 +22,14 @@ async function preprocessImage(filePath: string) {
     .toBuffer();
 }
 
-export async function extractTextFromImage(filePath: string) {
-  const imageBuffer = await preprocessImage(filePath);
+export async function extractTextFromImage(input: Buffer | string) {
+  const imageBuffer = await preprocessImage(input);
   const result = await Tesseract.recognize(imageBuffer, "eng");
   return result.data.text.trim();
 }
 
-export async function extractTextFromPDF(filePath: string) {
-  const buffer = await fs.readFile(filePath);
+export async function extractTextFromPDF(input: Buffer | string) {
+  const buffer = await toBuffer(input);
   const parser = new PDFParse({ data: buffer });
   try {
     const data = await parser.getText();

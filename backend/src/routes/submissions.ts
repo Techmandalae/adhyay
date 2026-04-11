@@ -40,9 +40,10 @@ type UploadFile = {
   encoding: string;
   mimetype: string;
   size: number;
-  destination: string;
-  filename: string;
-  path: string;
+  destination?: string;
+  filename?: string;
+  path?: string;
+  buffer?: Buffer;
 };
 
 type UploadRequest = Request & {
@@ -160,7 +161,7 @@ const upload = multer({
 });
 
 const answerUpload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_ANSWER_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
     if (!allowedAnswerMimeTypes.has(file.mimetype)) {
@@ -177,6 +178,16 @@ function buildSubmissionFileUrl(filePath: string) {
 }
 
 async function extractSubmissionText(file: UploadFile) {
+  if (file.buffer) {
+    return file.mimetype === "application/pdf"
+      ? extractTextFromPDF(file.buffer)
+      : extractTextFromImage(file.buffer);
+  }
+
+  if (!file.path) {
+    throw new HttpError(400, "Uploaded file could not be processed");
+  }
+
   return file.mimetype === "application/pdf"
     ? extractTextFromPDF(file.path)
     : extractTextFromImage(file.path);
@@ -479,7 +490,9 @@ async function createSubmissionEvaluation(params: {
         : {}),
       ...(params.file
         ? {
-            filePath: params.filePathOverride ?? params.file.path,
+            ...((params.filePathOverride ?? params.file.path)
+              ? { filePath: params.filePathOverride ?? params.file.path }
+              : {}),
             fileName: params.file.originalname,
             fileMime: params.file.mimetype,
             fileSize: params.file.size
@@ -524,6 +537,7 @@ submissionsRouter.post(
   requireStudent,
   upload.single("file"),
   async (req, res, next) => {
+    console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /exams/:examId/submissions" });
     const parsed = submissionBodySchema.safeParse(req.body);
     if (!parsed.success) {
       const details = parsed.error.issues.map((issue) => ({
@@ -741,6 +755,7 @@ submissionsRouter.post(
 );
 
 submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("file"), async (req, res, next) => {
+  console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /submit" });
   const parsed = quickSubmitSchema.safeParse(req.body);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue) => ({
@@ -803,10 +818,7 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
 
     let extractedText = "";
     if (file) {
-      extractedText =
-        file.mimetype === "application/pdf"
-          ? await extractTextFromPDF(file.path)
-          : await extractTextFromImage(file.path);
+      extractedText = await extractSubmissionText(file);
     }
 
     const evaluationSource =
@@ -857,6 +869,7 @@ submissionsRouter.post(
   requireStudent,
   answerUpload.single("answer"),
   async (req, res, next) => {
+    console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /submit-answer" });
     const parsed = z
       .object({
         examId: z.string().min(1)
@@ -931,14 +944,14 @@ submissionsRouter.post(
           rawTextAnswer: extractedText
         }
       );
-      const fileUrl = buildSubmissionFileUrl(file.path);
+      const fileUrl = file.path ? buildSubmissionFileUrl(file.path) : null;
 
       const [submission, savedEvaluation] = await createSubmissionEvaluation({
         examId: parsed.data.examId,
         schoolId: exam.schoolId,
         studentId,
         file,
-        filePathOverride: fileUrl,
+        ...(fileUrl ? { filePathOverride: fileUrl } : {}),
         extractedText,
         evaluation: evaluationResult.evaluation,
         aiAvailable: evaluationResult.aiAvailable

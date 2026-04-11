@@ -816,6 +816,16 @@ const optionalTrimmedString = z.preprocess((value) => {
   return trimmed.length === 0 ? undefined : trimmed;
 }, z.string().trim().min(1).optional());
 
+function toStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return [value.trim()];
+  }
+  return [];
+}
+
 const generateExamSchema = z
   .object({
     subject: z.string().trim().min(2),
@@ -859,6 +869,7 @@ const statusSchema = z
 ====================================================== */
 
 examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
+  console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /exams/generate" });
   console.log("=== EXAM REQUEST START ===");
   console.log("BODY:", req.body);
   console.log("USER:", req.user?.email);
@@ -889,7 +900,14 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
     templateId
   });
 
-  const parsed = generateExamSchema.safeParse(req.body);
+  const normalizedBody = {
+    ...req.body,
+    subjectIds: toStringArray(req.body?.subjectIds),
+    ncertChapters: toStringArray(req.body?.ncertChapters ?? req.body?.chapters),
+    chapterIds: toStringArray(req.body?.chapterIds)
+  };
+
+  const parsed = generateExamSchema.safeParse(normalizedBody);
 
   if (!parsed.success) {
     console.log("Exam request validation error:", parsed.error.flatten());

@@ -94,6 +94,7 @@ function parseUploadType(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /api/upload-logo" });
     const requestContentType = request.headers.get("content-type") ?? "";
     if (!requestContentType.toLowerCase().includes("multipart/form-data")) {
       return NextResponse.json(

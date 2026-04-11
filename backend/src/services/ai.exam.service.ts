@@ -101,7 +101,7 @@ const LOW_QUALITY_QUESTION_PATTERNS = [
   "define the concept"
 ];
 
-const INVALID_QUESTION_TERMS = ["concept", "example", "application"];
+const RETRY_QUESTION_PATTERNS = ["write a brief answer"];
 
 function buildSectionPlan(templateSections: ExamTemplateSection[]) {
   const sections: SectionPlan[] = [];
@@ -509,33 +509,24 @@ export function buildExamPrompt(input: {
     input.chapterContext && input.chapterContext.trim().length > 0
       ? input.chapterContext.trim()
       : chapterTitles;
-  const examPattern = getExamPattern(input.subject, className);
-  const classPattern = getClassLevelPattern(className);
   const patternGuidance =
     input.patternGuidance && input.patternGuidance.trim().length > 0
       ? input.patternGuidance.trim()
-      : "No additional NCERT exercise guidance provided.";
+      : "Use the provided chapter context and standard school-exam difficulty for this class.";
 
   return `
 You are an expert school exam paper setter.
 
-Generate real exam questions, not templates or placeholders.
+Generate a balanced exam paper with real exam questions.
 
-Class: ${className}
-Subject: ${input.subject}
-Difficulty: ${input.difficulty}
-Language: ${languageLabel}
+Inputs:
+- Class: ${className}
+- Subject: ${input.subject}
+- Chapters: ${input.chapters.join(", ")}
+- Difficulty: ${input.difficulty}
+- Language: ${languageLabel}
 
-Chapters:
-${chapterTitles}
-
-Subject-Aware Exam Pattern
-${examPattern}
-
-Class-Level Pattern
-${classPattern}
-
-NCERT Exercise Pattern Signals
+Chapter Guidance
 ${patternGuidance}
 
 Exam Structure
@@ -547,36 +538,22 @@ ${chapterContext}
 Class Level Guidance
 ${classLevelGuidance}
 
-Rules
-
-1. Ensure questions strictly belong to the provided chapter titles.
-2. Follow CBSE exam style and use real academic content from the selected class, subject, and chapters.
-3. Match difficulty to the class level.
-4. Use the exact section order and exact question count from the exam structure.
-5. Use the additional chapter context when it is available, but do not invent facts outside the listed chapters.
-6. Avoid weak questions like:
+Rules:
+- Use only the selected class, subject, and chapters.
+- Do NOT repeat chapter names in each question.
+- Do NOT use repetitive templates or filler wording.
+- Questions must be meaningful, exam-level, and academically correct.
+- Mix MCQ, short answer, and long answer whenever the section plan allows it.
    - "इस पाठ में क्या बताया गया है"
    - "लेखक ने क्या कहा है"
    - "इस अध्याय में क्या बताया गया है"
-7. Questions must test understanding, not vague summary recall.
-8. Include a realistic mix of MCQ, short-answer, and long-answer questions whenever the section plan allows it.
-9. For MCQ sections, provide exactly ${DEFAULT_CHOICES_PER_QUESTION} options and set correctAnswer to one of those option texts.
-10. For fill_in_the_blanks sections, write real blanks using "____", set options to [], and provide the exact fill word or phrase in correctAnswer.
-11. For non-MCQ and non-fill_in_the_blanks sections, set options to [] and give a concise model answer in correctAnswer.
-12. Do not create fill in the blanks unless the section plan explicitly includes a fill_in_the_blanks section.
-13. Set chapter to one of the provided chapter titles exactly.
-14. Keep marks aligned with the requested section marks.
-15. Do NOT repeat questions.
-16. Do NOT mention chapter names inside the question body unless academically necessary.
-17. Do NOT output placeholders or filler wording like "concept", "example", "application", or "write about the chapter".
-18. Questions must look like real CBSE or strong school-exam questions based on NCERT exercise patterns.
-19. Include variety across MCQ, short answer, long answer, case-based, assertion-reason, grammar, or comprehension as relevant to the subject and section plan.
-20. Keep formatting clean and readable.
-21. Return only valid UTF-8 plain text characters.
-22. Ensure MCQ options A, B, C, and D are plain text without bullets or special symbols.
-23. Avoid malformed characters, encoding artifacts, decorative characters, or broken punctuation.
-24. Ensure logical progression from easy to moderate to challenging within the paper.
-25. Return valid JSON only. Do not add markdown fences or commentary.
+- Use the exact section order and question counts from the exam structure below.
+- Keep marks aligned with the requested section marks.
+- For MCQ sections, provide exactly ${DEFAULT_CHOICES_PER_QUESTION} options and set correctAnswer to one of those option texts.
+- For non-MCQ sections, set options to [] and provide a concise correctAnswer.
+- For fill_in_the_blanks sections only, use real blanks with "____".
+- Set chapter to one of the provided chapter titles exactly.
+- Return valid JSON only. No markdown fences or commentary.
 
 Return valid JSON only:
 
@@ -712,7 +689,7 @@ function hasLowQualityQuestionText(questions: Array<{ question?: string; prompt?
   });
 }
 
-function hasInvalidQuestionTerms(questions: Array<{ question?: string; prompt?: string }>) {
+function hasRetryQuestionPatterns(questions: Array<{ question?: string; prompt?: string }>) {
   return questions.some((question) => {
     const text =
       typeof question.question === "string"
@@ -726,9 +703,7 @@ function hasInvalidQuestionTerms(questions: Array<{ question?: string; prompt?: 
       return true;
     }
 
-    return INVALID_QUESTION_TERMS.some((term) =>
-      new RegExp(`\\b${term}\\b`, "i").test(normalized)
-    );
+    return RETRY_QUESTION_PATTERNS.some((pattern) => normalized.includes(pattern));
   });
 }
 
@@ -880,15 +855,15 @@ function createFallbackQuestion(
   number: number,
   chapter: string,
   subject: string,
-  difficulty: GenerateExamInput["difficulty"],
+  _difficulty: GenerateExamInput["difficulty"],
   includeAnswerKey: boolean
 ): ExamQuestion {
   if (section.type === "mcq") {
     const choices = [
-      "The statement that best matches the NCERT explanation",
-      "The statement that contradicts the taught idea",
-      "The statement based on an incorrect interpretation",
-      "The statement unrelated to the topic"
+      "The most accurate statement",
+      "A partially correct statement",
+      "An incorrect interpretation",
+      "An unrelated statement"
     ];
 
     return {
@@ -897,7 +872,7 @@ function createFallbackQuestion(
       sectionNumber: section.sectionNumber,
       chapter,
       type: "mcq",
-      prompt: `Which statement is most accurate for the topic taught in ${subject}?`,
+      prompt: "Which statement is most accurate for the idea tested in this question?",
       choices,
       ...(includeAnswerKey
         ? {
@@ -909,8 +884,8 @@ function createFallbackQuestion(
   }
 
   const promptByType: Record<string, string> = {
-    very_short: `Write a brief answer based on one important point from ${chapter} in ${subject}.`,
-    short: `Explain an important idea from ${chapter} in ${subject} with proper detail.`,
+    very_short: `Answer the question using one important point from ${chapter} in ${subject}.`,
+    short: `Explain the asked idea from ${chapter} in ${subject} with proper detail.`,
     long: `Write a detailed answer from ${chapter} in ${subject} with clear reasoning and supporting points.`,
     fill_in_the_blanks: `Complete the statement using the correct term from ${chapter}.`
   };
@@ -1090,15 +1065,15 @@ export async function generateExam(
       throw new Error("OpenAI response contained low-quality question text.");
     }
 
-    const containsInvalidQuestionTerms = schemaParsed.data.sections.some((section) =>
-      hasInvalidQuestionTerms(section.questions)
+    const containsRetryQuestionPatterns = schemaParsed.data.sections.some((section) =>
+      hasRetryQuestionPatterns(section.questions)
     );
 
-    if (containsInvalidQuestionTerms) {
+    if (containsRetryQuestionPatterns) {
       if (attempt === 0) {
         return attemptGeneration(1);
       }
-      throw new Error("OpenAI response contained placeholder question text.");
+      throw new Error("OpenAI response contained repetitive template wording.");
     }
 
     const usage = toUsage(response);

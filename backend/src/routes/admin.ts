@@ -1355,11 +1355,12 @@ adminRouter.post(
 
 adminRouter.post(
   "/logo",
-  uploadLogo.single("logo"),
+  (uploadLogo as unknown as { any: () => unknown }).any() as never,
   async (req, res, next) => {
     try {
+      console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /admin/logo" });
       const admin = req.user!;
-      const file = (
+      const requestWithFiles = (
         req as unknown as {
           file?: {
             originalname: string;
@@ -1368,8 +1369,22 @@ adminRouter.post(
             size?: number;
             buffer?: Buffer;
           };
+          files?: Record<
+            string,
+            Array<{
+              originalname: string;
+              fieldname?: string;
+              mimetype?: string;
+              size?: number;
+              buffer?: Buffer;
+            }>
+          >;
         }
-      ).file;
+      );
+      const file =
+        requestWithFiles.file ??
+        requestWithFiles.files?.logo?.[0] ??
+        requestWithFiles.files?.file?.[0];
       console.log(file ?? null);
       if (!file) {
         return res.status(400).json({ error: "No file uploaded" });
