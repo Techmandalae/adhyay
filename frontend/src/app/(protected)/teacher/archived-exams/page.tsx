@@ -101,8 +101,7 @@ export default function ArchivedExamsPage() {
         <div className="flex flex-wrap gap-3">
           <PageLocalNav
             items={[
-              { label: "Create exam", href: "/exams/new" },
-              { label: "Reports", href: "/reports" }
+              { label: "Create exam", href: "/exams/new" }
             ]}
           />
           <Button variant="outline" onClick={() => void loadArchivedExams()} disabled={!token}>

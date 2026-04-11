@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "Results", path: "/dashboard" },
-  { label: "Reports", path: "/reports" },
   { label: "Performance trends", path: "/analytics" }
 ];
 

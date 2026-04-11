@@ -245,6 +245,52 @@ const quickSubmitSchema = z
         )
         .optional()
     ),
+    textAnswers: z.preprocess(
+      (value) => {
+        if (typeof value === "string" && value.trim().length > 0) {
+          try {
+            return JSON.parse(value);
+          } catch (_error) {
+            return value;
+          }
+        }
+        return value;
+      },
+      z
+        .array(
+          z
+            .object({
+              questionNumber: z.coerce.number().int().positive().optional(),
+              questionId: z.string().min(1).optional(),
+              answer: z.string().trim().min(1)
+            })
+            .strict()
+        )
+        .optional()
+    ),
+    response: z.preprocess(
+      (value) => {
+        if (typeof value === "string" && value.trim().length > 0) {
+          try {
+            return JSON.parse(value);
+          } catch (_error) {
+            return value;
+          }
+        }
+        return value;
+      },
+      z
+        .array(
+          z
+            .object({
+              questionNumber: z.coerce.number().int().positive().optional(),
+              questionId: z.string().min(1).optional(),
+              answer: z.string().trim().min(1)
+            })
+            .strict()
+        )
+        .optional()
+    ),
     typedAnswers: z.string().trim().min(1).optional(),
     rawTextAnswer: z.string().trim().min(1).optional()
   })
@@ -299,6 +345,38 @@ function parseExamQuestions(payload: unknown): ExamQuestion[] {
   const rawQuestions = (payload as Record<string, unknown>).questions;
   const parsedQuestions = z.array(questionSchema).safeParse(rawQuestions);
   return parsedQuestions.success ? (parsedQuestions.data as ExamQuestion[]) : [];
+}
+
+function normalizeStructuredAnswers(
+  payload:
+    | Array<{ questionNumber?: number | undefined; questionId?: string | undefined; answer: string }>
+    | undefined,
+  questions: ExamQuestion[]
+) {
+  if (!payload || payload.length === 0) {
+    return [];
+  }
+
+  const questionIdMap = new Map(
+    questions
+      .filter((question) => typeof question.id === "string" && question.id.trim().length > 0)
+      .map((question) => [question.id as string, question.number] as const)
+  );
+
+  return payload
+    .map((item) => {
+      const questionNumber =
+        typeof item.questionNumber === "number" && Number.isFinite(item.questionNumber)
+          ? item.questionNumber
+          : item.questionId
+            ? questionIdMap.get(item.questionId.trim()) ?? null
+            : null;
+
+      return questionNumber && item.answer.trim().length > 0
+        ? { questionNumber, answer: item.answer.trim() }
+        : null;
+    })
+    .filter((item): item is { questionNumber: number; answer: string } => item !== null);
 }
 
 function getCorrectAnswer(question: ExamQuestion) {
@@ -756,7 +834,11 @@ submissionsRouter.post(
 
 submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("file"), async (req, res, next) => {
   console.log("NEW_LOGIC_ACTIVE_v1", { route: "POST /submit" });
-  const parsed = quickSubmitSchema.safeParse(req.body);
+  const normalizedSubmitBody = {
+    ...req.body,
+    answers: req.body?.answers ?? req.body?.textAnswers ?? req.body?.response
+  };
+  const parsed = quickSubmitSchema.safeParse(normalizedSubmitBody);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue) => ({
       path: issue.path.join("."),
@@ -779,10 +861,6 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
     const typedReq = req as UploadRequest;
     const file = typedReq.file;
     const typedAnswers = parsed.data.typedAnswers?.trim() ?? parsed.data.rawTextAnswer?.trim() ?? "";
-    const structuredAnswers = parsed.data.answers;
-    if (!file && !structuredAnswers?.length && typedAnswers.length === 0) {
-      return next(new HttpError(400, "Answer sheet file or answers are required"));
-    }
 
     const existingSubmission = await prisma.examSubmission.findFirst({
       where: { examId: parsed.data.examId, studentId }
@@ -821,15 +899,21 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
       extractedText = await extractSubmissionText(file);
     }
 
-    const evaluationSource =
-      structuredAnswers && structuredAnswers.length > 0
-        ? structuredAnswers
-        : typedAnswers || extractedText;
-
     const questions = parseExamQuestions((await prisma.exam.findUnique({
       where: { id: parsed.data.examId },
       select: { examPaper: { select: { payload: true } } }
     }))?.examPaper?.payload);
+    const structuredAnswers = normalizeStructuredAnswers(
+      parsed.data.answers ?? parsed.data.textAnswers ?? parsed.data.response,
+      questions
+    );
+    if (!file && structuredAnswers.length === 0 && typedAnswers.length === 0) {
+      return next(new HttpError(400, "Answer sheet file or answers are required"));
+    }
+    const evaluationSource =
+      structuredAnswers.length > 0
+        ? structuredAnswers
+        : typedAnswers || extractedText;
     const evaluationResult = await resolveEvaluationResult(
       "submit_evaluation",
       () => evaluateAnswers(parsed.data.examId, evaluationSource),

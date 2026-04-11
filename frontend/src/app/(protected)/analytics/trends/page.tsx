@@ -97,8 +97,8 @@ export default function TrendAnalyticsPage() {
             </Button>
             {isAdmin ? (
               <StatusBlock
-                title="Use class analytics or reports"
-                description="Admin trend reporting is consolidated on the analytics overview and reports pages."
+                title="Use class analytics"
+                description="Admin trend reporting is consolidated on the analytics overview."
               />
             ) : null}
             {status.state === "error" ? (

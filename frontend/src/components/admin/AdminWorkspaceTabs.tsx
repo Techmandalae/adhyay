@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/admin", label: "User Management" },
-  { href: "/analytics/class", label: "Analytics" },
-  { href: "/reports", label: "Reports" }
+  { href: "/analytics/class", label: "Analytics" }
 ];
 
 export function AdminWorkspaceTabs() {

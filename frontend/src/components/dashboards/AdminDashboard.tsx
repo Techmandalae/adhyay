@@ -88,9 +88,6 @@ export function AdminDashboard() {
         <Link href="/analytics/class">
           <Button variant="outline">Analytics</Button>
         </Link>
-        <Link href="/reports">
-          <Button variant="ghost">Reports</Button>
-        </Link>
       </div>
 
       {state.status === "error" ? (
@@ -129,10 +126,6 @@ export function AdminDashboard() {
         <Link href="/admin#users" className="rounded-[var(--radius)] border border-border bg-white/70 p-4 transition hover:border-accent">
           <p className="text-sm font-semibold text-foreground">Users</p>
           <p className="mt-1 text-sm text-ink-soft">Create, deactivate, and link accounts.</p>
-        </Link>
-        <Link href="/reports" className="rounded-[var(--radius)] border border-border bg-white/70 p-4 transition hover:border-accent">
-          <p className="text-sm font-semibold text-foreground">Animated report</p>
-          <p className="mt-1 text-sm text-ink-soft">Review exam and usage metrics with chart animation.</p>
         </Link>
       </Card>
     </div>

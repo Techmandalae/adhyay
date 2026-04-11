@@ -154,8 +154,7 @@ export default function ExamHistoryPage() {
             <PageLocalNav
               items={[
                 { label: "New exam", href: "/exams/new" },
-                { label: "Archived exams", href: "/teacher/archived-exams" },
-                { label: "Reports", href: "/reports" }
+                { label: "Archived exams", href: "/teacher/archived-exams" }
               ]}
             />
             <Button variant="outline" onClick={() => void refreshExams()} disabled={!token}>

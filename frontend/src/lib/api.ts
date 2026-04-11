@@ -1192,7 +1192,7 @@ export async function uploadSubmission(
 export async function submitTypedAnswers(
   token: string,
   examId: string,
-  answers: Array<{ questionNumber: number; answer: string }>
+  answers: Array<{ questionNumber: number; questionId?: string; answer: string }>
 ) {
   const response = await apiFetch<{
     message?: string;

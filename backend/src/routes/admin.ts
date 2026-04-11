@@ -140,9 +140,9 @@ const cloudinary = require("cloudinary").v2 as {
   };
 };
 
-async function uploadLogoBuffer(file: { buffer: Buffer }) {
+async function uploadLogoBuffer(file: { buffer: Buffer; mimetype: string }) {
   if (!env.CLOUDINARY_URL) {
-    throw new HttpError(500, "Logo storage is not configured");
+    return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
   }
 
   cloudinary.config({ cloudinary_url: env.CLOUDINARY_URL });
@@ -1393,7 +1393,8 @@ adminRouter.post(
         return res.status(400).json({ error: "Only PNG, JPEG, and WEBP logos are allowed" });
       }
       const uploadedUrl = await uploadLogoBuffer({
-        buffer: file.buffer
+        buffer: file.buffer,
+        mimetype: file.mimetype
       });
       const updated = await prisma.school.update({
         where: { id: admin.schoolId },

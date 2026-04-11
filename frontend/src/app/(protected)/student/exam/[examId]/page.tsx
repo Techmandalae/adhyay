@@ -120,10 +120,17 @@ export default function StudentExamPreviewPage() {
     }
 
     const answers = Object.entries(answerMap)
-      .map(([questionNumber, answer]) => ({
-        questionNumber: Number(questionNumber),
-        answer: answer.trim()
-      }))
+      .map(([questionNumber, answer]) => {
+        const matchingQuestion = (questions as PreviewQuestion[]).find(
+          (question) => String(question.number) === questionNumber
+        );
+
+        return {
+          questionNumber: Number(questionNumber),
+          questionId: matchingQuestion?.id,
+          answer: answer.trim()
+        };
+      })
       .filter(
         (item) =>
           Number.isFinite(item.questionNumber) &&

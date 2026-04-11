@@ -131,7 +131,7 @@ export type AdminAnalyticsResponse = {
     bySubject: TopicCount[];
     byDifficulty: TopicCount[];
   };
-  teacherActivity: Array<{ teacherId: string; examsCreated: number; evaluationsReviewed: number }>;
+  teacherActivity: Array<{ teacherId: string; teacherName: string; examsCreated: number; evaluationsReviewed: number }>;
   evaluationQuality: { averagePercentage: number; overrideRate: number; averageScoreDelta: number };
   statusBreakdown: { approved: number; pending: number; rejected: number };
   report: {

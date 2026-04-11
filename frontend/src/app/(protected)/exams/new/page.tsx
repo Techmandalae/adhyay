@@ -377,13 +377,12 @@ export default function NewExamPage() {
           <SectionHeader
             eyebrow="Exam generation"
             title="Create a new exam"
-            subtitle="Use the streamlined generator and keep history, analytics, and reports on separate pages."
+            subtitle="Use the streamlined generator and keep history and analytics on separate pages."
           />
 
           <PageLocalNav
             items={[
-              { label: "Analytics", href: "/analytics/class" },
-              { label: "Reports", href: "/reports" }
+              { label: "Analytics", href: "/analytics/class" }
             ]}
           />
 

@@ -92,9 +92,6 @@ export function TeacherDashboard() {
         <Link href="/evaluations/pending">
           <Button variant="outline">Pending Reviews</Button>
         </Link>
-        <Link href="/reports">
-          <Button variant="ghost">Reports</Button>
-        </Link>
       </div>
 
       {state.status === "error" ? (

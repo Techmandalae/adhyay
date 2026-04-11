@@ -86,9 +86,6 @@ export function StudentDashboard() {
         <Link href="/student/results">
           <Button>Results</Button>
         </Link>
-        <Link href="/reports">
-          <Button variant="outline">Reports</Button>
-        </Link>
         <Link href="/analytics/trends">
           <Button variant="ghost">Performance trends</Button>
         </Link>
@@ -130,10 +127,6 @@ export function StudentDashboard() {
         <Link href="/analytics/class" className="rounded-[var(--radius)] border border-border bg-white/70 p-4 transition hover:border-accent">
           <p className="text-sm font-semibold text-foreground">Analytics</p>
           <p className="mt-1 text-sm text-ink-soft">See subject and difficulty-level performance.</p>
-        </Link>
-        <Link href="/reports" className="rounded-[var(--radius)] border border-border bg-white/70 p-4 transition hover:border-accent">
-          <p className="text-sm font-semibold text-foreground">Animated report</p>
-          <p className="mt-1 text-sm text-ink-soft">View a more polished summary of your recent results.</p>
         </Link>
       </Card>
     </div>

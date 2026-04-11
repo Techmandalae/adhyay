@@ -659,11 +659,7 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
     prisma.exam.findMany({
       where: {
         schoolId: params.schoolId,
-        ...(params.teacherId ? { teacherId: params.teacherId } : {}),
-        createdAt: {
-          ...(params.startDate ? { gte: params.startDate } : null),
-          ...(params.endDate ? { lte: params.endDate } : null)
-        }
+        ...(params.teacherId ? { teacherId: params.teacherId } : {})
       },
       select: { id: true, createdAt: true, meta: true, teacherId: true }
     }),
@@ -774,8 +770,8 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
   return {
     teacherId: params.teacherId ?? null,
     range: {
-      startDate: params.startDate?.toISOString() ?? null,
-      endDate: params.endDate?.toISOString() ?? null
+      startDate: null,
+      endDate: null
     },
     filters: {
       subject: params.subject ?? null,
@@ -849,13 +845,19 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
   const [exams, approvedEvaluations] = await Promise.all([
     prisma.exam.findMany({
       where: {
-        createdAt: {
-          ...(params.startDate ? { gte: params.startDate } : null),
-          ...(params.endDate ? { lte: params.endDate } : null)
-        },
         schoolId: params.schoolId
       },
-      select: { id: true, createdAt: true, meta: true, teacherId: true }
+      select: {
+        id: true,
+        createdAt: true,
+        meta: true,
+        teacherId: true,
+        teacher: {
+          select: {
+            fullName: true
+          }
+        }
+      }
     }),
     fetchApprovedEvaluations(params.schoolId, {
     })
@@ -985,11 +987,16 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
 
   const teacherActivity = Array.from(
     new Set([...teacherExamMap.keys(), ...teacherReviewMap.keys()])
-  ).map((teacherId) => ({
-    teacherId,
-    examsCreated: teacherExamMap.get(teacherId) ?? 0,
-    evaluationsReviewed: teacherReviewMap.get(teacherId) ?? 0
-  }));
+  ).map((teacherId) => {
+    const teacherName =
+      exams.find((exam) => exam.teacherId === teacherId)?.teacher?.fullName?.trim() || teacherId;
+    return {
+      teacherId,
+      teacherName,
+      examsCreated: teacherExamMap.get(teacherId) ?? 0,
+      evaluationsReviewed: teacherReviewMap.get(teacherId) ?? 0
+    };
+  });
 
   const generatedAt = new Date().toISOString();
 
@@ -1003,8 +1010,8 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
 
   return {
     range: {
-      startDate: params.startDate?.toISOString() ?? null,
-      endDate: params.endDate?.toISOString() ?? null
+      startDate: null,
+      endDate: null
     },
     summary: {
       totalExams: filteredExams.length,
@@ -1053,7 +1060,7 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
           type: "table",
           columns: ["Teacher", "Exams", "Reviews"],
           rows: teacherActivity.map((item) => [
-            item.teacherId,
+            item.teacherName,
             item.examsCreated,
             item.evaluationsReviewed
           ])

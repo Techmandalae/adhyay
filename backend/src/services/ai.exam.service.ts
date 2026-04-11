@@ -1076,6 +1076,20 @@ export async function generateExam(
       throw new Error("OpenAI response contained repetitive template wording.");
     }
 
+    const containsInvalidAiOutput = schemaParsed.data.sections.some((section) =>
+      section.questions.some((question) =>
+        question.question.includes("Chapter") ||
+        question.question.toLowerCase().includes("write a brief answer")
+      )
+    );
+
+    if (containsInvalidAiOutput) {
+      if (attempt === 0) {
+        return attemptGeneration(1);
+      }
+      throw new Error("Invalid AI output");
+    }
+
     const usage = toUsage(response);
     return usage ? { parsedExam: schemaParsed.data, usage } : { parsedExam: schemaParsed.data };
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -10,37 +10,19 @@ import { MetricGrid } from "@/components/analytics/MetricGrid";
 import { SubjectVolumeChart } from "@/components/analytics/SubjectVolumeChart";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
 import { PageFade } from "@/components/ui/PageFade";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
-  getAcademicClasses,
   getAdminAnalytics,
   getStudentAnalytics,
   getTeacherAnalytics
 } from "@/lib/api";
-import { sortAcademicClassOptions } from "@/lib/catalog";
-import type { AcademicClass } from "@/types/academic";
 import type {
   AdminAnalyticsResponse,
   StudentAnalyticsResponse,
   TeacherAnalyticsResponse
 } from "@/types/analytics";
-
-type AnalyticsClassOption = {
-  classId: string;
-  classLevel: number;
-  label: string;
-};
-
-function compareClassOptions(left: AnalyticsClassOption, right: AnalyticsClassOption) {
-  if (left.classLevel !== right.classLevel) {
-    return left.classLevel - right.classLevel;
-  }
-  return left.label.localeCompare(right.label);
-}
 
 export default function ClassAnalyticsPage() {
   const { token, user } = useAuth();
@@ -48,60 +30,9 @@ export default function ClassAnalyticsPage() {
     state: "idle" | "loading" | "success" | "error";
     message?: string;
   }>({ state: "idle" });
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    classId: ""
-  });
   const [teacherData, setTeacherData] = useState<TeacherAnalyticsResponse | null>(null);
   const [studentData, setStudentData] = useState<StudentAnalyticsResponse | null>(null);
   const [adminData, setAdminData] = useState<AdminAnalyticsResponse | null>(null);
-  const [classOptions, setClassOptions] = useState<AnalyticsClassOption[]>([]);
-
-  const selectedClassOption = useMemo(
-    () => classOptions.find((option) => option.classId === filters.classId) ?? null,
-    [classOptions, filters.classId]
-  );
-
-  useEffect(() => {
-    if (!token || !user || user.role === "STUDENT") {
-      return;
-    }
-
-    let isActive = true;
-    const loadClasses = async () => {
-      try {
-        const response = await getAcademicClasses(token);
-        if (!isActive) {
-          return;
-        }
-
-        const deduped = new Map<string, AnalyticsClassOption>();
-        sortAcademicClassOptions(response.items).forEach((item: AcademicClass) => {
-          if (!item.classId || deduped.has(item.classId)) {
-            return;
-          }
-          deduped.set(item.classId, {
-            classId: item.classId,
-            classLevel: item.classLevel,
-            label: item.className || item.label
-          });
-        });
-
-        setClassOptions(Array.from(deduped.values()).sort(compareClassOptions));
-      } catch {
-        if (!isActive) {
-          return;
-        }
-        setClassOptions([]);
-      }
-    };
-
-    void loadClasses();
-    return () => {
-      isActive = false;
-    };
-  }, [token, user]);
 
   const handleLoad = async () => {
     if (!token || !user) {
@@ -111,28 +42,17 @@ export default function ClassAnalyticsPage() {
     setStatus({ state: "loading" });
     try {
       if (user.role === "TEACHER") {
-        const response = await getTeacherAnalytics(token, {
-          startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined,
-          classLevel: selectedClassOption?.classLevel
-        });
+        const response = await getTeacherAnalytics(token, {});
         setTeacherData(response);
         setStudentData(null);
         setAdminData(null);
       } else if (user.role === "STUDENT") {
-        const response = await getStudentAnalytics(token, {
-          startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined
-        });
+        const response = await getStudentAnalytics(token, {});
         setStudentData(response);
         setTeacherData(null);
         setAdminData(null);
       } else {
-        const response = await getAdminAnalytics(token, {
-          startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined,
-          classLevel: selectedClassOption?.classLevel
-        });
+        const response = await getAdminAnalytics(token, {});
         setAdminData(response);
         setTeacherData(null);
         setStudentData(null);
@@ -153,42 +73,9 @@ export default function ClassAnalyticsPage() {
           <SectionHeader
             eyebrow="Class analytics"
             title="Visual performance overview"
-            subtitle="Use start date, end date, and class to track exam volume and performance quickly."
+            subtitle="Latest exam volume, submissions, and evaluation percentage."
           />
           <Card className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Input
-                label="Start date"
-                type="date"
-                value={filters.startDate}
-                onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
-              />
-              <Input
-                label="End date"
-                type="date"
-                value={filters.endDate}
-                onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
-              />
-              {user?.role !== "STUDENT" ? (
-                <Select
-                  label="Class"
-                  value={filters.classId}
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      classId: event.target.value
-                    }))
-                  }
-                >
-                  <option value="">All classes</option>
-                  {classOptions.map((option) => (
-                    <option key={option.classId} value={option.classId}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-              ) : null}
-            </div>
             <Button onClick={handleLoad} disabled={!token || status.state === "loading"}>
               {status.state === "loading" ? "Loading..." : "Refresh analytics"}
             </Button>
@@ -333,7 +220,7 @@ export default function ClassAnalyticsPage() {
                   <DataTable
                     columns={["Teacher", "Exams", "Reviews"]}
                     rows={adminData.teacherActivity.map((item) => [
-                      item.teacherId,
+                      item.teacherName,
                       item.examsCreated,
                       item.evaluationsReviewed
                     ])}
