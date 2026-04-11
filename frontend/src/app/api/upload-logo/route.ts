@@ -1,4 +1,3 @@
-// test change
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -37,10 +36,28 @@ function toPublicUrl(relativePath: string | null | undefined) {
   return `${API_BASE}/${relativePath.replace(/^\/+/, "")}`;
 }
 
+async function parseJsonSafely(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as {
+      error?: { message?: string };
+      message?: string;
+      logoUrl?: string | null;
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const incoming = await request.formData();
-    const file = incoming.get("file");
+    const file = incoming.get("file") ?? incoming.get("logo");
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file" }, { status: 400 });
@@ -75,24 +92,22 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeout);
     }
 
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: { message?: string };
-      message?: string;
-      logoUrl?: string;
-    };
+    const payload = await parseJsonSafely(response);
+    const publicUrl = toPublicUrl(payload?.logoUrl);
 
     if (!response.ok) {
       return NextResponse.json(
         {
-          error: payload.error?.message ?? payload.message ?? "Upload failed"
+          error: payload?.error?.message ?? payload?.message ?? "Upload failed"
         },
         { status: response.status }
       );
     }
 
     return NextResponse.json({
-      logoUrl: payload.logoUrl ?? null,
-      url: toPublicUrl(payload.logoUrl)
+      logoUrl: publicUrl,
+      path: payload?.logoUrl ?? null,
+      url: publicUrl
     });
   } catch (error) {
     console.error("Logo upload failed", error);
@@ -103,7 +118,12 @@ export async function POST(request: NextRequest) {
             ? "Upload timed out"
             : "Upload failed"
       },
-      { status: 500 }
+      {
+        status:
+          error instanceof Error && error.name === "TypeError"
+            ? 502
+            : 500
+      }
     );
   }
 }

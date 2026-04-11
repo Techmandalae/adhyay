@@ -105,7 +105,12 @@ export default function NewExamPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || !examForm.classId || !examForm.subjectId) {
+    if (
+      !token ||
+      !examForm.classId ||
+      !examForm.subjectId ||
+      !isValidAcademicSubject(classSubjects, examForm.subjectId)
+    ) {
       return;
     }
 
@@ -150,13 +155,14 @@ export default function NewExamPage() {
     return () => {
       isActive = false;
     };
-  }, [token, examForm.classId, examForm.subjectId]);
+  }, [token, examForm.classId, examForm.subjectId, classSubjects]);
 
   useEffect(() => {
     if (
       !token ||
       !examForm.classId ||
       !examForm.subjectId ||
+      !isValidAcademicSubject(classSubjects, examForm.subjectId) ||
       examForm.mode === "REFERENCE_ONLY" ||
       examForm.ncertBookIds.length === 0
     ) {
@@ -205,6 +211,7 @@ export default function NewExamPage() {
     token,
     examForm.classId,
     examForm.subjectId,
+    classSubjects,
     examForm.mode,
     examForm.ncertBookIds
   ]);

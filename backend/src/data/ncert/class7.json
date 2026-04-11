@@ -28,7 +28,7 @@
     "books":
     [
         {
-            "book": "Ganit Prakash Part-1",
+            "book": "Ganita Prakash Part-1",
             "chapters": [
                 "Chapter 1: Large Numbers Around Us",
                 "Chapter 2: Arithmetic Expressions",
@@ -41,7 +41,7 @@
             ]
         },
         {
-            "book": "Ganit Prakash Part-2",
+            "book": "Ganita Prakash Part-2",
             "chapters": [
                 "Chapter 1: Geometric Twins",
                 "Chapter 2: Operations with Integers",

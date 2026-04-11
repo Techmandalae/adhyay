@@ -89,6 +89,16 @@ function buildAcademicSetupDraft(
     });
 }
 
+function extractClassLevel(value: string) {
+  const match = value.match(/(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const level = Number(match[1]);
+  return Number.isFinite(level) ? level : null;
+}
+
 function normalizeAcademicSetupDraft(items: AcademicSetupDraft): AcademicSetupDraft {
   return items
     .map((item) => ({
@@ -96,7 +106,24 @@ function normalizeAcademicSetupDraft(items: AcademicSetupDraft): AcademicSetupDr
       hasStreams: item.hasStreams,
       sections: [...item.sections].sort((left, right) => left.localeCompare(right))
     }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => {
+      const leftLevel = extractClassLevel(left.name);
+      const rightLevel = extractClassLevel(right.name);
+
+      if (leftLevel !== null && rightLevel !== null && leftLevel !== rightLevel) {
+        return leftLevel - rightLevel;
+      }
+
+      if (leftLevel !== null && rightLevel === null) {
+        return -1;
+      }
+
+      if (leftLevel === null && rightLevel !== null) {
+        return 1;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
 }
 
 function PreviewTable({ kind, preview }: { kind: ImportKind; preview: ImportPreviewResult }) {
@@ -438,11 +465,13 @@ export default function AdminDashboard() {
     setAcademicSetupState({ status: "loading", data: null });
     try {
       const payload = await getAcademicSetup(token);
-      const classes = payload.items.map((item) => ({
-        name: item.name,
-        hasStreams: item.hasStreams,
-        sections: item.sections.map((section) => section.name)
-      }));
+      const classes = normalizeAcademicSetupDraft(
+        payload.items.map((item) => ({
+          name: item.name,
+          hasStreams: item.hasStreams,
+          sections: item.sections.map((section) => section.name)
+        }))
+      );
       const selections: Record<number, boolean> = {};
       const sections: Record<number, string> = {};
       classes.forEach((klass) => {

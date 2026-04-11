@@ -144,6 +144,25 @@ function getClassLevel(name: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function compareClassNames(left: string, right: string) {
+  const leftLevel = getClassLevel(left);
+  const rightLevel = getClassLevel(right);
+
+  if (leftLevel !== null && rightLevel !== null && leftLevel !== rightLevel) {
+    return leftLevel - rightLevel;
+  }
+
+  if (leftLevel !== null && rightLevel === null) {
+    return -1;
+  }
+
+  if (leftLevel === null && rightLevel !== null) {
+    return 1;
+  }
+
+  return left.localeCompare(right);
+}
+
 function buildSubjectPoolForSections(sections: string[], hasStreams: boolean) {
   if (!hasStreams) {
     return COMMON_SUBJECTS;
@@ -1341,16 +1360,17 @@ adminRouter.get("/academic-setup", async (req, res, next) => {
     const admin = req.user!;
     const standards = await prisma.academicClassStandard.findMany({
       where: { schoolId: admin.schoolId },
-      orderBy: { name: "asc" },
       include: { sections: { orderBy: { name: "asc" }, select: { id: true, name: true } } }
     });
     res.json({
-      items: standards.map((standard) => ({
-        id: standard.id,
-        name: standard.name,
-        hasStreams: standard.hasStreams,
-        sections: standard.sections
-      }))
+      items: [...standards]
+        .sort((left, right) => compareClassNames(left.name, right.name))
+        .map((standard) => ({
+          id: standard.id,
+          name: standard.name,
+          hasStreams: standard.hasStreams,
+          sections: standard.sections
+        }))
     });
   } catch (error) {
     next(error);

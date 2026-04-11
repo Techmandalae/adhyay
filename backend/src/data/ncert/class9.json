@@ -183,39 +183,53 @@
         "book": "Abhyaswaan Bhav",
         "chapters": [
           "प्रथमः पाठः - अपठितावबोधनम्",
-          "द्वितीयः पाठः - पत्रलेखनम्",
-          "तृतीयः पाठः - अनुच्छेदलेखनम्",
-          "चतुर्थः पाठः - चित्रवर्णनम्",
-          "पञ्चमः पाठः - रचनात्मककार्यम्/रचनानुवादः",
-          "षष्‍ठः पाठः - सन्धिः",
-          "सप्‍तमः पाठः - समासाः",
-          "अष्‍टमः पाठः - प्रत्ययाः",
-          "नवमः पाठः - अव्ययानि",
-          "दशमः पाठः - समयः",
-          "एकादशः पाठः - वाच्यम्",
-          "द्वादशः पाठः - अशुद्धिसंशोधनम्",
-          "त्रयोदशः पाठः - मिश्रिताभ्यासः",
-          "चतुर्दशः पाठः - आदर्शप्रश्नपत्रम्"
+          "द्वितीयः पाठः - पत्रम्",
+          "तृतीयः पाठः - चित्रवर्णनम्",
+          "चतुर्थः पाठः - संवादानुच्छेदलेखनम्",
+          "पञ्चमः पाठः - रचनानुवादः",
+          "षष्‍ठः पाठः - कारकोपपदविभक्तिः",
+          "सप्‍तमः पाठः - सन्धिः",
+          "अष्‍टमः पाठः - उपसर्गाव्ययप्रत्ययाः",
+          "नवमः पाठः - समासाः",
+          "दशमः पाठः - शब्दरूपाणि",
+          "एकादशः पाठः - धातुरूपाणि",
+          "द्वादशः पाठः - वर्णविचारः",
+          "परिशिष्टम् - 1",
+          "परिशिष्टम्  - 2"
         ]
       }
+    ]
+  },
+  "ICT": {
+    "book": "Information and Communication Technology",
+    "chapters": [
+      "Chapter 1: Introduction to ICT",
+      "Chapter 2: Creating Textual Communication",
+      "Chapter 3: Creating Visual Communication",
+      "Chapter 4: Creating Audio-Video Communication",
+      "Chapter 5: Presenting Ideas",
+      "Chapter 6: Getting Connected: Internet",
+      "Chapter 7: Safety and Security in the Cyber World",
+      "Chapter 8: Fun with Logic"
     ]
   },
   "Health & Physical Education": {
     "book": "Health & Physical Education",
     "chapters": [
-      "Chapter 1: Physical Education: Relation with other Subjects",
-      "Chapter 2: Effects of Physical Activities on Human Body",
-      "Chapter 3: Growth and Development during Adolescence",
-      "Chapter 4: Individual Games and Sports I",
-      "Chapter 5: Individual Games and Sports II",
-      "Chapter 6: Team Games and Sports I",
-      "Chapter 7: Team Games and Sports II",
-      "Chapter 8: Yoga for Healthy Living",
-      "Chapter 9: Dietary Considerations and Food Quality",
-      "Chapter 10: Safety Measures for Healthy Living",
-      "Chapter 11: Healthy Community Living",
-      "Chapter 12: Social Health",
-      "Chapter 13: Agencies and Awards Promoting Health, Sports and Yoga"
+      "Chapter 1: Health and Diseases",
+      "Chapter 2: Growing up with Confidence",
+      "Chapter 3: Physical Education",
+      "Chapter 4: Physical Fitness",
+      "Chapter 5: Sports Training",
+      "Chapter 6: Individual Sports",
+      "Chapter 7: Team Games",
+      "Chapter 8: Ethics in Sports",
+      "Chapter 9: Personality Development through Yoga",
+      "Chapter 10: Waste Management",
+      "Chapter 11: Diet for Healthy Living",
+      "Chapter 12: First Aid and Safety",
+      "Chapter 13: Social Health",
+      "Chapter 14: Adolescent Friendly Health Services"
     ]
   }
 }

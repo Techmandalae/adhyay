@@ -251,7 +251,12 @@ export default function TeacherDashboard() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || !examForm.classId || !examForm.subjectId) {
+    if (
+      !token ||
+      !examForm.classId ||
+      !examForm.subjectId ||
+      !isValidAcademicSubject(classSubjects, examForm.subjectId)
+    ) {
       return;
     }
 
@@ -296,13 +301,14 @@ export default function TeacherDashboard() {
     return () => {
       isActive = false;
     };
-  }, [token, examForm.classId, examForm.subjectId]);
+  }, [token, examForm.classId, examForm.subjectId, classSubjects]);
 
   useEffect(() => {
     if (
       !token ||
       !examForm.classId ||
       !examForm.subjectId ||
+      !isValidAcademicSubject(classSubjects, examForm.subjectId) ||
       examForm.mode === "REFERENCE_ONLY" ||
       examForm.ncertBookIds.length === 0
     ) {
@@ -356,6 +362,7 @@ export default function TeacherDashboard() {
     token,
     examForm.classId,
     examForm.subjectId,
+    classSubjects,
     examForm.mode,
     examForm.ncertBookIds
   ]);
@@ -542,7 +549,10 @@ export default function TeacherDashboard() {
     !isReferenceOnly && examForm.ncertBookIds.length > 0 && (examForm.chapterIds?.length ?? 0) > 0;
   const hasRequiredReferences =
     examForm.mode === "REFERENCE_ONLY" ? (examForm.referenceBookIds?.length ?? 0) > 0 : true;
-  const hasPrimarySubject = selectedSubjectIds.length > 0;
+  const validSelectedSubjectIds = selectedSubjectIds.filter((subjectId) =>
+    classSubjects.some((subject) => subject.id === subjectId)
+  );
+  const hasPrimarySubject = isValidAcademicSubject(classSubjects, examForm.subjectId);
   const canGenerateExam =
     canCallApi &&
     isTeacher &&
@@ -554,7 +564,16 @@ export default function TeacherDashboard() {
   const handleGenerateExam = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!token || !isTeacher) return;
-    if (!isValidAcademicSubject(classSubjects, examForm.subjectId)) {
+    const resolvedSubjectId = isValidAcademicSubject(classSubjects, examForm.subjectId)
+      ? (examForm.subjectId ?? "")
+      : "";
+    const resolvedSubjectIds = validSelectedSubjectIds.includes(resolvedSubjectId)
+      ? validSelectedSubjectIds
+      : resolvedSubjectId
+        ? [resolvedSubjectId]
+        : [];
+
+    if (!resolvedSubjectId || resolvedSubjectIds.length === 0) {
       setExamStatus({
         status: "error",
         data: null,
@@ -583,12 +602,12 @@ export default function TeacherDashboard() {
         ...examForm,
         sectionId: examForm.sectionId?.trim() || undefined,
         templateId: examForm.templateId?.trim() || undefined,
-        subjectIds: selectedSubjectIds,
-        subjectId: examForm.subjectId || selectedSubjectIds[0],
+        subjectIds: resolvedSubjectIds,
+        subjectId: resolvedSubjectId,
         subject:
-          selectedSubjectIds.length > 1
+          resolvedSubjectIds.length > 1
             ? classSubjects
-                .filter((item) => selectedSubjectIds.includes(item.id))
+                .filter((item) => resolvedSubjectIds.includes(item.id))
                 .map((item) => item.name)
                 .join(" / ")
             : examForm.subject,

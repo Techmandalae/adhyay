@@ -905,7 +905,7 @@ export async function uploadSchoolLogo(token: string, file: File) {
   }
 
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file, file.name);
 
   const response = await fetch("/api/upload-logo", {
     method: "POST",
@@ -927,7 +927,12 @@ export async function uploadSchoolLogo(token: string, file: File) {
     );
   }
 
-  return payload as { logoUrl: string; url?: string | null };
+  const result = payload as { logoUrl?: string | null; url?: string | null; path?: string | null };
+  return {
+    logoUrl: result.logoUrl ?? result.url ?? "",
+    url: result.url ?? result.logoUrl ?? null,
+    path: result.path ?? null
+  };
 }
 
 export async function deleteSchoolLogo(token: string) {
