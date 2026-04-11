@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -38,6 +39,11 @@ type AsyncState<T> = {
   error?: string;
 };
 
+type SelectedAnswerFile = {
+  file: File;
+  previewUrl: string | null;
+};
+
 export default function StudentDashboard() {
   const { token, user } = useAuth();
   const [examId, setExamId] = useState("");
@@ -49,7 +55,7 @@ export default function StudentDashboard() {
     status: "idle",
     data: null
   });
-  const [file, setFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedAnswerFile[]>([]);
   const [rawAnswerText, setRawAnswerText] = useState("");
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<
@@ -57,12 +63,14 @@ export default function StudentDashboard() {
       submissionId: string;
       score?: number;
       notifications?: NotificationDispatchSummary[];
+      fileUrl?: string | null;
+      fileUrls?: string[];
     }>
   >({
     status: "idle",
     data: null
   });
-  const [submissions, setSubmissions] = useState<StoredSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<StoredSubmission[]>(() => loadSubmissions());
   const [evaluationState, setEvaluationState] = useState<AsyncState<EvaluationDetail>>({
     status: "idle",
     data: null
@@ -78,10 +86,6 @@ export default function StudentDashboard() {
     difficulty: ""
   });
   const [subjectOptions, setSubjectOptions] = useState<AcademicSubject[]>([]);
-
-  useEffect(() => {
-    setSubmissions(loadSubmissions());
-  }, []);
 
   const refreshAssigned = async () => {
     if (!token) return;
@@ -100,10 +104,26 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (!token) return;
+    let isActive = true;
     const loadAssigned = async () => {
-      await refreshAssigned();
+      setAssignedExams({ status: "loading", data: null });
+      try {
+        const response = await getAssignedExams(token);
+        if (!isActive) return;
+        setAssignedExams({ status: "success", data: response.items });
+      } catch (error) {
+        if (!isActive) return;
+        setAssignedExams({
+          status: "error",
+          data: null,
+          error: error instanceof Error ? error.message : "Unable to load assigned exams"
+        });
+      }
     };
     void loadAssigned();
+    return () => {
+      isActive = false;
+    };
   }, [token]);
 
   useEffect(() => {
@@ -115,7 +135,7 @@ export default function StudentDashboard() {
         const response = await getAcademicSubjects(token, classId);
         if (!isActive) return;
         setSubjectOptions(response.items);
-      } catch (_error) {
+      } catch {
         if (!isActive) return;
         setSubjectOptions([]);
       }
@@ -125,6 +145,16 @@ export default function StudentDashboard() {
       isActive = false;
     };
   }, [token, user?.classId]);
+
+  useEffect(() => {
+    return () => {
+      for (const selectedFile of selectedFiles) {
+        if (selectedFile.previewUrl) {
+          URL.revokeObjectURL(selectedFile.previewUrl);
+        }
+      }
+    };
+  }, [selectedFiles]);
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob);
@@ -150,6 +180,21 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleFileChange = (nextFiles: FileList | null) => {
+    setSelectedFiles((currentFiles) => {
+      for (const selectedFile of currentFiles) {
+        if (selectedFile.previewUrl) {
+          URL.revokeObjectURL(selectedFile.previewUrl);
+        }
+      }
+
+      return Array.from(nextFiles ?? []).map((file) => ({
+        file,
+        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null
+      }));
+    });
+  };
+
   const handleDownloadPdf = async () => {
     if (!token || !examId.trim()) return;
     try {
@@ -168,7 +213,7 @@ export default function StudentDashboard() {
     event.preventDefault();
     if (!token || !examId.trim()) return;
 
-    if (!file && rawAnswerText.trim().length === 0) {
+    if (selectedFiles.length === 0 && rawAnswerText.trim().length === 0) {
       setAnswerError("Upload a file or type your answers.");
       return;
     }
@@ -179,7 +224,7 @@ export default function StudentDashboard() {
       const response = await uploadSubmission(
         token,
         examId.trim(),
-        file,
+        selectedFiles.map((selectedFile) => selectedFile.file),
         rawAnswerText.trim()
       );
       setUploadState({
@@ -187,7 +232,9 @@ export default function StudentDashboard() {
         data: {
           submissionId: response.submissionId,
           score: response.score,
-          notifications: response.notifications
+          notifications: response.notifications,
+          fileUrl: response.fileUrl ?? null,
+          fileUrls: response.fileUrls ?? []
         }
       });
       const stored: StoredSubmission = {
@@ -198,7 +245,7 @@ export default function StudentDashboard() {
       };
       saveSubmission(stored);
       setSubmissions(loadSubmissions());
-      setFile(null);
+      handleFileChange(null);
       setRawAnswerText("");
     } catch (error) {
       setUploadState({
@@ -328,7 +375,7 @@ export default function StudentDashboard() {
             <SectionHeader
               eyebrow="Upload"
               title="Submit your answer sheet"
-              subtitle="Upload JPEG, PNG, or PDF, or type your answers directly."
+              subtitle="Upload a handwritten answer PDF or image, or type your answers directly."
             />
             <form className="grid gap-4" onSubmit={handleUpload}>
               <Select
@@ -345,13 +392,55 @@ export default function StudentDashboard() {
                 ))}
               </Select>
               <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium text-foreground">Answer sheet file</span>
+                <span className="font-medium text-foreground">Answer sheet files</span>
                 <input
                   className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm"
                   type="file"
-                  accept="image/jpeg,image/png,application/pdf"
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(event) => handleFileChange(event.target.files)}
                 />
+                {selectedFiles.length > 0 ? (
+                  <div className="space-y-3">
+                    <span className="text-xs text-ink-soft">
+                      {selectedFiles.length} file{selectedFiles.length === 1 ? "" : "s"} selected
+                    </span>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedFiles.map((selectedFile) =>
+                        selectedFile.previewUrl ? (
+                          <div
+                            key={`${selectedFile.file.name}-${selectedFile.file.lastModified}`}
+                            className="inline-flex flex-col gap-2 rounded-2xl border border-border bg-white p-2"
+                          >
+                            <Image
+                              src={selectedFile.previewUrl}
+                              alt={`Preview of ${selectedFile.file.name}`}
+                              unoptimized
+                              width={112}
+                              height={112}
+                              className="h-28 w-28 rounded-xl object-cover"
+                            />
+                            <span className="max-w-28 text-xs text-ink-soft">
+                              {selectedFile.file.name}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            key={`${selectedFile.file.name}-${selectedFile.file.lastModified}`}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-ink-soft"
+                          >
+                            <span className="text-base font-semibold leading-none">PDF</span>
+                            <span>{selectedFile.file.name}</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-ink-soft">
+                    PDF, JPG, or PNG. Up to 5 files, 5MB each.
+                  </span>
+                )}
               </label>
               <label className="flex flex-col gap-2 text-sm">
                 <span className="font-medium text-foreground">Write your answers (optional)</span>
@@ -376,6 +465,11 @@ export default function StudentDashboard() {
                 description={
                   [
                     `Submission ID: ${uploadState.data?.submissionId}`,
+                    uploadState.data?.fileUrls?.length
+                      ? `${uploadState.data.fileUrls.length} file${uploadState.data.fileUrls.length === 1 ? "" : "s"} uploaded successfully.`
+                      : uploadState.data?.fileUrl
+                        ? "Answer sheet uploaded successfully."
+                        : null,
                     uploadState.data?.score !== undefined
                       ? `AI score: ${uploadState.data.score}`
                       : null,

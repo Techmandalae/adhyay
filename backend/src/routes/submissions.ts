@@ -46,6 +46,7 @@ type UploadFile = {
 
 type UploadRequest = Request & {
   file?: UploadFile;
+  files?: UploadFile[];
 };
 
 const allowedMimeTypes = new Set([
@@ -53,6 +54,12 @@ const allowedMimeTypes = new Set([
   "image/png",
   "application/pdf"
 ]);
+const allowedAnswerMimeTypes = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png"
+]);
+const MAX_ANSWER_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 function toPrismaJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
@@ -150,6 +157,29 @@ const upload = multer({
     return cb(null, true);
   }
 });
+
+const answerUpload = multer({
+  storage,
+  limits: { fileSize: MAX_ANSWER_UPLOAD_BYTES, files: 5 },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedAnswerMimeTypes.has(file.mimetype)) {
+      return cb(new HttpError(400, "Only PDF or images allowed"));
+    }
+    return cb(null, true);
+  }
+});
+
+function buildSubmissionFileUrl(filePath: string) {
+  const uploadRoot = path.resolve(process.cwd(), env.UPLOAD_DIR);
+  const relativePath = path.relative(uploadRoot, filePath).replace(/\\/g, "/");
+  return `${env.UPLOAD_DIR}/${relativePath}`.replace(/^\/+/, "");
+}
+
+async function extractSubmissionText(file: UploadFile) {
+  return file.mimetype === "application/pdf"
+    ? extractTextFromPDF(file.path)
+    : extractTextFromImage(file.path);
+}
 
 const submissionBodySchema = z
   .object({
@@ -254,6 +284,7 @@ async function createSubmissionEvaluation(params: {
   schoolId: string;
   studentId: string;
   file?: UploadFile;
+  filePathOverride?: string;
   structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
   rawTextAnswer?: string;
   extractedText?: string;
@@ -271,7 +302,7 @@ async function createSubmissionEvaluation(params: {
         : {}),
       ...(params.file
         ? {
-            filePath: params.file.path,
+            filePath: params.filePathOverride ?? params.file.path,
             fileName: params.file.originalname,
             fileMime: params.file.mimetype,
             fileSize: params.file.size
@@ -601,6 +632,110 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
     next(error);
   }
 });
+
+submissionsRouter.post(
+  "/submit-answer",
+  requireAuth,
+  requireStudent,
+  answerUpload.array("answers", 5),
+  async (req, res, next) => {
+    const parsed = z
+      .object({
+        examId: z.string().min(1)
+      })
+      .strict()
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return next(new HttpError(400, "examId is required"));
+    }
+
+    try {
+      const user = req.user;
+      if (!user) {
+        return next(new HttpError(401, "Authentication required"));
+      }
+
+      const studentId = getStudentId(user);
+      if (!studentId) {
+        return next(new HttpError(403, "Student context required"));
+      }
+
+      const typedReq = req as UploadRequest;
+      const files = typedReq.files ?? [];
+      console.log(files);
+
+      if (files.length === 0) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const existingSubmission = await prisma.examSubmission.findFirst({
+        where: { examId: parsed.data.examId, studentId }
+      });
+      if (existingSubmission) {
+        return next(new HttpError(409, "Submission already exists for this exam"));
+      }
+
+      const exam = await prisma.exam.findFirst({
+        where: {
+          id: parsed.data.examId,
+          schoolId: user.schoolId
+        },
+        select: {
+          id: true,
+          meta: true,
+          schoolId: true,
+          status: true,
+          classId: true,
+          sectionId: true,
+          assignedClassId: true,
+          assignedClassLevel: true
+        }
+      });
+
+      if (!exam) {
+        return next(new HttpError(404, "Exam not found"));
+      }
+
+      if (!canStudentAccessExam(user, exam)) {
+        return next(new HttpError(403, "Exam is not published for your class"));
+      }
+
+      const extractedChunks: string[] = [];
+      for (const file of files) {
+        extractedChunks.push(await extractSubmissionText(file));
+      }
+      const extractedText = extractedChunks
+        .map((chunk) => chunk.trim())
+        .filter((chunk) => chunk.length > 0)
+        .join("\n\n");
+      const evaluation = await evaluateAnswers(parsed.data.examId, extractedText);
+      const primaryFile = files[0];
+      const fileUrl = buildSubmissionFileUrl(primaryFile.path);
+
+      const [submission, savedEvaluation] = await createSubmissionEvaluation({
+        examId: parsed.data.examId,
+        schoolId: exam.schoolId,
+        studentId,
+        file: primaryFile,
+        filePathOverride: fileUrl,
+        extractedText,
+        evaluation
+      });
+
+      res.json({
+        message: files.length > 1 ? "Answer sheets uploaded" : "Answer sheet uploaded",
+        submissionId: submission.id,
+        evaluationId: savedEvaluation.id,
+        status: savedEvaluation.status,
+        score: evaluation.overallScore,
+        fileUrl,
+        fileUrls: files.map((file) => buildSubmissionFileUrl(file.path))
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 submissionsRouter.get(
   "/evaluations/pending",

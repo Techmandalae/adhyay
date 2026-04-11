@@ -51,6 +51,7 @@ declare module "multer" {
     storage?: StorageEngine;
     limits?: {
       fileSize?: number;
+      files?: number;
     };
     fileFilter?: (
       req: Request,
@@ -61,6 +62,7 @@ declare module "multer" {
 
   interface Multer {
     single(fieldName: string): RequestHandler;
+    array(fieldName: string, maxCount?: number): RequestHandler;
   }
 
   function multer(options?: MulterOptions): Multer;

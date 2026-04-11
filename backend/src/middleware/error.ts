@@ -17,7 +17,7 @@ export function notFound(_req: Request, _res: Response, next: NextFunction) {
 
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ) {
@@ -33,7 +33,11 @@ export function errorHandler(
         : 500;
   const message =
     isMulterError && multerErrorCode === "LIMIT_FILE_SIZE"
-      ? "File too large (max 2MB)"
+      ? req.originalUrl?.includes("/submit-answer")
+        ? "File too large (max 5MB)"
+        : "File too large (max 2MB)"
+      : isMulterError && multerErrorCode === "LIMIT_FILE_COUNT"
+        ? "Maximum 5 files allowed"
       : err.message || "Internal Server Error";
   const payload = {
     error: {

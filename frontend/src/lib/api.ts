@@ -1109,49 +1109,92 @@ export async function updateProfile(
    Submissions
 ======================= */
 
+type UploadSubmissionResponse = {
+  message?: string;
+  submissionId: string;
+  evaluationId: string;
+  status: string;
+  score?: number;
+  notifications?: NotificationDispatchSummary[];
+  fileUrl?: string | null;
+  fileUrls?: string[];
+};
+
 export async function uploadSubmission(
   token: string,
   examId: string,
-  file: File | null,
+  files: File[],
   typedAnswers?: string
-) {
-  const formData = new FormData();
-  formData.append("examId", examId);
-  if (file) {
-    formData.append("file", file);
+): Promise<UploadSubmissionResponse> {
+  if (files.length > 0) {
+    const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
+    if (files.length > 5) {
+      throw new ApiError("Maximum 5 files allowed", 400);
+    }
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > 25 * 1024 * 1024) {
+      throw new ApiError("Total upload too large (max 25MB)", 400);
+    }
+
+    for (const file of files) {
+      if (!allowedTypes.has(file.type)) {
+        throw new ApiError("Only PDF or images allowed", 400);
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new ApiError(`"${file.name}" is too large (max 5MB)`, 400);
+      }
+    }
+
+    const formData = new FormData();
+    formData.append("examId", examId);
+    for (const file of files) {
+      formData.append("answers", file, file.name);
+    }
+
+    const response = await fetch("/api/submit-answer", {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(token),
+        "x-answer-count": String(files.length),
+        "x-answer-total-size": String(totalSize),
+        "x-answer-types": files.map((file) => file.type).join(",")
+      },
+      body: formData
+    });
+
+    const text = await response.text();
+    const payload = text ? (JSON.parse(text) as unknown) : null;
+
+    if (!response.ok) {
+      throw new ApiError(
+        (payload as { error?: { message?: string } })?.error?.message ??
+          (payload as { error?: string })?.error ??
+          `Upload failed with status ${response.status}`,
+        response.status,
+        payload
+      );
+    }
+
+    invalidateApiCache("/exams/student/exams");
+    invalidateApiCache("/analytics/student");
+    return payload as UploadSubmissionResponse;
   }
+
   if (typedAnswers && typedAnswers.trim().length > 0) {
-    formData.append("typedAnswers", typedAnswers);
-  }
-
-  const response = await fetch(`${API_BASE}/submit`, {
-    method: "POST",
-    headers: getAuthHeaders(token),
-    body: formData
-  });
-
-  const text = await response.text();
-  const payload = text ? (JSON.parse(text) as unknown) : null;
-
-  if (!response.ok) {
-    throw new ApiError(
-      (payload as { error?: { message?: string } })?.error?.message ??
-        `Upload failed with status ${response.status}`,
-      response.status,
-      payload
+    const response = await apiFetch<UploadSubmissionResponse>(
+      "/submit",
+      {
+        method: "POST",
+        body: JSON.stringify({ examId, typedAnswers })
+      },
+      token
     );
+    invalidateApiCache("/exams/student/exams");
+    invalidateApiCache("/analytics/student");
+    return response;
   }
 
-  invalidateApiCache("/exams/student/exams");
-  invalidateApiCache("/analytics/student");
-  return payload as {
-    message?: string;
-    submissionId: string;
-    evaluationId: string;
-    status: string;
-    score?: number;
-    notifications?: NotificationDispatchSummary[];
-  };
+  throw new ApiError("Answer file or typed answers are required", 400);
 }
 
 export async function submitTypedAnswers(
