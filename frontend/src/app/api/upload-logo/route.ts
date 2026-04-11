@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/svg+xml"
+]);
 
 const API_BASE = (
   process.env.API_BASE_URL ??
@@ -16,11 +22,22 @@ const API_BASE = (
 ).replace(/\/+$/, "");
 
 function getAuthHeader(request: NextRequest) {
-  const header = request.headers.get("authorization");
   const headers = new Headers();
-  if (header) {
-    headers.set("Authorization", header);
+
+  const authorization = request.headers.get("authorization");
+  const contentType = request.headers.get("content-type");
+  const contentLength = request.headers.get("content-length");
+
+  if (authorization) {
+    headers.set("Authorization", authorization);
   }
+  if (contentType) {
+    headers.set("Content-Type", contentType);
+  }
+  if (contentLength) {
+    headers.set("Content-Length", contentLength);
+  }
+
   return headers;
 }
 
@@ -54,39 +71,74 @@ async function parseJsonSafely(response: Response) {
   }
 }
 
+function parseUploadSize(request: NextRequest) {
+  const rawSize =
+    request.headers.get("x-logo-size") ??
+    request.headers.get("x-file-size") ??
+    request.headers.get("content-length");
+
+  if (!rawSize) {
+    return null;
+  }
+
+  const size = Number(rawSize);
+  return Number.isFinite(size) && size >= 0 ? size : null;
+}
+
+function parseUploadType(request: NextRequest) {
+  const type = request.headers.get("x-logo-type") ?? request.headers.get("x-file-type");
+  return type?.trim().toLowerCase() ?? "";
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const incoming = await request.formData();
-    const file = incoming.get("file") ?? incoming.get("logo");
-
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No file" }, { status: 400 });
+    const requestContentType = request.headers.get("content-type") ?? "";
+    if (!requestContentType.toLowerCase().includes("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "Content-Type must be multipart/form-data" },
+        { status: 400 }
+      );
     }
 
-    if (file.size > MAX_LOGO_SIZE_BYTES) {
+    const uploadSize = parseUploadSize(request);
+    if (uploadSize === null) {
+      return NextResponse.json({ error: "Missing file size" }, { status: 400 });
+    }
+
+    if (uploadSize > MAX_LOGO_SIZE_BYTES) {
       return NextResponse.json(
         { error: "File too large (max 2MB)" },
         { status: 400 }
       );
     }
 
-    if (file.type && !file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+    const uploadType = parseUploadType(request);
+    if (!uploadType || !ALLOWED_LOGO_TYPES.has(uploadType)) {
+      return NextResponse.json(
+        { error: "Only PNG, JPEG, and SVG logos are allowed" },
+        { status: 400 }
+      );
     }
 
-    const formData = new FormData();
-    formData.append("logo", file, file.name || `logo-${Date.now()}.png`);
+    if (!request.body) {
+      return NextResponse.json({ error: "No file" }, { status: 400 });
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
     let response: Response;
     try {
-      response = await fetch(`${API_BASE}/admin/logo`, {
+      const init: RequestInit & { duplex: "half" } = {
         method: "POST",
         headers: getAuthHeader(request),
-        body: formData,
+        body: request.body,
         cache: "no-store",
-        signal: controller.signal
+        signal: controller.signal,
+        duplex: "half"
+      };
+
+      response = await fetch(`${API_BASE}/admin/logo`, {
+        ...init
       });
     } finally {
       clearTimeout(timeout);
@@ -116,7 +168,9 @@ export async function POST(request: NextRequest) {
         error:
           error instanceof Error && error.name === "AbortError"
             ? "Upload timed out"
-            : "Upload failed"
+            : error instanceof Error && error.name === "TypeError"
+              ? "Upload upstream unavailable"
+              : "Upload failed"
       },
       {
         status:

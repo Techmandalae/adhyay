@@ -824,12 +824,22 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       return next(new HttpError(400, "Class level mismatch"));
     }
 
+    const normalizedBaseClassId =
+      resolvedClassLevel && Number.isFinite(resolvedClassLevel)
+        ? `default-${resolvedClassLevel}`
+        : null;
+    const useFallbackCatalogForTeacher =
+      isDefaultClass ||
+      (user.role === "TEACHER" && !isDefaultClass && Boolean(normalizedBaseClassId));
+    const fallbackCatalogClassId = isDefaultClass ? payload.classId : normalizedBaseClassId;
+
     const requestedSubjectIds =
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds
         : [payload.subjectId];
-    const defaultClassSubjects: SelectedSubject[] = isDefaultClass
-      ? buildFallbackSubjects(payload.classId).map((subject) => {
+    const fallbackSubjects: SelectedSubject[] =
+      useFallbackCatalogForTeacher && fallbackCatalogClassId
+        ? buildFallbackSubjects(fallbackCatalogClassId).map((subject) => {
           const fallbackBooks = buildFallbackBooks(subject.id);
           return {
             id: subject.id,
@@ -837,7 +847,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
             books: [...fallbackBooks.ncertBooks, ...fallbackBooks.referenceBooks]
           };
         })
-      : [];
+        : [];
     const schoolSubjects: SelectedSubject[] = (academicClass?.subjects ?? []).map((subject) => ({
       id: subject.id,
       name: subject.name,
@@ -854,8 +864,8 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         }))
       }))
     }));
-    const selectedSubjects: SelectedSubject[] = isDefaultClass
-      ? defaultClassSubjects.filter((subject) =>
+    const selectedSubjects: SelectedSubject[] = useFallbackCatalogForTeacher
+      ? fallbackSubjects.filter((subject) =>
           requestedSubjectIds.includes(subject.id)
         )
       : schoolSubjects.filter((subject) =>
@@ -863,7 +873,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         );
 
     if (selectedSubjects.length === 0) {
-      return next(new HttpError(400, "Invalid subject selection"));
+      return next(new HttpError(400, "Please select a valid subject for the chosen class."));
     }
     const primarySubject = selectedSubjects[0];
 

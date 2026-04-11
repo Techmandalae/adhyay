@@ -74,6 +74,25 @@ function parseClassLevel(name: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function compareClassNames(left: string, right: string) {
+  const leftLevel = parseClassLevel(left);
+  const rightLevel = parseClassLevel(right);
+
+  if (leftLevel !== null && rightLevel !== null && leftLevel !== rightLevel) {
+    return leftLevel - rightLevel;
+  }
+
+  if (leftLevel !== null && rightLevel === null) {
+    return -1;
+  }
+
+  if (leftLevel === null && rightLevel !== null) {
+    return 1;
+  }
+
+  return left.localeCompare(right);
+}
+
 function buildFallbackClassId(classLevel: number | null | undefined) {
   return classLevel && Number.isFinite(classLevel) ? `default-${classLevel}` : null;
 }
@@ -442,42 +461,53 @@ router.get(
 
 catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log("CATALOG API HIT - NEW CODE");
     const user = req.user;
     if (!user) {
       return next(new HttpError(401, "Authentication required"));
     }
 
-    console.log("USER:", user);
-    console.log("USER SCHOOL ID:", user?.schoolId);
-
     if (!user.schoolId) {
-      console.log("FALLBACK TRIGGERED - USING DEFAULT CLASSES");
       return res.json(buildDefaultCatalogResponse());
     }
 
-    const classes = await prisma.academicClass.findMany({
+    const standards = await prisma.academicClassStandard.findMany({
       where: { schoolId: user.schoolId },
-      orderBy: { classLevel: "asc" },
-      select: { id: true, name: true }
+      include: {
+        sections: {
+          orderBy: { name: "asc" },
+          select: { id: true, name: true }
+        },
+        classes: {
+          select: { id: true, classLevel: true, name: true }
+        }
+      }
     });
 
-    console.log("DB CLASSES RESULT:", classes);
-
-    if (!classes || classes.length === 0) {
-      console.log("FALLBACK TRIGGERED - USING DEFAULT CLASSES");
-      return res.json(buildDefaultCatalogResponse());
+    if (standards.length === 0) {
+      return res.json([]);
     }
 
-    return res.json({
-      classes: classes.map((klass) => ({
-        id: klass.id,
-        name: klass.name
-      })),
-      subjects: [],
-      books: [],
-      chapters: []
-    });
+    return res.json(
+      [...standards]
+        .sort((left, right) => compareClassNames(left.name, right.name))
+        .map((standard) => {
+          const linkedClass = [...standard.classes].sort((left, right) => {
+            if (left.classLevel !== right.classLevel) {
+              return left.classLevel - right.classLevel;
+            }
+
+            return compareClassNames(left.name, right.name);
+          })[0];
+
+          return {
+            classId: linkedClass?.id ?? standard.id,
+            className: standard.name,
+            classLevel: linkedClass?.classLevel ?? parseClassLevel(standard.name),
+            sections: standard.sections,
+            subjects: []
+          };
+        })
+    );
   } catch (error) {
     next(error);
   }

@@ -21,11 +21,24 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
-  const status = err instanceof HttpError ? err.status : 500;
+  const isMulterError = err.name === "MulterError";
+  const multerErrorCode = isMulterError ? (err as Error & { code?: string }).code : undefined;
+  const status =
+    err instanceof HttpError
+      ? err.status
+      : isMulterError
+        ? multerErrorCode === "LIMIT_FILE_SIZE"
+          ? 400
+          : 400
+        : 500;
+  const message =
+    isMulterError && multerErrorCode === "LIMIT_FILE_SIZE"
+      ? "File too large (max 2MB)"
+      : err.message || "Internal Server Error";
   const payload = {
     error: {
       status,
-      message: err.message || "Internal Server Error",
+      message,
       ...(err instanceof HttpError && err.details ? { details: err.details } : {})
     }
   };

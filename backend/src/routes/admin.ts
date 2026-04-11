@@ -63,7 +63,14 @@ const logoStorage = multer.diskStorage({
     cb(null, targetDir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase() || ".png";
+    const ext =
+      ({
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/svg+xml": ".svg"
+      }[file.mimetype] ??
+        path.extname(file.originalname || "").toLowerCase()) ||
+      ".png";
     const safeName = `school-logo-${Date.now()}${ext}`;
     cb(null, safeName);
   }
@@ -71,6 +78,14 @@ const logoStorage = multer.diskStorage({
 
 const uploadLogo = multer({
   storage: logoStorage,
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_LOGO_TYPES.has(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new HttpError(400, "Only PNG, JPEG, and SVG logos are allowed"));
+  },
   limits: {
     fileSize: Math.min(env.UPLOAD_MAX_BYTES, 2 * 1024 * 1024)
   }
@@ -136,6 +151,7 @@ const STREAM_SUBJECTS: Record<string, string[]> = {
 };
 
 const COMMON_SUBJECTS = ["Mathematics", "Science", "Social Science", "English", "Hindi"];
+const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
 
 function getClassLevel(name: string): number | null {
   const match = name.match(/(\d+)/);

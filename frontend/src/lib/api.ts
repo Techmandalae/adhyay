@@ -900,8 +900,14 @@ export async function saveAcademicSetup(
 }
 
 export async function uploadSchoolLogo(token: string, file: File) {
+  const allowedTypes = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
+
   if (file.size > 2 * 1024 * 1024) {
     throw new ApiError("Max 2MB", 400);
+  }
+
+  if (!allowedTypes.has(file.type)) {
+    throw new ApiError("Only PNG, JPEG, and SVG logos are allowed", 400);
   }
 
   const formData = new FormData();
@@ -909,12 +915,26 @@ export async function uploadSchoolLogo(token: string, file: File) {
 
   const response = await fetch("/api/upload-logo", {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "x-logo-size": String(file.size),
+      "x-logo-type": file.type
+    },
     body: formData
   });
 
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as unknown) : null;
+  const payload = (() => {
+    if (!text) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      return null;
+    }
+  })();
 
   if (!response.ok) {
     throw new ApiError(
