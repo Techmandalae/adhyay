@@ -54,3 +54,177 @@ body {
     ),
     linear-gradient(135deg, #fbf7f2 0%, #f4ede5 45%, #f7efe6 100%);
 }
+
+.exam-book-scene {
+  position: relative;
+  width: 220px;
+  height: 170px;
+  perspective: 1200px;
+}
+
+.exam-book-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 150px;
+  height: 28px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(27, 24, 20, 0.22), transparent 72%);
+  transform: translateX(-50%);
+  filter: blur(6px);
+  animation: exam-book-shadow 2.8s ease-in-out infinite;
+}
+
+.exam-book {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 148px;
+  height: 112px;
+  transform-style: preserve-3d;
+  transform: translateX(-50%) rotateX(55deg) rotateZ(-16deg);
+  animation: exam-book-float 2.8s ease-in-out infinite;
+}
+
+.exam-book-spine,
+.exam-book-cover,
+.exam-book-page,
+.exam-book-scanline {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px 12px 12px 10px;
+  transform-origin: left center;
+}
+
+.exam-book-spine {
+  width: 18px;
+  border-radius: 10px 0 0 10px;
+  background: linear-gradient(180deg, #c74d21 0%, #8f2d0f 100%);
+  box-shadow: inset -2px 0 6px rgba(0, 0, 0, 0.2);
+}
+
+.exam-book-cover {
+  background: linear-gradient(140deg, #ff8d5d 0%, #ff6b35 45%, #d95020 100%);
+  box-shadow:
+    0 18px 35px rgba(217, 80, 32, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.exam-book-page {
+  left: 14px;
+  width: calc(100% - 18px);
+  border: 1px solid rgba(227, 214, 200, 0.9);
+  background: linear-gradient(180deg, #fffdfa 0%, #f7f0e7 100%);
+  box-shadow: 0 8px 18px rgba(27, 24, 20, 0.08);
+}
+
+.exam-book-page::before,
+.exam-book-page::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(92, 83, 71, 0.14);
+}
+
+.exam-book-page::before {
+  top: 24px;
+}
+
+.exam-book-page::after {
+  top: 40px;
+}
+
+.exam-book-page-one {
+  animation: exam-page-flip-one 1.9s ease-in-out infinite;
+}
+
+.exam-book-page-two {
+  animation: exam-page-flip-two 1.9s ease-in-out infinite 0.25s;
+}
+
+.exam-book-page-three {
+  animation: exam-page-flip-three 1.9s ease-in-out infinite 0.5s;
+}
+
+.exam-book-scanline {
+  left: 28px;
+  top: 16px;
+  width: 90px;
+  height: 80px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(15, 139, 141, 0.2), transparent);
+  transform: translateZ(24px) rotateZ(8deg);
+  filter: blur(1px);
+  animation: exam-scan-pass 2.2s ease-in-out infinite;
+}
+
+@keyframes exam-book-float {
+  0%,
+  100% {
+    transform: translateX(-50%) rotateX(55deg) rotateZ(-16deg) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) rotateX(55deg) rotateZ(-16deg) translateY(-8px);
+  }
+}
+
+@keyframes exam-book-shadow {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(-50%) scaleX(0.92);
+    opacity: 0.55;
+  }
+}
+
+@keyframes exam-page-flip-one {
+  0%,
+  18% {
+    transform: translateZ(12px) rotateY(0deg);
+  }
+  42%,
+  100% {
+    transform: translateZ(12px) rotateY(-162deg);
+  }
+}
+
+@keyframes exam-page-flip-two {
+  0%,
+  28% {
+    transform: translateZ(18px) rotateY(0deg);
+  }
+  56%,
+  100% {
+    transform: translateZ(18px) rotateY(-168deg);
+  }
+}
+
+@keyframes exam-page-flip-three {
+  0%,
+  38% {
+    transform: translateZ(24px) rotateY(0deg);
+  }
+  68%,
+  100% {
+    transform: translateZ(24px) rotateY(-174deg);
+  }
+}
+
+@keyframes exam-scan-pass {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-12px, 0, 24px) rotateZ(8deg);
+  }
+  35%,
+  65% {
+    opacity: 1;
+    transform: translate3d(22px, 0, 24px) rotateZ(8deg);
+  }
+}

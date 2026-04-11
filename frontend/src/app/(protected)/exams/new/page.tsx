@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -336,6 +337,11 @@ export default function NewExamPage() {
   return (
     <RequireRole roles={["TEACHER"]}>
       <PageFade>
+        <AnimatePresence>
+          {status.state === "loading" ? (
+            <GenerationLoader label="Opening books, flipping through chapters, and structuring the paper." />
+          ) : null}
+        </AnimatePresence>
         <div className="mx-auto grid max-w-5xl gap-8">
           <SectionHeader
             eyebrow="Exam generation"
@@ -345,7 +351,6 @@ export default function NewExamPage() {
 
           <PageLocalNav
             items={[
-              { label: "Back to history", href: "/exams/history" },
               { label: "Analytics", href: "/analytics/class" },
               { label: "Reports", href: "/reports" }
             ]}
@@ -353,10 +358,6 @@ export default function NewExamPage() {
 
           {catalogError ? (
             <StatusBlock tone="negative" title="Setup unavailable" description={catalogError} />
-          ) : null}
-
-          {status.state === "loading" ? (
-            <GenerationLoader label="Analyzing syllabus, picking chapters, and structuring the paper." />
           ) : null}
 
           <Card className="space-y-6">

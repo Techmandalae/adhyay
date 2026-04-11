@@ -14,6 +14,7 @@ import { getRoleRoute } from "@/lib/auth";
 import { login } from "@/lib/api";
 import { APP_NAME } from "@/lib/branding";
 import { decodeJwt } from "@/lib/jwt";
+import type { AuthUser } from "@/types/auth";
 
 export function LoginClient() {
   const { signIn } = useAuth();
@@ -50,14 +51,15 @@ export function LoginClient() {
         password: password.trim(),
         ...(schoolId.trim() ? { schoolId: schoolId.trim() } : {})
       });
-      signIn(response.token);
-      const decoded = decodeJwt(response.token);
+      const sessionUser = response.user ?? decodeJwt(response.token);
+      signIn(response.token, sessionUser);
+      const resolvedUser = sessionUser as AuthUser | null;
       startTransition(() => {
         router.replace(
-          decoded?.mustChangePassword
+          resolvedUser?.mustChangePassword
             ? "/change-password"
-            : decoded?.role
-              ? getRoleRoute(decoded.role)
+            : resolvedUser?.role
+              ? getRoleRoute(resolvedUser.role)
               : next
         );
       });

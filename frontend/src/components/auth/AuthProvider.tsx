@@ -15,13 +15,14 @@ type AuthContextValue = {
   token: string | null;
   user: AuthUser | null;
   isLoading: boolean;
-  signIn: (token: string) => void;
+  signIn: (token: string, user?: AuthUser | null) => void;
   signOut: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_KEY = "token";
+const USER_KEY = "auth-user";
 
 function getStoredAuthState() {
   if (typeof window === "undefined") {
@@ -33,9 +34,20 @@ function getStoredAuthState() {
   }
 
   const stored = window.localStorage.getItem(TOKEN_KEY);
+  const storedUser = window.localStorage.getItem(USER_KEY);
+  let user: AuthUser | null = null;
+
+  if (storedUser) {
+    try {
+      user = JSON.parse(storedUser) as AuthUser;
+    } catch {
+      user = null;
+    }
+  }
+
   return {
     token: stored,
-    user: stored ? decodeJwt(stored) : null,
+    user: user ?? (stored ? decodeJwt(stored) : null),
     isLoading: false
   };
 }
@@ -43,17 +55,24 @@ function getStoredAuthState() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState(getStoredAuthState);
 
-  const signIn = useCallback((newToken: string) => {
+  const signIn = useCallback((newToken: string, newUser?: AuthUser | null) => {
+    const resolvedUser = newUser ?? decodeJwt(newToken);
     window.localStorage.setItem(TOKEN_KEY, newToken);
+    if (resolvedUser) {
+      window.localStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
+    } else {
+      window.localStorage.removeItem(USER_KEY);
+    }
     setAuthState({
       token: newToken,
-      user: decodeJwt(newToken),
+      user: resolvedUser,
       isLoading: false
     });
   }, []);
 
   const signOut = useCallback(() => {
     window.localStorage.removeItem(TOKEN_KEY);
+    window.localStorage.removeItem(USER_KEY);
     setAuthState({
       token: null,
       user: null,

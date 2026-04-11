@@ -122,7 +122,6 @@ export default function ReportsPage() {
           />
           <PageLocalNav
             items={[
-              { label: "Back to dashboard", href: "/dashboard" },
               { label: "Analytics", href: "/analytics/class" }
             ]}
           />

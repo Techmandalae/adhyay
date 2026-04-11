@@ -1339,7 +1339,12 @@ adminRouter.post(
   async (req, res, next) => {
     try {
       const admin = req.user!;
-      const file = (req as unknown as { file?: { filename: string } }).file;
+      const file = (
+        req as unknown as {
+          file?: { filename: string; fieldname?: string; mimetype?: string; size?: number };
+        }
+      ).file;
+      console.log("Logo upload file:", file ?? null);
       if (!file) {
         return next(new HttpError(400, "Logo file is required"));
       }

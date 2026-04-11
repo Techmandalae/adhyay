@@ -720,33 +720,74 @@ authRouter.post("/login", async (req, res, next) => {
 
   try {
     const { email, password, schoolId } = parsed.data;
-    const userInclude = {
-      teacherProfile: true,
-      studentProfile: true,
+    const userSelect = {
+      id: true,
+      publicId: true,
+      schoolId: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      approvalStatus: true,
+      name: true,
+      isActive: true,
+      isVerified: true,
+      emailVerified: true,
+      teacherProfile: {
+        select: {
+          id: true,
+          isIndependent: true
+        }
+      },
+      studentProfile: {
+        select: {
+          id: true,
+          classId: true,
+          classLevel: true,
+          sectionId: true
+        }
+      },
       parentProfile: {
-        include: {
+        select: {
+          id: true,
           children: {
-            include: { student: true }
+            select: {
+              studentId: true,
+              student: {
+                select: {
+                  classId: true,
+                  classLevel: true,
+                  sectionId: true
+                }
+              }
+            }
           }
         }
       },
-      adminProfile: true,
-      school: { select: { meta: true, status: true, isIndependentWorkspace: true } }
+      adminProfile: {
+        select: {
+          id: true
+        }
+      },
+      school: {
+        select: {
+          meta: true,
+          status: true,
+          isIndependentWorkspace: true
+        }
+      }
     } as const;
 
-    let users = [];
-
-    if (schoolId) {
-      users = await prisma.user.findMany({
-        where: { email, schoolId },
-        include: userInclude
-      });
-    } else {
-      users = await prisma.user.findMany({
-        where: { email },
-        include: userInclude
-      });
-    }
+    const users = schoolId
+      ? await prisma.user
+          .findUnique({
+            where: { schoolId_email: { schoolId, email } },
+            select: userSelect
+          })
+          .then((user) => (user ? [user] : []))
+      : await prisma.user.findMany({
+          where: { email },
+          select: userSelect
+        });
 
     if (users.length === 0) {
       return next(new HttpError(401, "Invalid email or password"));

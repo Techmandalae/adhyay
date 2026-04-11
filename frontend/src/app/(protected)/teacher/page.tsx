@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { GenerationLoader } from "@/components/ui/GenerationLoader";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -749,6 +751,11 @@ export default function TeacherDashboard() {
 
   return (
     <RequireRole roles={["TEACHER"]}>
+      <AnimatePresence>
+        {isGenerating ? (
+          <GenerationLoader label="Opening books, scanning chapters, and building your exam set." />
+        ) : null}
+      </AnimatePresence>
       <div className="mx-auto grid max-w-6xl gap-10">
         <SectionHeader
           eyebrow="Teacher cockpit"

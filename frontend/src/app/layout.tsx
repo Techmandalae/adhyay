@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: "Smart exam generation",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
+    icon: "/favicon-v2.png",
+    shortcut: "/favicon-v2.png",
     apple: "/logo-icon.png"
   },
   openGraph: {

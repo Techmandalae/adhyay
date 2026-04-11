@@ -101,7 +101,6 @@ export default function ArchivedExamsPage() {
         <div className="flex flex-wrap gap-3">
           <PageLocalNav
             items={[
-              { label: "Back to history", href: "/exams/history" },
               { label: "Create exam", href: "/exams/new" },
               { label: "Reports", href: "/reports" }
             ]}

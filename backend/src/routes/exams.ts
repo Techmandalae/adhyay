@@ -876,6 +876,31 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       return next(new HttpError(400, "Please select a valid subject for the chosen class."));
     }
     const primarySubject = selectedSubjects[0];
+    const persistedSubject = isDefaultClass
+      ? null
+      : await prisma.academicSubject.findFirst({
+          where: useFallbackCatalogForTeacher
+            ? {
+                schoolId: user.schoolId,
+                classId: payload.classId,
+                name: {
+                  equals: primarySubject.name,
+                  mode: "insensitive"
+                }
+              }
+            : {
+                id: primarySubject.id,
+                schoolId: user.schoolId,
+                classId: payload.classId
+              },
+          select: { id: true, name: true }
+        });
+
+    if (!isDefaultClass && !persistedSubject) {
+      return next(new HttpError(400, "Selected subject is not available for this class."));
+    }
+
+    const persistedSubjectId = persistedSubject?.id ?? null;
 
     const fetchedChaptersForDebug =
       payload.chapterIds && payload.chapterIds.length > 0
@@ -1088,14 +1113,14 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         : primarySubject.name;
 
     const syllabusChapterTitles =
-      academicClass?.classStandardId
+      academicClass?.classStandardId && persistedSubjectId
         ? await prisma.syllabusChapter.findMany({
-            where: {
-              schoolId: user.schoolId,
-              classStandardId: academicClass.classStandardId,
-              subjectId: primarySubject.id,
-              ...(resolvedChapters.length > 0
-                ? {
+          where: {
+            schoolId: user.schoolId,
+            classStandardId: academicClass.classStandardId,
+            subjectId: persistedSubjectId,
+            ...(resolvedChapters.length > 0
+              ? {
                     chapterTitle: {
                       in: resolvedChapters
                     }
@@ -1126,12 +1151,12 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         ? templateStructure
         : inferredPatternProfile.sections;
 
-    const syllabusChapterIds = academicClass?.classStandardId
+    const syllabusChapterIds = academicClass?.classStandardId && persistedSubjectId
       ? await prisma.syllabusChapter.findMany({
           where: {
             schoolId: user.schoolId,
             classStandardId: academicClass.classStandardId,
-            subjectId: primarySubject.id,
+            subjectId: persistedSubjectId,
             ...(effectiveChapterTitles.length > 0
               ? { chapterTitle: { in: effectiveChapterTitles } }
               : {})
@@ -1164,7 +1189,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       const examInput: GenerateExamInput = {
         topic: payload.topic,
         subject: subjectLabel,
-        subjectId: payload.subjectId,
+        subjectId: persistedSubjectId ?? payload.subjectId,
         subjectIds: payload.subjectIds,
         classId: payload.classId,
         classLevel: resolvedClassLevel,
@@ -1227,12 +1252,12 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         );
       }
 
-      const sourceQuestions = questionBankClassStandardId
+      const sourceQuestions = questionBankClassStandardId && persistedSubjectId
         ? await prisma.questionBank.findMany({
             where: {
               schoolId: user.schoolId,
               classStandardId: questionBankClassStandardId,
-              subjectId: primarySubject.id,
+              subjectId: persistedSubjectId,
               ...(syllabusChapterIds.length > 0
                 ? { chapterId: { in: syllabusChapterIds.map((chapter) => chapter.id) } }
                 : {})
@@ -1434,7 +1459,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
         classId: isDefaultClass ? null : payload.classId,
         classStandard: isDefaultClass ? classStandard : null,
         sectionId,
-        subjectId: isDefaultClass ? null : primarySubject.id,
+        subjectId: persistedSubjectId,
         subjectName: isDefaultClass ? primarySubject.name.toLowerCase() : null,
         templateId: payload.templateId ?? null,
         status: "DRAFT",
@@ -1450,7 +1475,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
           choicesPerQuestion: exam.metadata.choicesPerQuestion,
           teacherId,
           schoolId: user.schoolId,
-          subjectId: primarySubject.id,
+          subjectId: persistedSubjectId,
           ...(isDefaultClass ? { subjectName: primarySubject.name.toLowerCase() } : {}),
           classId: payload.classId,
           ...(classStandard ? { classStandard } : {}),
@@ -1494,13 +1519,13 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       });
     }
 
-    if (academicClass?.classStandardId) {
+    if (academicClass?.classStandardId && persistedSubjectId) {
       const classStandardId = academicClass.classStandardId;
       const syllabusRows = await prisma.syllabusChapter.findMany({
         where: {
           schoolId: user.schoolId,
           classStandardId,
-          subjectId: primarySubject.id
+          subjectId: persistedSubjectId
         },
         select: {
           id: true,
@@ -1524,7 +1549,7 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
           return {
             schoolId: user.schoolId,
             classStandardId,
-            subjectId: primarySubject.id,
+            subjectId: persistedSubjectId,
             chapterId: syllabusByTitle.get(question.chapter.toLowerCase()) ?? null,
             difficulty: exam.metadata.difficulty,
             question: question.prompt,

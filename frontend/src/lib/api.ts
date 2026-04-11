@@ -132,17 +132,11 @@ export async function login(payload: {
   password: string;
   schoolId?: string;
 }) {
-  const data = await apiFetch<{ token: string }>(
+  return apiFetch<{ token: string; user?: AuthUser }>(
     "/auth/login",
     { method: "POST", body: JSON.stringify(payload) },
     null
   );
-
-  if (typeof window !== "undefined") {
-    localStorage.setItem("token", data.token);
-  }
-
-  return data;
 }
 
 export async function registerSchool(payload: {
@@ -911,7 +905,7 @@ export async function uploadSchoolLogo(token: string, file: File) {
   }
 
   const formData = new FormData();
-  formData.append("file", file, file.name);
+  formData.append("logo", file, file.name);
 
   const response = await fetch("/api/upload-logo", {
     method: "POST",
