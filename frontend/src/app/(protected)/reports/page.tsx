@@ -139,9 +139,10 @@ export default function ReportsPage() {
             <>
               <MetricGrid
                 metrics={[
-                  { label: "Evaluations", value: teacherData.summary.totalEvaluations, tone: "accent" },
-                  { label: "Students", value: teacherData.summary.uniqueStudents },
-                  { label: "Average %", value: teacherData.summary.averagePercentage, tone: "cool" }
+                  { label: "Total exams", value: teacherData.summary.totalExams, tone: "accent" },
+                  { label: "Submissions", value: teacherData.summary.totalSubmissions },
+                  { label: "Evaluated", value: teacherData.summary.evaluatedCount },
+                  { label: "Evaluated %", value: teacherData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
               <Card className="space-y-4">
@@ -183,7 +184,8 @@ export default function ReportsPage() {
                 metrics={[
                   { label: "Total exams", value: adminData.summary.totalExams, tone: "accent" },
                   { label: "Submissions", value: adminData.summary.totalSubmissions },
-                  { label: "Average %", value: adminData.summary.averagePercentage, tone: "cool" }
+                  { label: "Evaluated", value: adminData.summary.evaluatedCount },
+                  { label: "Evaluated %", value: adminData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
               <Card className="space-y-4">

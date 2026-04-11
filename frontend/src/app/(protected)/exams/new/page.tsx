@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   generateExam,
+  getAcademicClasses,
   getAcademicBooksBySubjectId,
   getAcademicChapters,
   getSubjects,
@@ -50,7 +51,7 @@ const defaultExamInput: GenerateExamInput = {
 };
 
 export default function NewExamPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTemplateId = searchParams.get("templateId") ?? "";
@@ -84,16 +85,25 @@ export default function NewExamPage() {
 
     const loadInitialData = async () => {
       try {
-        const [catalogResponse, templatesResponse] = await Promise.all([
-          getTeacherCatalog(token),
-          getTemplates(token)
-        ]);
+        const templatesResponse = await getTemplates(token);
 
         if (!isActive) {
           return;
         }
 
-        setClassOptions(normalizeTeacherCatalog(catalogResponse).classOptions);
+        if (user?.schoolId && !user.isIndependentTeacher) {
+          const catalogResponse = await getAcademicClasses(token);
+          if (!isActive) {
+            return;
+          }
+          setClassOptions(catalogResponse.items);
+        } else {
+          const catalogResponse = await getTeacherCatalog(token);
+          if (!isActive) {
+            return;
+          }
+          setClassOptions(normalizeTeacherCatalog(catalogResponse).classOptions);
+        }
         setTemplates(templatesResponse.items.map((item) => ({ id: item.id, name: item.name })));
       } catch (error) {
         if (!isActive) {
@@ -108,7 +118,7 @@ export default function NewExamPage() {
     return () => {
       isActive = false;
     };
-  }, [token]);
+  }, [token, user?.schoolId, user?.isIndependentTeacher]);
 
   useEffect(() => {
     if (

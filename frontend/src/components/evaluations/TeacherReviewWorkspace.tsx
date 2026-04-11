@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import { approveSubmission, getEvaluation, getPendingEvaluations } from "@/lib/api";
+import { buildTeacherOverrideResult, getEvaluationBreakdown } from "@/lib/evaluation";
 import type { EvaluationDetail, EvaluationSummary } from "@/types/evaluation";
 
 type AsyncState<T> = {
@@ -28,6 +29,7 @@ export function TeacherReviewWorkspace() {
     data: null
   });
   const [teacherScore, setTeacherScore] = useState("");
+  const [reviewNotes, setReviewNotes] = useState("");
   const [actionState, setActionState] = useState<AsyncState<{ status: string }>>({
     status: "idle",
     data: null
@@ -93,6 +95,7 @@ export function TeacherReviewWorkspace() {
             ? String(detail.score)
             : ""
       );
+      setReviewNotes(detail.teacherResult?.summary ?? detail.result?.summary ?? "");
       setDetailState({ status: "success", data: detail });
     } catch (error) {
       setDetailState({
@@ -107,9 +110,15 @@ export function TeacherReviewWorkspace() {
     if (!token || !detailState.data) return;
     setActionState({ status: "loading", data: null });
     try {
+      const teacherResult = buildTeacherOverrideResult(
+        detailState.data.result,
+        teacherScore,
+        reviewNotes
+      );
       const response = await approveSubmission(token, {
         submissionId: detailState.data.submissionId,
-        ...(teacherScore.trim() ? { teacherScore: Number(teacherScore) } : {})
+        ...(teacherScore.trim() ? { teacherScore: Number(teacherScore) } : {}),
+        ...(teacherResult ? { teacherResult } : {})
       });
       setActionState({ status: "success", data: { status: response.status } });
       await loadDetail(detailState.data.submissionId);
@@ -122,6 +131,8 @@ export function TeacherReviewWorkspace() {
       });
     }
   };
+
+  const breakdown = getEvaluationBreakdown(detailState.data?.result);
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -149,10 +160,14 @@ export function TeacherReviewWorkspace() {
                 <p className="text-sm font-semibold">
                   {item.studentName ?? `Student ${item.studentId}`}
                 </p>
-                <p className="text-xs text-ink-soft">
+              <p className="text-xs text-ink-soft">
                   {item.examName ?? `Exam ${item.examId}`} | Submission {item.submissionId}
                 </p>
-                <p className="mt-1 text-xs text-ink-soft">AI score: {item.aiScore ?? "-"}</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {item.aiScore !== null && item.aiScore !== undefined
+                    ? `AI score: ${item.aiScore}`
+                    : "Manual review required"}
+                </p>
               </button>
             ))}
           </div>
@@ -187,18 +202,32 @@ export function TeacherReviewWorkspace() {
                   "No summary available."}
               </p>
             </div>
+            {detailState.data.manualReviewRequired ? (
+              <StatusBlock
+                tone="negative"
+                title="Manual review required"
+                description="AI evaluation was unavailable for this submission. You can still approve it with a teacher score and summary."
+              />
+            ) : null}
             <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
               <p className="font-semibold">Per-question feedback</p>
               <div className="mt-3 space-y-3">
-                {(detailState.data.aiResult ?? detailState.data.result)?.perQuestion.map((item) => (
+                {breakdown.map((item) => (
                   <div key={item.questionNumber} className="rounded-2xl border border-border p-3">
                     <p className="font-medium">Q{item.questionNumber}</p>
+                    <p className="mt-1 text-xs text-foreground">{item.question}</p>
                     <p className="text-xs text-ink-soft">
                       Marks: {item.score} / {item.maxScore}
                     </p>
-                    <p className="mt-1 text-xs text-ink-soft">{item.remarks}</p>
+                    <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
+                    <p className="mt-1 text-xs text-ink-soft">
+                      Detected answer: {item.detectedAnswer}
+                    </p>
                   </div>
-                )) ?? <p className="text-xs text-ink-soft">No feedback available.</p>}
+                ))}
+                {breakdown.length === 0 ? (
+                  <p className="text-xs text-ink-soft">No feedback available.</p>
+                ) : null}
               </div>
             </div>
             {detailState.data.extractedText ? (
@@ -215,6 +244,14 @@ export function TeacherReviewWorkspace() {
               value={teacherScore}
               onChange={(event) => setTeacherScore(event.target.value)}
             />
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="font-medium text-foreground">Teacher summary</span>
+              <textarea
+                className="min-h-[120px] rounded-2xl border border-border bg-surface px-4 py-2 text-sm outline-none transition focus:border-accent"
+                value={reviewNotes}
+                onChange={(event) => setReviewNotes(event.target.value)}
+              />
+            </label>
             <Button onClick={handleApprove} disabled={!token || actionState.status === "loading"}>
               {actionState.status === "loading" ? "Approving..." : "Approve evaluation"}
             </Button>

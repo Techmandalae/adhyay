@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 import bcrypt from "bcrypt";
+import AWS from "aws-sdk";
 import { Readable } from "stream";
 import XLSX from "xlsx";
 import { z } from "zod";
@@ -142,6 +143,47 @@ function getLogoExtension(mimeType: string, originalName: string) {
     path.extname(originalName || "").toLowerCase() ??
     ".png"
   );
+}
+
+function buildLogoS3Client() {
+  if (!env.AWS_REGION || !env.AWS_S3_BUCKET) {
+    throw new HttpError(500, "Logo storage is not configured");
+  }
+
+  return new AWS.S3({
+    region: env.AWS_REGION,
+    ...(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
+      ? {
+          credentials: {
+            accessKeyId: env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: env.AWS_SECRET_ACCESS_KEY
+          }
+        }
+      : {})
+  });
+}
+
+async function uploadLogoBuffer(
+  file: { buffer: Buffer; mimetype: string; originalname: string }
+) {
+  const s3 = buildLogoS3Client();
+  const keyPrefix = env.AWS_S3_LOGO_PREFIX?.trim().replace(/^\/+|\/+$/g, "") || "logos";
+  const key = `${keyPrefix}/school-logo-${Date.now()}-${crypto.randomUUID()}${getLogoExtension(
+    file.mimetype,
+    file.originalname
+  )}`;
+
+  const result = await s3
+    .upload({
+      Bucket: env.AWS_S3_BUCKET!,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      CacheControl: "public, max-age=31536000, immutable"
+    })
+    .promise();
+
+  return result.Location;
 }
 
 function getClassLevel(name: string): number | null {
@@ -1348,22 +1390,14 @@ adminRouter.post(
       if (!file.buffer || !file.mimetype || !ALLOWED_LOGO_TYPES.has(file.mimetype)) {
         return res.status(400).json({ error: "Only PNG, JPEG, and WEBP logos are allowed" });
       }
-
-      const uploadRoot = path.resolve(process.cwd(), env.UPLOAD_DIR);
-      const logoDir = path.join(uploadRoot, "logos");
-      await fs.promises.mkdir(logoDir, { recursive: true });
-
-      const filename = `school-logo-${Date.now()}-${crypto.randomUUID()}${getLogoExtension(
-        file.mimetype,
-        file.originalname
-      )}`;
-      const absolutePath = path.join(logoDir, filename);
-      await fs.promises.writeFile(absolutePath, file.buffer);
-
-      const relativePath = path.join(env.UPLOAD_DIR, "logos", filename);
+      const uploadedUrl = await uploadLogoBuffer({
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        originalname: file.originalname
+      });
       const updated = await prisma.school.update({
         where: { id: admin.schoolId },
-        data: { logoUrl: relativePath }
+        data: { logoUrl: uploadedUrl }
       });
 
       res.json({

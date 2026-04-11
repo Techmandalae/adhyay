@@ -215,6 +215,56 @@ function buildSubjectPerformance(rows: AnalyticsEvaluation[]): SubjectPerformanc
   }));
 }
 
+function buildSubjectVolumePerformance(
+  exams: Array<{ meta: Prisma.JsonValue | null }>,
+  evaluations: AnalyticsEvaluation[]
+): SubjectPerformance[] {
+  const examCounts = new Map<string, number>();
+  const evaluationStats = new Map<
+    string,
+    { scoreSum: number; percentageSum: number; count: number }
+  >();
+
+  exams.forEach((exam) => {
+    const subject = parseExamMeta(exam.meta).subject ?? "Unknown";
+    examCounts.set(subject, (examCounts.get(subject) ?? 0) + 1);
+  });
+
+  evaluations.forEach((row) => {
+    const subject = row.subject || "Unknown";
+    const entry = evaluationStats.get(subject) ?? {
+      scoreSum: 0,
+      percentageSum: 0,
+      count: 0
+    };
+
+    if (row.score !== null) {
+      entry.scoreSum += row.score;
+    }
+    if (row.percentage !== null) {
+      entry.percentageSum += row.percentage;
+    }
+    entry.count += 1;
+    evaluationStats.set(subject, entry);
+  });
+
+  return Array.from(examCounts.entries()).map(([subject, examsCount]) => {
+    const evaluation = evaluationStats.get(subject);
+    return {
+      subject,
+      exams: examsCount,
+      averageScore:
+        evaluation && evaluation.count > 0
+          ? Number((evaluation.scoreSum / evaluation.count).toFixed(2))
+          : 0,
+      averagePercentage:
+        evaluation && evaluation.count > 0
+          ? Number((evaluation.percentageSum / evaluation.count).toFixed(2))
+          : 0
+    };
+  });
+}
+
 function buildDifficultyPerformance(rows: AnalyticsEvaluation[]): DifficultyPerformance[] {
   const map = new Map<string, { count: number; percentageSum: number }>();
 
@@ -605,14 +655,55 @@ export async function buildParentAnalytics(params: ParentAnalyticsParams) {
 }
 
 export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
-  const evaluations = await fetchApprovedEvaluations(params.schoolId, {
-    ...(params.teacherId ? { teacherId: params.teacherId } : {}),
-    ...(params.startDate ? { startDate: params.startDate } : {}),
-    ...(params.endDate ? { endDate: params.endDate } : {})
+  const [exams, evaluations] = await Promise.all([
+    prisma.exam.findMany({
+      where: {
+        schoolId: params.schoolId,
+        ...(params.teacherId ? { teacherId: params.teacherId } : {}),
+        createdAt: {
+          ...(params.startDate ? { gte: params.startDate } : null),
+          ...(params.endDate ? { lte: params.endDate } : null)
+        }
+      },
+      select: { id: true, createdAt: true, meta: true, teacherId: true }
+    }),
+    fetchApprovedEvaluations(params.schoolId, {
+      ...(params.teacherId ? { teacherId: params.teacherId } : {}),
+      ...(params.startDate ? { startDate: params.startDate } : {}),
+      ...(params.endDate ? { endDate: params.endDate } : {})
+    })
+  ]);
+
+  const filteredExams = exams.filter((exam) => {
+    const meta = parseExamMeta(exam.meta);
+    return withinFilters(
+      {
+        evaluationId: "",
+        examId: exam.id,
+        studentId: "",
+        evaluatedAt: exam.createdAt,
+        score: null,
+        maxScore: null,
+        percentage: null,
+        subject: meta.subject ?? "Unknown",
+        classLevel: meta.classLevel ?? null,
+        difficulty: meta.difficulty ?? "unknown",
+        ncertChapters: meta.ncertChapters ?? [],
+        teacherId: exam.teacherId ?? null,
+        hasTeacherOverride: false,
+        scoreDelta: null,
+        strengths: [],
+        weaknesses: []
+      },
+      params
+    );
   });
 
-  const filtered = evaluations.filter((row) => withinFilters(row, params));
-  const subjectPerformance = buildSubjectPerformance(filtered);
+  const filteredExamIds = new Set(filteredExams.map((exam) => exam.id));
+  const filtered = evaluations.filter(
+    (row) => filteredExamIds.has(row.examId) && withinFilters(row, params)
+  );
+  const subjectPerformance = buildSubjectVolumePerformance(filteredExams, filtered);
   const difficultyPerformance = buildDifficultyPerformance(filtered);
 
   const topicMap = new Map<string, number>();
@@ -623,8 +714,8 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
   });
 
   const overrideCount = filtered.filter((row) => row.hasTeacherOverride).length;
-  const totalEvaluations = filtered.length;
-  const aiOnlyCount = totalEvaluations - overrideCount;
+  const evaluatedCount = filtered.length;
+  const aiOnlyCount = evaluatedCount - overrideCount;
   const deltaRows = filtered.filter((row) => row.scoreDelta !== null).length;
   const averageScoreDelta =
     deltaRows > 0
@@ -634,17 +725,26 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
           ).toFixed(2)
         )
       : 0;
+  const submissions = filteredExamIds.size
+    ? await prisma.examSubmission.findMany({
+        where: {
+          schoolId: params.schoolId,
+          examId: { in: Array.from(filteredExamIds) },
+          submittedAt: {
+            ...(params.startDate ? { gte: params.startDate } : null),
+            ...(params.endDate ? { lte: params.endDate } : null)
+          }
+        },
+        select: { studentId: true }
+      })
+    : [];
+  const totalSubmissions = submissions.length;
   const averagePercentage =
-    totalEvaluations > 0
-      ? Number(
-          (
-            filtered.reduce((sum, row) => sum + (row.percentage ?? 0), 0) /
-            totalEvaluations
-          ).toFixed(2)
-        )
+    totalSubmissions > 0
+      ? Number(((evaluatedCount / totalSubmissions) * 100).toFixed(2))
       : 0;
 
-  const uniqueStudents = new Set(filtered.map((row) => row.studentId)).size;
+  const uniqueStudents = new Set(submissions.map((row) => row.studentId)).size;
   const recentEvaluations = filtered
     .slice()
     .sort((a, b) => b.evaluatedAt.getTime() - a.evaluatedAt.getTime())
@@ -660,6 +760,14 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
 
   const generatedAt = new Date().toISOString();
 
+  console.log("[analytics][teacher]", {
+    schoolId: params.schoolId,
+    teacherId: params.teacherId ?? null,
+    examsCount: filteredExams.length,
+    submissionsCount: totalSubmissions,
+    evaluatedCount
+  });
+
   return {
     teacherId: params.teacherId ?? null,
     range: {
@@ -672,7 +780,10 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
       difficulty: params.difficulty ?? null
     },
     summary: {
-      totalEvaluations,
+      totalExams: filteredExams.length,
+      totalSubmissions,
+      evaluatedCount,
+      totalEvaluations: evaluatedCount,
       uniqueStudents,
       averagePercentage
     },
@@ -680,10 +791,10 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
     topicDistribution: clampTopTopics(topicMap),
     difficultyEffectiveness: difficultyPerformance,
     overrideStats: {
-      totalEvaluations,
+      totalEvaluations: evaluatedCount,
       overrideCount,
       aiOnlyCount,
-      overrideRate: totalEvaluations > 0 ? Number((overrideCount / totalEvaluations).toFixed(2)) : 0,
+      overrideRate: evaluatedCount > 0 ? Number((overrideCount / evaluatedCount).toFixed(2)) : 0,
       averageScoreDelta
     },
     recentEvaluations,
@@ -704,9 +815,11 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
           title: "Overview",
           type: "metrics",
           metrics: [
-            { label: "Approved evaluations", value: totalEvaluations },
+            { label: "Total exams", value: filteredExams.length },
+            { label: "Submissions", value: totalSubmissions },
+            { label: "Evaluated", value: evaluatedCount },
             { label: "Unique students", value: uniqueStudents },
-            { label: "Average %", value: averagePercentage }
+            { label: "Evaluated %", value: averagePercentage }
           ]
         },
         {
@@ -770,7 +883,10 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
   });
 
   const filteredExamIds = filteredExams.map((exam) => exam.id);
-  const filteredApprovedEvaluations = approvedEvaluations.filter((row) => withinFilters(row, params));
+  const filteredExamIdSet = new Set(filteredExamIds);
+  const filteredApprovedEvaluations = approvedEvaluations.filter(
+    (row) => filteredExamIdSet.has(row.examId) && withinFilters(row, params)
+  );
 
   const [submissionsCount, evaluationStatus, reviewCounts] =
     filteredExamIds.length > 0
@@ -838,15 +954,8 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
 
   const evaluationQuality = {
     averagePercentage:
-      filteredApprovedEvaluations.length > 0
-        ? Number(
-            (
-              filteredApprovedEvaluations.reduce(
-                (sum, row) => sum + (row.percentage ?? 0),
-                0
-              ) / filteredApprovedEvaluations.length
-            ).toFixed(2)
-          )
+      submissionsCount > 0
+        ? Number(((filteredApprovedEvaluations.length / submissionsCount) * 100).toFixed(2))
         : 0,
     overrideRate:
       filteredApprovedEvaluations.length > 0
@@ -886,6 +995,13 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
 
   const generatedAt = new Date().toISOString();
 
+  console.log("[analytics][admin]", {
+    schoolId: params.schoolId,
+    examsCount: filteredExams.length,
+    submissionsCount,
+    evaluatedCount: filteredApprovedEvaluations.length
+  });
+
   return {
     range: {
       startDate: params.startDate?.toISOString() ?? null,
@@ -894,6 +1010,7 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
     summary: {
       totalExams: filteredExams.length,
       totalSubmissions: submissionsCount,
+      evaluatedCount: filteredApprovedEvaluations.length,
       approvedEvaluations: filteredApprovedEvaluations.length,
       averagePercentage: evaluationQuality.averagePercentage,
       activeTeachers: teacherActivity.length
@@ -927,8 +1044,8 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
           metrics: [
             { label: "Total exams", value: filteredExams.length },
             { label: "Total submissions", value: submissionsCount },
-            { label: "Approved evaluations", value: filteredApprovedEvaluations.length },
-            { label: "Average %", value: evaluationQuality.averagePercentage }
+            { label: "Evaluated", value: filteredApprovedEvaluations.length },
+            { label: "Evaluated %", value: evaluationQuality.averagePercentage }
           ]
         },
         {

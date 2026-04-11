@@ -42,6 +42,22 @@ function compareClassOptions(left: AnalyticsClassOption, right: AnalyticsClassOp
   return left.label.localeCompare(right.label);
 }
 
+function dedupeSubjectOptions(subjects: AcademicSubject[]) {
+  const deduped = new Map<string, AcademicSubject>();
+
+  subjects.forEach((subject) => {
+    const key = subject.name.trim().toLowerCase();
+    if (!key || deduped.has(key)) {
+      return;
+    }
+    deduped.set(key, subject);
+  });
+
+  return Array.from(deduped.values()).sort((left, right) =>
+    left.name.localeCompare(right.name)
+  );
+}
+
 export default function ClassAnalyticsPage() {
   const { token, user } = useAuth();
   const [status, setStatus] = useState<{
@@ -129,12 +145,19 @@ export default function ClassAnalyticsPage() {
         if (!isActive) {
           return;
         }
-        setSubjectOptions(response.items);
+        const nextSubjects = dedupeSubjectOptions(response.items);
+        setSubjectOptions(nextSubjects);
+        setFilters((current) =>
+          current.subject && !nextSubjects.some((subject) => subject.name === current.subject)
+            ? { ...current, subject: "" }
+            : current
+        );
       } catch {
         if (!isActive) {
           return;
         }
         setSubjectOptions([]);
+        setFilters((current) => (current.subject ? { ...current, subject: "" } : current));
       }
     };
 
@@ -197,7 +220,7 @@ export default function ClassAnalyticsPage() {
           <SectionHeader
             eyebrow="Class analytics"
             title="Visual performance overview"
-            subtitle="Use focused filters and charts to spot volume, submissions, and score trends quickly."
+            subtitle="Use start date, end date, class, and an optional clean subject filter to spot volume and score trends quickly."
           />
           <Card className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -263,17 +286,17 @@ export default function ClassAnalyticsPage() {
                   <DonutBreakdownChart
                     data={[
                       {
-                        label: "Submissions",
-                        value: teacherData.summary.totalEvaluations,
+                        label: "Exams",
+                        value: teacherData.summary.totalExams,
                         color: "#ff6b35"
                       },
                       {
-                        label: "Students",
-                        value: teacherData.summary.uniqueStudents,
+                        label: "Submissions",
+                        value: teacherData.summary.totalSubmissions,
                         color: "#1e90ff"
                       },
                       {
-                        label: "Average %",
+                        label: "Evaluated %",
                         value: Math.round(teacherData.summary.averagePercentage),
                         suffix: "%",
                         color: "#f4b942"
@@ -293,9 +316,10 @@ export default function ClassAnalyticsPage() {
               </div>
               <MetricGrid
                 metrics={[
-                  { label: "Approved evaluations", value: teacherData.summary.totalEvaluations, tone: "accent" },
-                  { label: "Unique students", value: teacherData.summary.uniqueStudents },
-                  { label: "Average %", value: teacherData.summary.averagePercentage, tone: "cool" }
+                  { label: "Total exams", value: teacherData.summary.totalExams, tone: "accent" },
+                  { label: "Submissions", value: teacherData.summary.totalSubmissions },
+                  { label: "Evaluated", value: teacherData.summary.evaluatedCount },
+                  { label: "Evaluated %", value: teacherData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
             </>
@@ -358,7 +382,7 @@ export default function ClassAnalyticsPage() {
                         color: "#1e90ff"
                       },
                       {
-                        label: "Average %",
+                        label: "Evaluated %",
                         value: Math.round(adminData.summary.averagePercentage),
                         suffix: "%",
                         color: "#f4b942"
@@ -380,7 +404,8 @@ export default function ClassAnalyticsPage() {
                 metrics={[
                   { label: "Total exams", value: adminData.summary.totalExams, tone: "accent" },
                   { label: "Submissions", value: adminData.summary.totalSubmissions },
-                  { label: "Average %", value: adminData.summary.averagePercentage, tone: "cool" }
+                  { label: "Evaluated", value: adminData.summary.evaluatedCount },
+                  { label: "Evaluated %", value: adminData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
               <div className="grid gap-8 lg:grid-cols-[1fr]">

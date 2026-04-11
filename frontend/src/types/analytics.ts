@@ -83,7 +83,14 @@ export type TeacherAnalyticsResponse = {
   teacherId: string | null;
   range: { startDate: string | null; endDate: string | null };
   filters: { subject: string | null; classLevel: number | null; difficulty: string | null };
-  summary: { totalEvaluations: number; uniqueStudents: number; averagePercentage: number };
+  summary: {
+    totalExams: number;
+    totalSubmissions: number;
+    evaluatedCount: number;
+    totalEvaluations: number;
+    uniqueStudents: number;
+    averagePercentage: number;
+  };
   subjectPerformance: SubjectPerformance[];
   topicDistribution: TopicCount[];
   difficultyEffectiveness: DifficultyPerformance[];
@@ -115,6 +122,7 @@ export type AdminAnalyticsResponse = {
   summary: {
     totalExams: number;
     totalSubmissions: number;
+    evaluatedCount: number;
     approvedEvaluations: number;
     averagePercentage: number;
     activeTeachers: number;

@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      success: true,
       message: payload?.message ?? "Answer sheet uploaded",
       submissionId: payload?.submissionId ?? null,
       evaluationId: payload?.evaluationId ?? null,

@@ -21,6 +21,7 @@ const openai = new OpenAI({
 });
 
 export const evaluationResultSchema = z.object({
+  totalScore: z.number().nonnegative(),
   overallScore: z.number().nonnegative(),
   maxScore: z.number().positive(),
   summary: z.string().min(1),
@@ -29,12 +30,26 @@ export const evaluationResultSchema = z.object({
     aiGeneratedLikelihood: z.number().min(0).max(1),
     notes: z.string().min(1)
   }),
+  breakdown: z
+    .array(
+      z.object({
+        questionNumber: z.number().int().positive(),
+        question: z.string().min(1),
+        score: z.number().nonnegative(),
+        maxScore: z.number().positive(),
+        reason: z.string().min(1),
+        detectedAnswer: z.string().min(1)
+      })
+    )
+    .min(1),
   perQuestion: z
     .array(
       z.object({
         questionNumber: z.number().int().positive(),
+        question: z.string().min(1),
         score: z.number().nonnegative(),
         maxScore: z.number().positive(),
+        reason: z.string().min(1),
         remarks: z.string().min(1),
         detectedAnswer: z.string().min(1)
       })
@@ -46,36 +61,6 @@ export const evaluationResultSchema = z.object({
   })
 });
 
-function buildMockEvaluation(
-  questions: ExamQuestion[],
-  source: "file" | "structured",
-  reason?: string
-): EvaluationResult {
-  const perQuestion = questions.map((question) => ({
-    questionNumber: question.number,
-    score: 0,
-    maxScore: 1,
-    remarks: `Mock evaluation (${source})`,
-    detectedAnswer: "unavailable"
-  }));
-
-  return {
-    overallScore: 0,
-    maxScore: questions.length,
-    summary: reason ?? "Mock evaluation (OpenAI disabled).",
-    authenticity: {
-      handwritingLikely: source === "file",
-      aiGeneratedLikelihood: 0,
-      notes: reason ?? "OpenAI disabled in non-production environment."
-    },
-    perQuestion,
-    topicAnalysis: {
-      strengths: [],
-      weaknesses: [reason ?? "OpenAI disabled"]
-    }
-  };
-}
-
 function ensureApiKey() {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY in environment");
@@ -86,8 +71,18 @@ function buildResponseSchema() {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["overallScore", "maxScore", "summary", "authenticity", "perQuestion", "topicAnalysis"],
+    required: [
+      "totalScore",
+      "overallScore",
+      "maxScore",
+      "summary",
+      "authenticity",
+      "breakdown",
+      "perQuestion",
+      "topicAnalysis"
+    ],
     properties: {
+      totalScore: { type: "number" },
       overallScore: { type: "number" },
       maxScore: { type: "number" },
       summary: { type: "string" },
@@ -107,12 +102,46 @@ function buildResponseSchema() {
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["questionNumber", "score", "maxScore", "remarks", "detectedAnswer"],
+          required: [
+            "questionNumber",
+            "question",
+            "score",
+            "maxScore",
+            "reason",
+            "remarks",
+            "detectedAnswer"
+          ],
           properties: {
             questionNumber: { type: "integer" },
+            question: { type: "string" },
             score: { type: "number" },
             maxScore: { type: "number" },
+            reason: { type: "string" },
             remarks: { type: "string" },
+            detectedAnswer: { type: "string" }
+          }
+        }
+      },
+      breakdown: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "questionNumber",
+            "question",
+            "score",
+            "maxScore",
+            "reason",
+            "detectedAnswer"
+          ],
+          properties: {
+            questionNumber: { type: "integer" },
+            question: { type: "string" },
+            score: { type: "number" },
+            maxScore: { type: "number" },
+            reason: { type: "string" },
             detectedAnswer: { type: "string" }
           }
         }
@@ -163,7 +192,9 @@ function buildUserPrompt(questions: ExamQuestion[]) {
     "Evaluate the student's answers to the following questions.",
     "Each question is worth 1 mark unless the answer is missing/incorrect.",
     "Set maxScore to the number of questions.",
-    "Provide per-question remarks and detectedAnswer (use 'unreadable' if unclear).",
+    "Return totalScore and overallScore as the same value.",
+    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer (use 'unreadable' if unclear).",
+    "Provide matching perQuestion remarks for every question.",
     "Provide topic-wise strengths/weaknesses inferred from answers.",
     "Questions:",
     questionLines
@@ -182,7 +213,9 @@ function buildStructuredUserPrompt(
     "Evaluate the student's answers to the following questions.",
     "Each question is worth 1 mark unless the answer is missing/incorrect.",
     "Set maxScore to the number of questions.",
-    "Provide per-question remarks and detectedAnswer.",
+    "Return totalScore and overallScore as the same value.",
+    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer.",
+    "Provide matching perQuestion remarks for every question.",
     "Provide topic-wise strengths/weaknesses inferred from answers.",
     "Questions:",
     questionLines,
@@ -199,7 +232,9 @@ function buildRawTextUserPrompt(questions: ExamQuestion[], answerText: string) {
     "The student answers may come from OCR or typed text and can contain noise.",
     "Each question is worth 1 mark unless the answer is missing or incorrect.",
     "Set maxScore to the number of questions.",
-    "Provide per-question remarks and detectedAnswer.",
+    "Return totalScore and overallScore as the same value.",
+    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer.",
+    "Provide matching perQuestion remarks for every question.",
     "Questions:",
     questionLines,
     "",
@@ -277,42 +312,75 @@ async function callWithRetry<T>(
   }
 }
 
-function normalizeEvaluation(
-  result: EvaluationResult,
+export function normalizeEvaluation(
+  result: Partial<EvaluationResult>,
   questions: ExamQuestion[]
 ): EvaluationResult {
-  const perQuestionMap = new Map<number, EvaluationResult["perQuestion"][number]>();
-  for (const entry of result.perQuestion) {
+  const perQuestionMap = new Map<number, NonNullable<EvaluationResult["perQuestion"]>[number]>();
+  for (const entry of result.perQuestion ?? []) {
     perQuestionMap.set(entry.questionNumber, entry);
+  }
+  const breakdownMap = new Map<number, NonNullable<EvaluationResult["breakdown"]>[number]>();
+  for (const entry of result.breakdown ?? []) {
+    breakdownMap.set(entry.questionNumber, entry);
   }
 
   const normalizedPerQuestion = questions.map((question) => {
     const entry = perQuestionMap.get(question.number);
-    const score = Math.max(0, Math.min(1, entry?.score ?? 0));
+    const breakdownEntry = breakdownMap.get(question.number);
+    const rawScore = breakdownEntry?.score ?? entry?.score ?? 0;
+    const score = Math.max(0, Math.min(1, rawScore));
+    const reason =
+      breakdownEntry?.reason?.trim() ||
+      entry?.reason?.trim() ||
+      entry?.remarks?.trim() ||
+      "No reason provided.";
+    const detectedAnswer =
+      breakdownEntry?.detectedAnswer?.trim() ||
+      entry?.detectedAnswer?.trim() ||
+      "unavailable";
     return {
       questionNumber: question.number,
+      question: breakdownEntry?.question?.trim() || entry?.question?.trim() || question.prompt,
       score,
       maxScore: 1,
-      remarks: entry?.remarks?.trim() || "No remarks provided.",
-      detectedAnswer: entry?.detectedAnswer?.trim() || "unavailable"
+      reason,
+      remarks: entry?.remarks?.trim() || reason,
+      detectedAnswer
     };
   });
 
-  const overallScore = normalizedPerQuestion.reduce((sum, item) => sum + item.score, 0);
+  const normalizedBreakdown = normalizedPerQuestion.map((item) => ({
+    questionNumber: item.questionNumber,
+    question: item.question ?? `Q${item.questionNumber}`,
+    score: item.score,
+    maxScore: item.maxScore,
+    reason: item.reason ?? item.remarks,
+    detectedAnswer: item.detectedAnswer
+  }));
+
+  const totalScore = normalizedPerQuestion.reduce((sum, item) => sum + item.score, 0);
   const maxScore = questions.length;
 
   return {
-    ...result,
-    overallScore,
+    totalScore,
+    overallScore: totalScore,
     maxScore,
+    summary: result.summary?.trim() || "No summary provided.",
     authenticity: {
-      ...result.authenticity,
+      handwritingLikely: result.authenticity?.handwritingLikely ?? false,
       aiGeneratedLikelihood: Math.max(
         0,
-        Math.min(1, result.authenticity.aiGeneratedLikelihood)
-      )
+        Math.min(1, result.authenticity?.aiGeneratedLikelihood ?? 0)
+      ),
+      notes: result.authenticity?.notes?.trim() || "No authenticity notes provided."
     },
-    perQuestion: normalizedPerQuestion
+    breakdown: normalizedBreakdown,
+    perQuestion: normalizedPerQuestion,
+    topicAnalysis: {
+      strengths: result.topicAnalysis?.strengths ?? [],
+      weaknesses: result.topicAnalysis?.weaknesses ?? []
+    }
   };
 }
 
@@ -322,7 +390,7 @@ export async function evaluateAnswerSheet(
   questions: ExamQuestion[]
 ): Promise<EvaluationResult> {
   if (mimeType === "application/pdf") {
-    return buildMockEvaluation(questions, "file", "PDF evaluation is disabled.");
+    throw new Error("PDF AI evaluation is unavailable.");
   }
 
   if (mimeType !== "image/jpeg" && mimeType !== "image/png") {

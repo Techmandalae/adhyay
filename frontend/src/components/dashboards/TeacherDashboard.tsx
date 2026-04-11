@@ -51,7 +51,7 @@ export function TeacherDashboard() {
           status: "success",
           data: {
             examsGenerated: examResponse.total,
-            submissionsCount: analyticsResponse.summary.totalEvaluations,
+            submissionsCount: analyticsResponse.summary.totalSubmissions,
             pendingReviews: pendingResponse.items.length
           }
         });
@@ -119,7 +119,7 @@ export function TeacherDashboard() {
           <p className="mt-3 text-3xl font-semibold text-accent-warm">
             {state.data?.submissionsCount ?? "—"}
           </p>
-          <p className="mt-2 text-sm text-ink-soft">Approved and reviewed evaluation volume.</p>
+          <p className="mt-2 text-sm text-ink-soft">Submissions received for your exams.</p>
         </Card>
       </div>
 

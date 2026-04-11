@@ -111,12 +111,22 @@ export function normalizeSubjectsResponse(
   classIdOverride?: string
 ): AcademicSubject[] {
   const subjects = Array.isArray(response) ? response : response.items || [];
+  const deduped = new Map<string, AcademicSubject>();
 
-  return subjects.map((subject) => ({
-    id: subject.id,
-    name: subject.name,
-    classId: classIdOverride ?? subject.classId
-  }));
+  subjects.forEach((subject) => {
+    const normalizedName = subject.name.trim().toLowerCase();
+    if (!normalizedName || deduped.has(normalizedName)) {
+      return;
+    }
+
+    deduped.set(normalizedName, {
+      id: subject.id,
+      name: subject.name,
+      classId: classIdOverride ?? subject.classId
+    });
+  });
+
+  return Array.from(deduped.values());
 }
 
 export function getFallbackClassIdFromOption(

@@ -19,7 +19,8 @@ import { HttpError } from "../middleware/error";
 import {
   evaluateAnswerSheet,
   evaluateStructuredAnswers,
-  evaluationResultSchema
+  evaluationResultSchema,
+  normalizeEvaluation
 } from "../services/ai.evaluation.service";
 import { evaluateAnswers } from "../services/ai.evaluate.service";
 import {
@@ -279,6 +280,58 @@ function parseRawTextAnswers(rawText: string) {
   return answers;
 }
 
+function parseExamQuestions(payload: unknown): ExamQuestion[] {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const rawQuestions = (payload as Record<string, unknown>).questions;
+  const parsedQuestions = z.array(questionSchema).safeParse(rawQuestions);
+  return parsedQuestions.success ? (parsedQuestions.data as ExamQuestion[]) : [];
+}
+
+function buildManualReviewTemplate(questions: ExamQuestion[]): EvaluationResult | null {
+  if (questions.length === 0) {
+    return null;
+  }
+
+  return normalizeEvaluation(
+    {
+      totalScore: 0,
+      overallScore: 0,
+      maxScore: questions.length,
+      summary: "AI evaluation is unavailable. Manual teacher review is required.",
+      authenticity: {
+        handwritingLikely: false,
+        aiGeneratedLikelihood: 0,
+        notes: "AI evaluation was unavailable for this submission."
+      },
+      breakdown: questions.map((question) => ({
+        questionNumber: question.number,
+        question: question.prompt,
+        score: 0,
+        maxScore: 1,
+        reason: "Manual review pending.",
+        detectedAnswer: "unavailable"
+      })),
+      perQuestion: questions.map((question) => ({
+        questionNumber: question.number,
+        question: question.prompt,
+        score: 0,
+        maxScore: 1,
+        reason: "Manual review pending.",
+        remarks: "Manual review pending.",
+        detectedAnswer: "unavailable"
+      })),
+      topicAnalysis: {
+        strengths: [],
+        weaknesses: ["Manual teacher review pending"]
+      }
+    },
+    questions
+  );
+}
+
 async function resolveEvaluationOrNull(
   label: string,
   task: () => Promise<EvaluationResult>
@@ -338,7 +391,7 @@ async function createSubmissionEvaluation(params: {
         status: "PENDING",
         ...(params.evaluation
           ? {
-              aiScore: params.evaluation.overallScore,
+              aiScore: params.evaluation.totalScore,
               aiResult: toPrismaJson(params.evaluation),
               aiFlags: toPrismaJson(params.evaluation.authenticity)
             }
@@ -644,7 +697,7 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
       submissionId: submission.id,
       evaluationId: savedEvaluation.id,
       status: savedEvaluation.status,
-      ...(evaluation ? { score: evaluation.overallScore } : {})
+      ...(evaluation ? { score: evaluation.totalScore } : {})
     });
   } catch (error) {
     next(error);
@@ -735,11 +788,12 @@ submissionsRouter.post(
       });
 
       res.json({
+        success: true,
         message: evaluation ? "Answer sheet uploaded" : "Answer sheet uploaded and queued for review",
         submissionId: submission.id,
         evaluationId: savedEvaluation.id,
         status: savedEvaluation.status,
-        ...(evaluation ? { score: evaluation.overallScore } : {}),
+        ...(evaluation ? { score: evaluation.totalScore } : {}),
         fileUrl
       });
     } catch (error) {
@@ -775,6 +829,7 @@ submissionsRouter.get(
           submissionId: true,
           status: true,
           aiScore: true,
+          aiResult: true,
           createdAt: true,
           updatedAt: true,
           student: {
@@ -800,6 +855,7 @@ submissionsRouter.get(
             submissionId: evaluation.submissionId,
             status: evaluation.status,
             aiScore: evaluation.aiScore,
+            reviewMode: evaluation.aiResult ? "AI_ASSISTED" : "MANUAL",
             studentName: evaluation.student.fullName || null,
             examName: typeof meta.subject === "string" ? meta.subject : "Exam",
             createdAt: evaluation.createdAt,
@@ -911,7 +967,11 @@ submissionsRouter.get(
             }
           },
           exam: {
-            select: { meta: true, schoolId: true }
+            select: {
+              meta: true,
+              schoolId: true,
+              examPaper: { select: { payload: true } }
+            }
           }
         }
       });
@@ -937,7 +997,19 @@ submissionsRouter.get(
         }
       }
 
-      const result = (evaluation.teacherResult ?? evaluation.aiResult) as EvaluationResult | null;
+      const questions = parseExamQuestions(evaluation.exam.examPaper?.payload);
+      const normalizedAiResult =
+        evaluation.aiResult && questions.length > 0
+          ? normalizeEvaluation(evaluation.aiResult as Partial<EvaluationResult>, questions)
+          : (evaluation.aiResult as EvaluationResult | null);
+      const normalizedTeacherResult =
+        evaluation.teacherResult && questions.length > 0
+          ? normalizeEvaluation(evaluation.teacherResult as Partial<EvaluationResult>, questions)
+          : (evaluation.teacherResult as EvaluationResult | null);
+      const manualTemplate = !normalizedTeacherResult && !normalizedAiResult
+        ? buildManualReviewTemplate(questions)
+        : null;
+      const result = normalizedTeacherResult ?? normalizedAiResult ?? manualTemplate;
 
       return res.status(200).json({
         id: evaluation.id,
@@ -945,14 +1017,22 @@ submissionsRouter.get(
         examId: evaluation.examId,
         studentId: evaluation.studentId,
         status: evaluation.status,
-        score: evaluation.teacherScore ?? evaluation.aiScore,
+        score:
+          evaluation.teacherScore ??
+          evaluation.aiScore ??
+          normalizedTeacherResult?.totalScore ??
+          normalizedAiResult?.totalScore ??
+          manualTemplate?.totalScore ??
+          null,
         result,
         aiScore: evaluation.aiScore,
-        aiResult: evaluation.aiResult,
+        aiResult: normalizedAiResult,
         teacherScore: evaluation.teacherScore,
-        teacherResult: evaluation.teacherResult,
+        teacherResult: normalizedTeacherResult,
         answerFileName: evaluation.submission.fileName,
         extractedText: evaluation.submission.extractedText ?? evaluation.submission.rawTextAnswer,
+        manualReviewRequired: !normalizedAiResult,
+        reviewMode: normalizedAiResult ? "AI_ASSISTED" : "MANUAL",
         reviewedBy: evaluation.reviewedBy,
         reviewedAt: evaluation.reviewedAt,
         rejectionReason: evaluation.rejectionReason,

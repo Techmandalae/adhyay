@@ -309,21 +309,10 @@ router.get(
       if (!classId) {
         return res.status(400).json({ error: "classId required" });
       }
-      const isIndependent = classId.startsWith("default-");
-
       console.log("ClassId:", classId);
 
       if (classId.startsWith("default-")) {
-        let subjects = await prisma.academicSubject.findMany({
-          ...(user.schoolId ? { where: { schoolId: user.schoolId } } : {}),
-          orderBy: { name: "asc" },
-          select: { id: true, name: true, classId: true }
-        });
-
-        if (subjects.length === 0 && isIndependent) {
-          console.log("Fallback -> loading subjects from JSON");
-          subjects = buildFallbackSubjects(classId);
-        }
+        const subjects = buildFallbackSubjects(classId);
 
         console.log("Subjects:", subjects);
         if (subjects.length === 0) {
@@ -527,6 +516,10 @@ router.get(
       const user = req.user;
       if (!user) {
         return next(new HttpError(401, "Authentication required"));
+      }
+
+      if (classId.startsWith("default-")) {
+        return res.json({ items: buildFallbackSubjects(classId) });
       }
 
       if (user.role === "TEACHER" && !classId.startsWith("default-")) {

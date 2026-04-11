@@ -10,9 +10,20 @@ export interface EvaluationAuthFlags {
 
 export interface EvaluationQuestionFeedback {
   questionNumber: number;
+  question?: string;
   score: number;
   maxScore: number;
+  reason?: string;
   remarks: string;
+  detectedAnswer: string;
+}
+
+export interface EvaluationBreakdownItem {
+  questionNumber: number;
+  question: string;
+  score: number;
+  maxScore: number;
+  reason: string;
   detectedAnswer: string;
 }
 
@@ -22,10 +33,12 @@ export interface EvaluationTopicAnalysis {
 }
 
 export interface EvaluationResult {
+  totalScore: number;
   overallScore: number;
   maxScore: number;
   summary: string;
   authenticity: EvaluationAuthFlags;
+  breakdown: EvaluationBreakdownItem[];
   perQuestion: EvaluationQuestionFeedback[];
   topicAnalysis: EvaluationTopicAnalysis;
 }
@@ -57,6 +70,8 @@ export interface EvaluationDetail {
   teacherResult?: EvaluationResult | null;
   answerFileName?: string | null;
   extractedText?: string | null;
+  manualReviewRequired?: boolean;
+  reviewMode?: "AI_ASSISTED" | "MANUAL";
   reviewedBy: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;

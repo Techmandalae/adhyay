@@ -1115,6 +1115,7 @@ export async function updateProfile(
 ======================= */
 
 type UploadSubmissionResponse = {
+  success?: boolean;
   message?: string;
   submissionId: string;
   evaluationId: string;

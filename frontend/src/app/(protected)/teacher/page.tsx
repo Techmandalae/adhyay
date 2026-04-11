@@ -20,6 +20,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   generateExam,
+  getAcademicClasses,
   getSubjects,
   getAcademicBooksBySubjectId,
   getAcademicChapters,
@@ -44,6 +45,7 @@ import {
   normalizeSubjectsResponse,
   normalizeTeacherCatalog
 } from "@/lib/catalog";
+import { buildTeacherOverrideResult, getEvaluationBreakdown } from "@/lib/evaluation";
 import { summarizeNotifications } from "@/lib/notifications";
 import type { TeacherAnalyticsResponse } from "@/types/analytics";
 import type {
@@ -238,10 +240,17 @@ export default function TeacherDashboard() {
     const loadCatalog = async () => {
       setAcademicStatus({ status: "loading", data: null });
       try {
-        const response = await getTeacherCatalog(token);
         if (!isActive) return;
-        const normalized = normalizeTeacherCatalog(response);
-        setClassOptions(normalized.classOptions);
+        if (user?.schoolId && !user.isIndependentTeacher) {
+          const response = await getAcademicClasses(token);
+          if (!isActive) return;
+          setClassOptions(response.items);
+        } else {
+          const response = await getTeacherCatalog(token);
+          if (!isActive) return;
+          const normalized = normalizeTeacherCatalog(response);
+          setClassOptions(normalized.classOptions);
+        }
         setAcademicStatus({ status: "success", data: null });
       } catch (error) {
         if (!isActive) return;
@@ -256,7 +265,7 @@ export default function TeacherDashboard() {
     return () => {
       isActive = false;
     };
-  }, [token]);
+  }, [token, user?.schoolId, user?.isIndependentTeacher]);
 
   useEffect(() => {
     if (
@@ -710,16 +719,13 @@ export default function TeacherDashboard() {
   };
 
   const reviewedResult = useMemo<EvaluationResult | undefined>(() => {
-    const base = selectedEvaluation.data?.result;
-    if (!base) return undefined;
-    const hasOverride = reviewScore.trim().length > 0;
-    const overrideValue = Number(reviewScore);
-    return {
-      ...base,
-      overallScore: hasOverride && Number.isFinite(overrideValue) ? overrideValue : base.overallScore,
-      summary: reviewNotes.trim() || base.summary
-    };
+    return buildTeacherOverrideResult(selectedEvaluation.data?.result, reviewScore, reviewNotes);
   }, [reviewNotes, reviewScore, selectedEvaluation.data?.result]);
+
+  const reviewBreakdown = useMemo(
+    () => getEvaluationBreakdown(selectedEvaluation.data?.result),
+    [selectedEvaluation.data?.result]
+  );
 
   const handleReview = async (status: "APPROVED" | "REJECTED") => {
     if (!token || !selectedEvaluation.data) return;
@@ -1243,6 +1249,34 @@ export default function TeacherDashboard() {
                     AI score: {selectedEvaluation.data.score ?? "â€”"}
                   </p>
                 </div>
+                {selectedEvaluation.data.manualReviewRequired ? (
+                  <StatusBlock
+                    tone="negative"
+                    title="Manual review required"
+                    description="AI evaluation was unavailable for this submission. You can still approve it with a teacher score and summary."
+                  />
+                ) : null}
+                <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
+                  <p className="font-semibold">Per-question reasoning</p>
+                  <div className="mt-3 space-y-3">
+                    {reviewBreakdown.map((item) => (
+                      <div key={item.questionNumber} className="rounded-2xl border border-border p-3">
+                        <p className="font-medium">Q{item.questionNumber}</p>
+                        <p className="mt-1 text-xs text-foreground">{item.question}</p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Score: {item.score} / {item.maxScore}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Detected answer: {item.detectedAnswer}
+                        </p>
+                      </div>
+                    ))}
+                    {reviewBreakdown.length === 0 ? (
+                      <p className="text-xs text-ink-soft">No per-question reasoning available.</p>
+                    ) : null}
+                  </div>
+                </div>
                 <Input
                   label="Teacher score override"
                   type="number"
@@ -1302,11 +1336,11 @@ export default function TeacherDashboard() {
 
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <Card className="space-y-4">
-            <SectionHeader
-              eyebrow="Class analytics"
-              title="Performance overview"
-              subtitle="Filter approved evaluations to understand impact."
-            />
+              <SectionHeader
+                eyebrow="Class analytics"
+                title="Performance overview"
+                subtitle="Filter your exams, submissions, and evaluated work to understand impact."
+              />
             <div className="grid gap-4 md:grid-cols-2">
               <Input
                 label="Start date"
@@ -1368,22 +1402,22 @@ export default function TeacherDashboard() {
               />
             ) : null}
             {analyticsState.data ? (
-              <MetricGrid
-                metrics={[
-                  {
-                    label: "Approved evaluations",
-                    value: analyticsState.data.summary.totalEvaluations,
-                    tone: "accent"
-                  },
-                  {
-                    label: "Unique students",
-                    value: analyticsState.data.summary.uniqueStudents
-                  },
-                  {
-                    label: "Average %",
-                    value: analyticsState.data.summary.averagePercentage,
-                    tone: "cool"
-                  }
+                <MetricGrid
+                  metrics={[
+                    {
+                      label: "Total exams",
+                      value: analyticsState.data.summary.totalExams,
+                      tone: "accent"
+                    },
+                    {
+                      label: "Submissions",
+                      value: analyticsState.data.summary.totalSubmissions
+                    },
+                    {
+                      label: "Evaluated %",
+                      value: analyticsState.data.summary.averagePercentage,
+                      tone: "cool"
+                    }
                 ]}
               />
             ) : null}
@@ -1484,8 +1518,8 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
-        <Card className="space-y-4">
-          <SectionHeader eyebrow="Report" title="Recent approved evaluations" />
+          <Card className="space-y-4">
+          <SectionHeader eyebrow="Report" title="Recent evaluated submissions" />
           {analyticsState.data ? (
             <DataTable
               columns={["Exam", "Student", "Subject", "Difficulty", "%", "Evaluated"]}

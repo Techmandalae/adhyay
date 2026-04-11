@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import { Button } from "@/components/ui/Button";
+import { getEvaluationBreakdown } from "@/lib/evaluation";
 import { getEvaluation } from "@/lib/api";
 import { loadSubmissions, type StoredSubmission } from "@/lib/localSubmissions";
 import type { EvaluationDetail } from "@/types/evaluation";
@@ -20,15 +21,11 @@ type AsyncState<T> = {
 
 export default function StudentResultsPage() {
   const { token } = useAuth();
-  const [submissions, setSubmissions] = useState<StoredSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<StoredSubmission[]>(() => loadSubmissions());
   const [detailState, setDetailState] = useState<AsyncState<EvaluationDetail>>({
     status: "idle",
     data: null
   });
-
-  useEffect(() => {
-    setSubmissions(loadSubmissions());
-  }, []);
 
   const loadResult = async (submissionId: string) => {
     if (!token) return;
@@ -44,6 +41,10 @@ export default function StudentResultsPage() {
       });
     }
   };
+
+  const feedbackBreakdown = getEvaluationBreakdown(
+    detailState.data?.teacherResult ?? detailState.data?.aiResult ?? detailState.data?.result
+  );
 
   return (
     <RequireRole roles={["STUDENT"]}>
@@ -113,15 +114,22 @@ export default function StudentResultsPage() {
                 <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">
                   <p className="font-semibold">AI feedback</p>
                   <div className="mt-3 space-y-3">
-                    {(detailState.data.aiResult ?? detailState.data.result)?.perQuestion.map((item) => (
+                    {feedbackBreakdown.map((item) => (
                       <div key={item.questionNumber} className="rounded-2xl border border-border p-3">
                         <p className="font-medium">Q{item.questionNumber}</p>
+                        <p className="mt-1 text-xs text-foreground">{item.question}</p>
                         <p className="text-xs text-ink-soft">
                           Score: {item.score} / {item.maxScore}
                         </p>
-                        <p className="mt-1 text-xs text-ink-soft">{item.remarks}</p>
+                        <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Detected answer: {item.detectedAnswer}
+                        </p>
                       </div>
-                    )) ?? <p className="text-xs text-ink-soft">No question feedback available.</p>}
+                    ))}
+                    {feedbackBreakdown.length === 0 ? (
+                      <p className="text-xs text-ink-soft">No question feedback available.</p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border bg-white/70 p-4 text-sm">

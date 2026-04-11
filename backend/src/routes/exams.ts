@@ -192,6 +192,10 @@ function parseExamMeta(meta: unknown): ExamMeta {
   return parsed;
 }
 
+function normalizeNameKey(value: string | undefined | null) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function formatSectionClassLabel(className: string, sectionName: string) {
   const suffix = /^[A-Z]$/.test(sectionName) ? sectionName : ` ${sectionName}`;
   return `${className}${suffix}`;
@@ -944,6 +948,11 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds
         : [payload.subjectId];
+    const requestedSubjectNames = new Set(
+      [payload.subject]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map((value) => normalizeNameKey(value))
+    );
     const fallbackSubjects: SelectedSubject[] =
       useFallbackCatalogForTeacher && fallbackCatalogClassId
         ? buildFallbackSubjects(fallbackCatalogClassId).map((subject) => {
@@ -973,7 +982,8 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
     }));
     const selectedSubjects: SelectedSubject[] = useFallbackCatalogForTeacher
       ? fallbackSubjects.filter((subject) =>
-          requestedSubjectIds.includes(subject.id)
+          requestedSubjectIds.includes(subject.id) ||
+          requestedSubjectNames.has(normalizeNameKey(subject.name))
         )
       : schoolSubjects.filter((subject) =>
           requestedSubjectIds.includes(subject.id)
@@ -983,27 +993,18 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       return next(new HttpError(400, "Please select a valid subject for the chosen class."));
     }
     const primarySubject = selectedSubjects[0];
-    const persistedSubject = isDefaultClass
+    const persistedSubject = isDefaultClass || useFallbackCatalogForTeacher
       ? null
       : await prisma.academicSubject.findFirst({
-          where: useFallbackCatalogForTeacher
-            ? {
-                schoolId: user.schoolId,
-                classId: payload.classId,
-                name: {
-                  equals: primarySubject.name,
-                  mode: "insensitive"
-                }
-              }
-            : {
-                id: primarySubject.id,
-                schoolId: user.schoolId,
-                classId: payload.classId
-              },
+          where: {
+            id: primarySubject.id,
+            schoolId: user.schoolId,
+            classId: payload.classId
+          },
           select: { id: true, name: true }
         });
 
-    if (!isDefaultClass && !persistedSubject) {
+    if (!isDefaultClass && !useFallbackCatalogForTeacher && !persistedSubject) {
       return next(new HttpError(400, "Selected subject is not available for this class."));
     }
 
@@ -1163,8 +1164,18 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       }> = [];
 
       if (selectedChapterIds.length > 0) {
-        const fetchedChapters = await prisma.academicChapter.findMany({
-          where: { id: { in: selectedChapterIds }, schoolId: user.schoolId },
+      const fetchedChapters = await prisma.academicChapter.findMany({
+          where: {
+            id: { in: selectedChapterIds },
+            schoolId: user.schoolId,
+            ...(persistedSubjectId
+              ? {
+                  book: {
+                    subjectId: persistedSubjectId
+                  }
+                }
+              : {})
+          },
           select: {
             title: true,
             chapterNumber: true,
