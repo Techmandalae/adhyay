@@ -36,6 +36,7 @@ export interface ExamSummary {
   choicesPerQuestion?: number;
   templateId?: string;
   sectionId?: string;
+  assignedSectionIds?: string[];
   generatedAt: string;
   createdAt: string;
 }
@@ -80,6 +81,8 @@ export interface ExamDetailResponse {
   metadata: {
     subject?: string;
     classLevel?: number;
+    classId?: string;
+    sectionId?: string;
     language?: string;
     difficulty?: string;
     ncertChapters?: unknown;
@@ -87,10 +90,10 @@ export interface ExamDetailResponse {
     status?: ExamLifecycleStatus;
     assignedClassId?: string | null;
     assignedClassLevel?: number | null;
+    assignedSectionIds?: string[];
     questionCount?: number;
     choicesPerQuestion?: number;
     templateId?: string;
-    sectionId?: string;
     answerKeyReleased?: boolean;
   };
   sections: unknown;

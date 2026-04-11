@@ -138,3 +138,26 @@ export function isValidAcademicSubject(
 
   return subjects.some((subject) => subject.id === subjectId);
 }
+
+export function getPublishableClassOptions(
+  classOptions: AcademicClass[],
+  target: Pick<AcademicClass, "classId" | "sectionId"> | { classId?: string | null; sectionId?: string | null }
+) {
+  const classId = target.classId ?? "";
+  const sectionId = target.sectionId ?? "";
+  const sameClassOptions = classOptions.filter((item) => item.classId === classId);
+
+  if (sameClassOptions.length > 0) {
+    return sameClassOptions;
+  }
+
+  const exactMatch = classOptions.find(
+    (item) => item.classId === classId && item.sectionId === sectionId
+  );
+
+  if (exactMatch) {
+    return [exactMatch];
+  }
+
+  return classOptions.filter((item) => item.classId === classId);
+}

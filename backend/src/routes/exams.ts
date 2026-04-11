@@ -65,6 +65,8 @@ type ExamMeta = {
   mode?: string;
   status?: string;
   answerKeyReleased?: boolean;
+  assignedSectionIds?: string[];
+  assignedSectionLabels?: string[];
 };
 
 type UsageLimit = {
@@ -183,7 +185,36 @@ function parseExamMeta(meta: unknown): ExamMeta {
   if (typeof record.answerKeyReleased === "boolean") {
     parsed.answerKeyReleased = record.answerKeyReleased;
   }
+  const assignedSectionIds = normalizeStringArray(record.assignedSectionIds);
+  if (assignedSectionIds.length > 0) parsed.assignedSectionIds = assignedSectionIds;
+  const assignedSectionLabels = normalizeStringArray(record.assignedSectionLabels);
+  if (assignedSectionLabels.length > 0) parsed.assignedSectionLabels = assignedSectionLabels;
   return parsed;
+}
+
+function formatSectionClassLabel(className: string, sectionName: string) {
+  const suffix = /^[A-Z]$/.test(sectionName) ? sectionName : ` ${sectionName}`;
+  return `${className}${suffix}`;
+}
+
+function isExamAssignedToSection(
+  sectionId: string | null | undefined,
+  exam: { sectionId: string | null; meta: Prisma.JsonValue }
+) {
+  if (!sectionId) {
+    return true;
+  }
+
+  const meta = parseExamMeta(exam.meta);
+  if (meta.assignedSectionIds && meta.assignedSectionIds.length > 0) {
+    return meta.assignedSectionIds.includes(sectionId);
+  }
+
+  if (!exam.sectionId) {
+    return true;
+  }
+
+  return exam.sectionId === sectionId;
 }
 
 function stripAnswerKey(questions: unknown[]): unknown[] {
@@ -294,10 +325,82 @@ async function getStudentExamWhere(user: AuthUser) {
     status: "PUBLISHED" as const,
     class: {
       classStandardId: student.class.classStandardId
-    },
-    ...(student.sectionId
-      ? { OR: [{ sectionId: student.sectionId }, { sectionId: null }] }
-      : {})
+    }
+  };
+}
+
+async function resolvePublishAssignment(
+  schoolId: string,
+  examClassId: string | null,
+  requestedTargetIds: string[]
+) {
+  if (!examClassId) {
+    throw new HttpError(400, "Exam class is required to publish");
+  }
+
+  const dedupedTargetIds = Array.from(
+    new Set(requestedTargetIds.map((value) => value.trim()).filter((value) => value.length > 0))
+  );
+  if (dedupedTargetIds.length === 0) {
+    throw new HttpError(400, "Please select at least one class section to publish");
+  }
+
+  const baseClass = await prisma.academicClass.findFirst({
+    where: { id: examClassId, schoolId },
+    select: {
+      id: true,
+      classLevel: true,
+      classStandardId: true,
+      classStandard: {
+        select: {
+          name: true,
+          sections: {
+            orderBy: { name: "asc" },
+            select: { id: true, name: true }
+          }
+        }
+      }
+    }
+  });
+
+  if (!baseClass) {
+    throw new HttpError(404, "Exam class not found");
+  }
+
+  const sectionMap = new Map(
+    (baseClass.classStandard?.sections ?? []).map((section) => [section.id, section] as const)
+  );
+
+  if (sectionMap.size === 0) {
+    if (dedupedTargetIds.length !== 1 || dedupedTargetIds[0] !== baseClass.id) {
+      throw new HttpError(400, "Please select a valid class for this exam");
+    }
+
+    return {
+      assignedClassId: baseClass.id,
+      assignedClassLevel: baseClass.classLevel,
+      assignedSectionIds: [] as string[],
+      assignedSectionLabels: [] as string[]
+    };
+  }
+
+  const invalidTargetId = dedupedTargetIds.find((value) => !sectionMap.has(value));
+  if (invalidTargetId) {
+    throw new HttpError(400, "Please select valid sections for the generated class");
+  }
+
+  const className = baseClass.classStandard?.name ?? `Class ${baseClass.classLevel}`;
+  const selectedSections = dedupedTargetIds
+    .map((targetId) => sectionMap.get(targetId))
+    .filter((section): section is { id: string; name: string } => Boolean(section));
+
+  return {
+    assignedClassId: baseClass.id,
+    assignedClassLevel: baseClass.classLevel,
+    assignedSectionIds: selectedSections.map((section) => section.id),
+    assignedSectionLabels: selectedSections.map((section) =>
+      formatSectionClassLabel(className, section.name)
+    )
   };
 }
 
@@ -561,15 +664,14 @@ async function findAccessibleExamForPreview(user: AuthUser, examId: string) {
         id: examId,
         status: "PUBLISHED",
         schoolId: user.schoolId,
-        classId,
-        ...(sectionId ? { sectionId } : {})
+        classId
       },
       include: {
         examPaper: {
           select: { id: true, payload: true }
         }
       }
-    });
+    }).then((exam) => (exam && isExamAssignedToSection(sectionId, exam) ? exam : null));
   }
 
   const studentWhere = await getStudentExamWhere(user);
@@ -583,7 +685,7 @@ async function findAccessibleExamForPreview(user: AuthUser, examId: string) {
         select: { id: true, payload: true }
       }
     }
-  });
+  }).then((exam) => (exam && isExamAssignedToSection(user.sectionId ?? null, exam) ? exam : null));
 }
 
 function isLifecycleTransitionAllowed(current: string, next: string) {
@@ -742,9 +844,10 @@ const listSchema = z
 
 const statusSchema = z
   .object({
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
-  assignedClassId: z.string().trim().min(1).optional()
-})
+    status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
+    assignedClassId: z.string().trim().min(1).optional(),
+    classSectionIds: z.array(z.string().trim().min(1)).min(1).optional()
+  })
   .strict();
 
 /* ======================================================
@@ -1684,8 +1787,7 @@ examsRouter.get("/assigned", requireStudentOrParent, async (req, res, next) => {
         where: {
           status: "PUBLISHED",
           schoolId: user.schoolId,
-          classId,
-          ...(sectionId ? { sectionId } : {})
+          classId
         },
         orderBy: { createdAt: "desc" },
         select: {
@@ -1702,7 +1804,7 @@ examsRouter.get("/assigned", requireStudentOrParent, async (req, res, next) => {
         }
       });
 
-      const items = exams.map((exam) => {
+      const items = exams.filter((exam) => isExamAssignedToSection(sectionId, exam)).map((exam) => {
         const meta = parseExamMeta(exam.meta);
         return {
           id: exam.id,
@@ -1798,7 +1900,9 @@ examsRouter.get("/student/exams", requireStudent, async (req, res, next) => {
       }
     });
 
-    const items = exams.map((exam) => {
+    const items = exams
+      .filter((exam) => isExamAssignedToSection(user.sectionId ?? null, exam))
+      .map((exam) => {
       const meta = parseExamMeta(exam.meta);
       return {
         id: exam.id,
@@ -1855,7 +1959,9 @@ examsRouter.get("/archived", requireTeacher, async (req, res, next) => {
       }
     });
 
-    const items = exams.map((exam) => {
+    const items = exams
+      .filter((exam) => isExamAssignedToSection(user.sectionId ?? null, exam))
+      .map((exam) => {
       const meta = parseExamMeta(exam.meta);
       return {
         id: exam.id,
@@ -1906,8 +2012,7 @@ examsRouter.get("/assigned/:id", requireStudentOrParent, async (req, res, next) 
           id: examId,
           status: "PUBLISHED",
           schoolId: user.schoolId,
-          classId,
-          ...(sectionId ? { sectionId } : {})
+          classId
         },
         include: {
           examPaper: {
@@ -1916,7 +2021,7 @@ examsRouter.get("/assigned/:id", requireStudentOrParent, async (req, res, next) 
         }
       });
 
-      if (!exam) {
+      if (!exam || !isExamAssignedToSection(sectionId, exam)) {
         return next(new HttpError(404, "Exam not found"));
       }
 
@@ -2002,7 +2107,7 @@ examsRouter.get("/:id/preview", requireAuth, async (req, res, next) => {
     }
 
     const exam = await findAccessibleExamForPreview(user, examId);
-    if (!exam) {
+    if (!exam || !isExamAssignedToSection(user.sectionId ?? null, exam)) {
       return next(new HttpError(404, "Exam not found"));
     }
 
@@ -2079,11 +2184,21 @@ examsRouter.get("/:id", requireTeacherOrAdmin, async (req, res, next) => {
 
 examsRouter.post("/:id/publish", requireTeacher, async (req, res, next) => {
   const parsed = z
-    .object({ assignedClassId: z.string().trim().min(1) })
+    .object({
+      assignedClassId: z.string().trim().min(1).optional(),
+      classSectionIds: z.array(z.string().trim().min(1)).min(1).optional()
+    })
     .strict()
     .safeParse(req.body);
-  if (!parsed.success) {
-    return next(new HttpError(400, "assignedClassId is required to publish"));
+  const requestedTargetIds = parsed.success
+    ? parsed.data.classSectionIds?.length
+      ? parsed.data.classSectionIds
+      : parsed.data.assignedClassId
+        ? [parsed.data.assignedClassId]
+        : []
+    : [];
+  if (!parsed.success || requestedTargetIds.length === 0) {
+    return next(new HttpError(400, "classSectionIds is required to publish"));
   }
 
   try {
@@ -2109,32 +2224,22 @@ examsRouter.post("/:id/publish", requireTeacher, async (req, res, next) => {
       return next(new HttpError(404, "Exam not found"));
     }
 
-    const klass = await prisma.academicClass.findFirst({
-      where: { id: parsed.data.assignedClassId, schoolId: user.schoolId },
-      select: { id: true, classLevel: true }
-    });
-    if (!klass) {
-      return next(new HttpError(404, "Assigned class not found"));
-    }
-
-    if (klass.id !== exam.classId) {
-      return next(
-        new HttpError(400, "Exam can only be published to the exact class selected during generation")
-      );
-    }
+    const assignment = await resolvePublishAssignment(user.schoolId, exam.classId, requestedTargetIds);
 
     const updated = await prisma.exam.update({
       where: { id: exam.id },
       data: {
         status: "PUBLISHED",
-        assignedClassId: klass.id,
-        assignedClassLevel: klass.classLevel,
+        assignedClassId: assignment.assignedClassId,
+        assignedClassLevel: assignment.assignedClassLevel,
         publishedAt: new Date(),
         meta: {
           ...(exam.meta as Record<string, unknown>),
           status: "PUBLISHED",
-          assignedClassId: klass.id,
-          assignedClassLevel: klass.classLevel
+          assignedClassId: assignment.assignedClassId,
+          assignedClassLevel: assignment.assignedClassLevel,
+          assignedSectionIds: assignment.assignedSectionIds,
+          assignedSectionLabels: assignment.assignedSectionLabels
         }
       }
     });
@@ -2144,6 +2249,7 @@ examsRouter.post("/:id/publish", requireTeacher, async (req, res, next) => {
       status: updated.status,
       assignedClassId: updated.assignedClassId,
       assignedClassLevel: updated.assignedClassLevel,
+      assignedSectionIds: assignment.assignedSectionIds,
       publishedAt: updated.publishedAt?.toISOString() ?? null
     });
   } catch (error) {
@@ -2271,27 +2377,27 @@ examsRouter.patch("/:id/status", requireTeacherOrAdmin, async (req, res, next) =
       return next(new HttpError(400, "Invalid exam lifecycle transition"));
     }
 
+    const existingMeta = parseExamMeta(exam.meta);
     let assignedClassId: string | null = exam.assignedClassId;
     let assignedClassLevel: number | null = exam.assignedClassLevel;
+    let assignedSectionIds = existingMeta.assignedSectionIds ?? [];
+    let assignedSectionLabels = existingMeta.assignedSectionLabels ?? [];
 
     if (parsed.data.status === "PUBLISHED") {
-      if (!parsed.data.assignedClassId) {
-        return next(new HttpError(400, "assignedClassId is required to publish"));
+      const requestedTargetIds =
+        parsed.data.classSectionIds?.length
+          ? parsed.data.classSectionIds
+          : parsed.data.assignedClassId
+            ? [parsed.data.assignedClassId]
+            : [];
+      if (requestedTargetIds.length === 0) {
+        return next(new HttpError(400, "classSectionIds is required to publish"));
       }
-      const klass = await prisma.academicClass.findFirst({
-        where: { id: parsed.data.assignedClassId, schoolId: user.schoolId },
-        select: { id: true, classLevel: true }
-      });
-      if (!klass) {
-        return next(new HttpError(404, "Assigned class not found"));
-      }
-      if (klass.id !== exam.classId) {
-        return next(
-          new HttpError(400, "Exam can only be published to the exact class selected during generation")
-        );
-      }
-      assignedClassId = klass.id;
-      assignedClassLevel = klass.classLevel;
+      const assignment = await resolvePublishAssignment(user.schoolId, exam.classId, requestedTargetIds);
+      assignedClassId = assignment.assignedClassId;
+      assignedClassLevel = assignment.assignedClassLevel;
+      assignedSectionIds = assignment.assignedSectionIds;
+      assignedSectionLabels = assignment.assignedSectionLabels;
     }
 
     const updated = await prisma.exam.update({
@@ -2305,7 +2411,9 @@ examsRouter.patch("/:id/status", requireTeacherOrAdmin, async (req, res, next) =
           ...(exam.meta as Record<string, unknown>),
           status: parsed.data.status,
           assignedClassId,
-          assignedClassLevel
+          assignedClassLevel,
+          assignedSectionIds,
+          assignedSectionLabels
         }
       }
     });

@@ -69,6 +69,14 @@ function getStudentId(user: AuthUser): string | null {
   return null;
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
 function canStudentAccessExam(
   user: AuthUser,
   exam: {
@@ -77,6 +85,7 @@ function canStudentAccessExam(
     sectionId: string | null;
     assignedClassId: string | null;
     assignedClassLevel: number | null;
+    meta?: Prisma.JsonValue;
   }
 ): boolean {
   if (user.role !== "STUDENT" && user.role !== "PARENT") {
@@ -93,7 +102,15 @@ function canStudentAccessExam(
   if (classId && exam.classId !== classId) {
     return false;
   }
-  if (sectionId && exam.sectionId !== sectionId) {
+  const assignedSectionIds = normalizeStringArray(
+    exam.meta && typeof exam.meta === "object"
+      ? (exam.meta as Record<string, unknown>).assignedSectionIds
+      : undefined
+  );
+  if (sectionId && assignedSectionIds.length > 0 && !assignedSectionIds.includes(sectionId)) {
+    return false;
+  }
+  if (sectionId && assignedSectionIds.length === 0 && exam.sectionId && exam.sectionId !== sectionId) {
     return false;
   }
   return Boolean(classId);
@@ -530,6 +547,7 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
       },
       select: {
         id: true,
+        meta: true,
         schoolId: true,
         status: true,
         classId: true,

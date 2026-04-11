@@ -37,6 +37,7 @@ import {
   reviewEvaluation
 } from "@/lib/api";
 import {
+  getPublishableClassOptions,
   getFallbackClassIdFromOption,
   isValidAcademicSubject,
   normalizeSubjectsResponse,
@@ -182,7 +183,7 @@ export default function TeacherDashboard() {
     status: "idle",
     data: null
   });
-  const [publishSelections, setPublishSelections] = useState<Record<string, string>>({});
+  const [publishSelections, setPublishSelections] = useState<Record<string, string[]>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState(0);
@@ -649,16 +650,16 @@ export default function TeacherDashboard() {
   const handleStatusUpdate = async (
     examId: string,
     status: "PUBLISHED" | "ARCHIVED",
-    assignedClassId?: string
+    classSectionIds?: string[]
   ) => {
     if (!token) return;
     setStatusUpdate({ status: "loading", data: null });
     try {
       if (status === "PUBLISHED") {
-        if (!assignedClassId) {
-          throw new Error("Assigned class is required to publish.");
+        if (!classSectionIds || classSectionIds.length === 0) {
+          throw new Error("At least one class section is required to publish.");
         }
-        const response = await publishExam(token, examId, assignedClassId);
+        const response = await publishExam(token, examId, classSectionIds);
         setStatusUpdate({ status: "success", data: { examId, status: response.status } });
         window.alert("Exam Published");
       } else {
@@ -1029,19 +1030,12 @@ export default function TeacherDashboard() {
             {examList.data && examList.data.length > 0 ? (
               <div className="space-y-3">
                 {examList.data.map((exam) => {
-                  const exactClassOption =
-                    classOptions.find(
-                      (item) =>
-                        item.classId === exam.classId &&
-                        item.sectionId === (exam.sectionId ?? "")
-                    ) ??
-                    classOptions.find((item) => item.classId === exam.classId);
-                  const publishableClasses = exactClassOption ? [exactClassOption] : [];
-                  const publishClassId =
-                    publishSelections[exam.id] ??
-                    (typeof exam.assignedClassId === "string" ? exam.assignedClassId : "") ??
-                    (typeof exam.classId === "string" ? exam.classId : "") ??
-                    (publishableClasses[0]?.classId ?? "");
+                  const publishableClasses = getPublishableClassOptions(classOptions, {
+                    classId: exam.classId ?? "",
+                    sectionId: exam.sectionId ?? ""
+                  });
+                  const publishSectionIds =
+                    publishSelections[exam.id] ?? exam.assignedSectionIds ?? [];
                   return (
                     <div key={exam.id} className="rounded-2xl border border-border bg-white/70 p-4">
                       <p className="text-sm font-semibold text-foreground">
@@ -1087,30 +1081,50 @@ export default function TeacherDashboard() {
                       <div className="mt-3 grid gap-3">
                         {exam.status === "DRAFT" ? (
                           <>
-                            <Select
-                              label="Publish to class"
-                              value={publishClassId}
-                              onChange={(event) =>
-                                setPublishSelections({
-                                  ...publishSelections,
-                                  [exam.id]: event.target.value
-                                })
-                              }
-                            >
-                              <option value="">Select class</option>
-                              {publishableClasses.map((item) => (
-                                <option key={item.classId} value={item.classId}>
-                                  {item.label}
-                                </option>
-                              ))}
-                            </Select>
+                            <div className="grid gap-2 text-sm">
+                              <span className="font-medium text-foreground">Publish to class sections</span>
+                              <div className="grid gap-2 rounded-2xl border border-border bg-surface px-4 py-3">
+                                {publishableClasses.length > 0 ? (
+                                  publishableClasses.map((item) => {
+                                    const checked = publishSectionIds.includes(item.id);
+                                    return (
+                                      <label key={item.id} className="flex items-center gap-2 text-sm text-foreground">
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={(event) =>
+                                            setPublishSelections((current) => {
+                                              const nextValues = new Set(
+                                                current[exam.id] ?? exam.assignedSectionIds ?? []
+                                              );
+                                              if (event.target.checked) {
+                                                nextValues.add(item.id);
+                                              } else {
+                                                nextValues.delete(item.id);
+                                              }
+                                              return {
+                                                ...current,
+                                                [exam.id]: Array.from(nextValues)
+                                              };
+                                            })
+                                          }
+                                        />
+                                        <span>{item.label}</span>
+                                      </label>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-xs text-ink-soft">No sections available for this class.</p>
+                                )}
+                              </div>
+                            </div>
                             <Button
                               type="button"
                               onClick={() =>
-                                handleStatusUpdate(exam.id, "PUBLISHED", publishClassId)
+                                handleStatusUpdate(exam.id, "PUBLISHED", publishSectionIds)
                               }
                               disabled={
-                                !publishClassId ||
+                                publishSectionIds.length === 0 ||
                                 statusUpdate.status === "loading" ||
                                 !canPublishExams
                               }

@@ -1344,9 +1344,9 @@ adminRouter.post(
           file?: { filename: string; fieldname?: string; mimetype?: string; size?: number };
         }
       ).file;
-      console.log("Logo upload file:", file ?? null);
+      console.log(file ?? null);
       if (!file) {
-        return next(new HttpError(400, "Logo file is required"));
+        return res.status(400).json({ error: "No file uploaded" });
       }
 
       const relativePath = path.join(env.UPLOAD_DIR, "logos", file.filename);

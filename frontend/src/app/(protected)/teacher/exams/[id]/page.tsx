@@ -8,7 +8,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   downloadExamPdf,
@@ -18,6 +17,7 @@ import {
   publishExam,
   updateAnswerKeyRelease
 } from "@/lib/api";
+import { getPublishableClassOptions } from "@/lib/catalog";
 import type { ExamDetailResponse } from "@/types/exam";
 import type { AcademicClass } from "@/types/academic";
 
@@ -25,6 +25,22 @@ type AsyncState<T> = {
   status: "idle" | "loading" | "error" | "success";
   data: T | null;
   error?: string;
+};
+
+type PreviewSection = {
+  sectionNumber?: string | number;
+  title?: string;
+  questionsToGenerate?: number;
+  questionsToAttempt?: number;
+  marksPerQuestion?: number | string;
+  questionNumbers?: number[];
+};
+
+type PreviewQuestion = {
+  id?: string;
+  number?: string | number;
+  prompt?: string;
+  choices?: string[];
 };
 
 export default function TeacherExamPreviewPage() {
@@ -36,7 +52,7 @@ export default function TeacherExamPreviewPage() {
     data: null
   });
   const [classes, setClasses] = useState<AcademicClass[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [publishState, setPublishState] = useState<AsyncState<null>>({
     status: "idle",
     data: null
@@ -84,7 +100,7 @@ export default function TeacherExamPreviewPage() {
         const response = await getAcademicClasses(token);
         if (!isActive) return;
         setClasses(response.items);
-      } catch (_error) {
+      } catch {
         if (!isActive) return;
         setClasses([]);
       }
@@ -96,10 +112,10 @@ export default function TeacherExamPreviewPage() {
   }, [token]);
 
   const handlePublish = async () => {
-    if (!token || !selectedClassId || !examId) return;
+    if (!token || selectedClassIds.length === 0 || !examId) return;
     setPublishState({ status: "loading", data: null });
     try {
-      await publishExam(token, examId, selectedClassId);
+      await publishExam(token, examId, selectedClassIds);
       setPublishState({ status: "success", data: null });
     } catch (error) {
       setPublishState({
@@ -165,6 +181,10 @@ export default function TeacherExamPreviewPage() {
   const exam = examState.data;
   const sections = Array.isArray(exam?.sections) ? exam?.sections : [];
   const questions = Array.isArray(exam?.questions) ? exam?.questions : [];
+  const publishableClasses = getPublishableClassOptions(classes, {
+    classId: exam?.metadata.classId ?? "",
+    sectionId: exam?.metadata.sectionId ?? ""
+  });
 
   return (
     <RequireRole roles={["TEACHER"]}>
@@ -224,7 +244,7 @@ export default function TeacherExamPreviewPage() {
                 <p className="text-sm text-ink-soft">No sections found.</p>
               ) : (
                 <div className="space-y-3 text-sm">
-                  {sections.map((section: any) => (
+                  {(sections as PreviewSection[]).map((section) => (
                     <div key={section.sectionNumber} className="rounded-2xl border border-border bg-white/70 p-4">
                       <p className="font-semibold">{section.title}</p>
                       <p className="text-xs text-ink-soft">
@@ -247,7 +267,7 @@ export default function TeacherExamPreviewPage() {
                 <p className="text-sm text-ink-soft">No questions available.</p>
               ) : (
                 <div className="space-y-3 text-sm">
-                  {questions.map((question: any) => (
+                  {(questions as PreviewQuestion[]).map((question) => (
                     <div key={question.id ?? question.number} className="rounded-2xl border border-border bg-white/70 p-4">
                       <p className="font-semibold">
                         Q{question.number}. {question.prompt}
@@ -267,23 +287,45 @@ export default function TeacherExamPreviewPage() {
 
             <Card className="space-y-4">
               <SectionHeader eyebrow="Publish" title="Make exam available" />
-              <Select
-                label="Assign to class"
-                value={selectedClassId}
-                onChange={(event) => setSelectedClassId(event.target.value)}
-              >
-                <option value="">Select class</option>
-                {Array.from(
-                  new Map(classes.map((klass) => [klass.classId, klass])).values()
-                ).map((klass) => (
-                  <option key={klass.classId} value={klass.classId}>
-                    {klass.className}
-                  </option>
-                ))}
-              </Select>
+              <div className="grid gap-2 text-sm">
+                <span className="font-medium text-foreground">Assign to class sections</span>
+                <div className="grid gap-2 rounded-2xl border border-border bg-surface px-4 py-3">
+                  {publishableClasses.length > 0 ? (
+                    publishableClasses.map((klass) => {
+                      const checked = selectedClassIds.includes(klass.id);
+                      return (
+                        <label key={klass.id} className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) =>
+                              setSelectedClassIds((current) => {
+                                const nextValues = new Set(current);
+                                if (event.target.checked) {
+                                  nextValues.add(klass.id);
+                                } else {
+                                  nextValues.delete(klass.id);
+                                }
+                                return Array.from(nextValues);
+                              })
+                            }
+                          />
+                          <span>{klass.label}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-ink-soft">No sections available for this class.</p>
+                  )}
+                </div>
+              </div>
               <Button
                 onClick={handlePublish}
-                disabled={!selectedClassId || publishState.status === "loading" || user?.canPublish === false}
+                disabled={
+                  selectedClassIds.length === 0 ||
+                  publishState.status === "loading" ||
+                  user?.canPublish === false
+                }
               >
                 Publish exam
               </Button>

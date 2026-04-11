@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageFade } from "@/components/ui/PageFade";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   archiveExam,
@@ -20,7 +19,7 @@ import {
   getTeacherCatalog,
   publishExam
 } from "@/lib/api";
-import { normalizeTeacherCatalog } from "@/lib/catalog";
+import { getPublishableClassOptions, normalizeTeacherCatalog } from "@/lib/catalog";
 import type { AcademicClass } from "@/types/academic";
 import type { ExamSummary } from "@/types/exam";
 
@@ -35,7 +34,7 @@ export default function ExamHistoryPage() {
     data: null
   });
   const [classOptions, setClassOptions] = useState<AcademicClass[]>([]);
-  const [publishSelections, setPublishSelections] = useState<Record<string, string>>({});
+  const [publishSelections, setPublishSelections] = useState<Record<string, string[]>>({});
   const [actionState, setActionState] = useState<{
     status: "idle" | "loading" | "success" | "error";
     message?: string;
@@ -111,7 +110,7 @@ export default function ExamHistoryPage() {
   const handleStatusUpdate = async (
     examId: string,
     status: "PUBLISHED" | "ARCHIVED",
-    assignedClassId?: string
+    classSectionIds?: string[]
   ) => {
     if (!token) {
       return;
@@ -120,10 +119,10 @@ export default function ExamHistoryPage() {
     setActionState({ status: "loading" });
     try {
       if (status === "PUBLISHED") {
-        if (!assignedClassId) {
-          throw new Error("Please select a class before publishing.");
+        if (!classSectionIds || classSectionIds.length === 0) {
+          throw new Error("Please select at least one class section before publishing.");
         }
-        await publishExam(token, examId, assignedClassId);
+        await publishExam(token, examId, classSectionIds);
       } else {
         await archiveExam(token, examId);
       }
@@ -176,13 +175,12 @@ export default function ExamHistoryPage() {
 
           <div className="grid gap-4">
             {(examState.data ?? []).map((exam) => {
-              const classOption =
-                classOptions.find(
-                  (item) =>
-                    item.classId === exam.classId && item.sectionId === (exam.sectionId ?? "")
-                ) ?? classOptions.find((item) => item.classId === exam.classId);
-              const publishClassId =
-                publishSelections[exam.id] ?? exam.assignedClassId ?? exam.classId ?? "";
+              const publishableClasses = getPublishableClassOptions(classOptions, {
+                classId: exam.classId ?? "",
+                sectionId: exam.sectionId ?? ""
+              });
+              const publishSectionIds =
+                publishSelections[exam.id] ?? exam.assignedSectionIds ?? [];
 
               return (
                 <Card key={exam.id} className="space-y-4">
@@ -233,24 +231,48 @@ export default function ExamHistoryPage() {
 
                   {exam.status === "DRAFT" ? (
                     <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                      <Select
-                        label="Publish to class"
-                        value={publishClassId}
-                        onChange={(event) =>
-                          setPublishSelections((current) => ({
-                            ...current,
-                            [exam.id]: event.target.value
-                          }))
-                        }
-                      >
-                        <option value="">Select class</option>
-                        {classOption ? (
-                          <option value={classOption.classId}>{classOption.label}</option>
-                        ) : null}
-                      </Select>
+                      <div className="grid gap-2 text-sm">
+                        <span className="font-medium text-foreground">Publish to class sections</span>
+                        <div className="grid gap-2 rounded-2xl border border-border bg-surface px-4 py-3">
+                          {publishableClasses.length > 0 ? (
+                            publishableClasses.map((item) => {
+                              const checked = publishSectionIds.includes(item.id);
+                              return (
+                                <label key={item.id} className="flex items-center gap-2 text-sm text-foreground">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(event) =>
+                                      setPublishSelections((current) => {
+                                        const nextValues = new Set(current[exam.id] ?? exam.assignedSectionIds ?? []);
+                                        if (event.target.checked) {
+                                          nextValues.add(item.id);
+                                        } else {
+                                          nextValues.delete(item.id);
+                                        }
+                                        return {
+                                          ...current,
+                                          [exam.id]: Array.from(nextValues)
+                                        };
+                                      })
+                                    }
+                                  />
+                                  <span>{item.label}</span>
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <p className="text-xs text-ink-soft">No sections available for this class.</p>
+                          )}
+                        </div>
+                      </div>
                       <Button
-                        disabled={actionState.status === "loading" || !publishClassId || !user?.canPublish}
-                        onClick={() => void handleStatusUpdate(exam.id, "PUBLISHED", publishClassId)}
+                        disabled={
+                          actionState.status === "loading" ||
+                          publishSectionIds.length === 0 ||
+                          !user?.canPublish
+                        }
+                        onClick={() => void handleStatusUpdate(exam.id, "PUBLISHED", publishSectionIds)}
                       >
                         Publish exam
                       </Button>

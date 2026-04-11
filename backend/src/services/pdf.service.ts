@@ -33,42 +33,75 @@ const QUESTION_SPACING = 6;
 const CHOICE_INDENT = 18;
 
 const WINDOWS_FONT_DIR = "C:\\Windows\\Fonts";
+const PDFJS_FONT_DIR = path.resolve(process.cwd(), "node_modules", "pdfjs-dist", "standard_fonts");
+const FRONTEND_NOTO_FONT_DIR = path.resolve(
+  process.cwd(),
+  "..",
+  "frontend",
+  "node_modules",
+  "next",
+  "dist",
+  "compiled",
+  "@vercel",
+  "og"
+);
 
 const fontCandidates: Record<ExamLanguage, { regular: string[]; bold: string[] }> = {
   english: {
-    regular: [],
-    bold: []
+    regular: [
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Regular.ttf"),
+      path.join(FRONTEND_NOTO_FONT_DIR, "noto-sans-v27-latin-regular.ttf"),
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Regular.ttf")
+    ],
+    bold: [
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans-Bold.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Bold.ttf"),
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Bold.ttf")
+    ]
   },
   hindi: {
     regular: [
       path.join(WINDOWS_FONT_DIR, "Nirmala.ttf"),
       path.join(WINDOWS_FONT_DIR, "Mangal.ttf"),
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Regular.ttf"),
       "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
       "/usr/share/fonts/opentype/noto/NotoSansDevanagari-Regular.ttf",
-      "/System/Library/Fonts/KohinoorDevanagari-Regular.ttf"
+      "/System/Library/Fonts/KohinoorDevanagari-Regular.ttf",
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Regular.ttf")
     ],
     bold: [
       path.join(WINDOWS_FONT_DIR, "NirmalaB.ttf"),
       path.join(WINDOWS_FONT_DIR, "Mangalb.ttf"),
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans-Bold.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Bold.ttf"),
       "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
       "/usr/share/fonts/opentype/noto/NotoSansDevanagari-Bold.ttf",
-      "/System/Library/Fonts/KohinoorDevanagari-Semibold.ttf"
+      "/System/Library/Fonts/KohinoorDevanagari-Semibold.ttf",
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Bold.ttf")
     ]
   },
   punjabi: {
     regular: [
       path.join(WINDOWS_FONT_DIR, "Nirmala.ttf"),
       path.join(WINDOWS_FONT_DIR, "Raavi.ttf"),
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Regular.ttf"),
       "/usr/share/fonts/truetype/noto/NotoSansGurmukhi-Regular.ttf",
       "/usr/share/fonts/opentype/noto/NotoSansGurmukhi-Regular.ttf",
-      "/System/Library/Fonts/GurmukhiMN.ttf"
+      "/System/Library/Fonts/GurmukhiMN.ttf",
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Regular.ttf")
     ],
     bold: [
       path.join(WINDOWS_FONT_DIR, "NirmalaB.ttf"),
       path.join(WINDOWS_FONT_DIR, "Raavib.ttf"),
+      path.join(WINDOWS_FONT_DIR, "DejaVuSans-Bold.ttf"),
+      path.join(WINDOWS_FONT_DIR, "NotoSans-Bold.ttf"),
       "/usr/share/fonts/truetype/noto/NotoSansGurmukhi-Bold.ttf",
       "/usr/share/fonts/opentype/noto/NotoSansGurmukhi-Bold.ttf",
-      "/System/Library/Fonts/GurmukhiMN-Bold.ttf"
+      "/System/Library/Fonts/GurmukhiMN-Bold.ttf",
+      path.join(PDFJS_FONT_DIR, "LiberationSans-Bold.ttf")
     ]
   }
 };
@@ -88,14 +121,14 @@ function setupFonts(doc: PDFDocument, language: ExamLanguage): FontSelection {
   const boldPath = pickFirstExisting(candidates.bold);
 
   if (regularPath) {
-    doc.registerFont("Body", regularPath);
+    doc.registerFont("Custom", regularPath);
   }
   if (boldPath) {
-    doc.registerFont("BodyBold", boldPath);
+    doc.registerFont("CustomBold", boldPath);
   }
 
-  const body = regularPath ? "Body" : "Helvetica";
-  const bold = boldPath ? "BodyBold" : body;
+  const body = regularPath ? "Custom" : "Times-Roman";
+  const bold = boldPath ? "CustomBold" : body;
 
   return { body, bold };
 }
@@ -302,6 +335,23 @@ function renderMetadataBlock(
       .fillColor("#111111")
       .text(value);
   }
+
+  doc.moveDown(0.6);
+}
+
+function renderClassSubjectLine(
+  doc: PDFDocument,
+  fonts: FontSelection,
+  metadata: ExamMetadata
+) {
+  const classLabel = `Class ${String(metadata.classLevel ?? "-")}`;
+  const subjectLabel = safeText(metadata.subject, "Exam");
+
+  doc
+    .font(fonts.bold)
+    .fontSize(12)
+    .fillColor("#111111")
+    .text(`${classLabel} | ${subjectLabel}`);
 
   doc.moveDown(0.6);
 }
@@ -563,12 +613,11 @@ export function streamExamPdf(
 
   doc.pipe(res);
 
-  const renderHeaderBound = () =>
-    drawHeaderWithSubject(doc, fonts, payload.branding, payload.exam.metadata);
+  const renderHeaderBound = () => drawHeader(doc, fonts, payload.branding);
   renderHeaderBound();
   doc.on("pageAdded", renderHeaderBound);
 
-  renderMetadataBlock(doc, fonts, payload.exam.metadata);
+  renderClassSubjectLine(doc, fonts, payload.exam.metadata);
 
   const sections = normalizeSections(payload.exam.sections, payload.exam.questions);
   const ordered = orderQuestionsBySections(sections, payload.exam.questions);

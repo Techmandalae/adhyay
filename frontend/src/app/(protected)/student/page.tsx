@@ -277,6 +277,15 @@ export default function StudentDashboard() {
               <Button onClick={handleFetchExam} disabled={!token || !examId}>
                 Fetch exam details
               </Button>
+              {examId ? (
+                <Link href={`/student/exam/${examId}`}>
+                  <Button variant="outline">Preview Exam</Button>
+                </Link>
+              ) : (
+                <Button variant="outline" disabled>
+                  Preview Exam
+                </Button>
+              )}
               <Button variant="outline" onClick={handleDownloadPdf} disabled={!token || !examId}>
                 Download PDF
               </Button>

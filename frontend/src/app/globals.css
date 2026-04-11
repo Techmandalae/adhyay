@@ -228,3 +228,370 @@ body {
     transform: translate3d(22px, 0, 24px) rotateZ(8deg);
   }
 }
+
+.auth-role-motion {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 0.35rem);
+  background:
+    radial-gradient(circle at top right, rgba(15, 139, 141, 0.16), transparent 34%),
+    linear-gradient(160deg, rgba(255, 250, 243, 0.98), rgba(246, 240, 230, 0.92));
+}
+
+.auth-role-motion--loading {
+  min-height: 320px;
+}
+
+.auth-role-motion__aurora,
+.auth-role-motion__grid,
+.auth-role-motion__stack {
+  position: absolute;
+  inset: 0;
+}
+
+.auth-role-motion__aurora {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(15, 139, 141, 0.18), transparent 28%),
+    radial-gradient(circle at 82% 22%, rgba(255, 107, 53, 0.16), transparent 26%),
+    radial-gradient(circle at 50% 88%, rgba(17, 24, 39, 0.08), transparent 32%);
+  animation: auth-aurora-drift 10s ease-in-out infinite;
+}
+
+.auth-role-motion__grid {
+  inset: 18px;
+  border-radius: calc(var(--radius) - 0.45rem);
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 88%);
+}
+
+.auth-role-motion__stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-role-motion--paused,
+.auth-role-motion--paused * {
+  animation-play-state: paused !important;
+}
+
+.auth-role-card {
+  width: 240px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 1.6rem;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 22px 44px rgba(17, 24, 39, 0.12);
+  padding: 1rem 1rem 1.1rem;
+  backdrop-filter: blur(16px);
+}
+
+.auth-role-card--wide {
+  transform: rotate(-7deg);
+  animation: auth-school-card-float 4.8s ease-in-out infinite;
+}
+
+.auth-role-card--chart {
+  transform: rotate(5deg);
+  animation: auth-parent-card-float 5.2s ease-in-out infinite;
+}
+
+.auth-role-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-role-card__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.72);
+}
+
+.auth-role-card__badge {
+  border-radius: 999px;
+  background: rgba(15, 139, 141, 0.12);
+  color: rgb(15, 139, 141);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+}
+
+.auth-role-bars {
+  display: flex;
+  align-items: end;
+  gap: 0.8rem;
+  height: 128px;
+  margin-top: 1.4rem;
+}
+
+.auth-role-bars span {
+  flex: 1;
+  border-radius: 999px 999px 0.8rem 0.8rem;
+  background: linear-gradient(180deg, rgba(15, 139, 141, 0.88), rgba(255, 107, 53, 0.76));
+  transform-origin: bottom;
+  animation: auth-bar-wave 2.8s ease-in-out infinite;
+}
+
+.auth-role-bars span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.auth-role-bars span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.auth-role-bars span:nth-child(4) {
+  animation-delay: 0.44s;
+}
+
+.auth-role-orbit {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px dashed rgba(15, 139, 141, 0.24);
+}
+
+.auth-role-orbit--one {
+  inset: 54px 34px 34px 74px;
+  animation: auth-orbit 10s linear infinite;
+}
+
+.auth-role-orbit--two {
+  inset: 34px 74px 54px 34px;
+  animation: auth-orbit 14s linear infinite reverse;
+}
+
+.auth-role-book {
+  position: relative;
+  width: 220px;
+  height: 154px;
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(18deg) rotateZ(-9deg);
+  animation: auth-book-tilt 4.8s ease-in-out infinite;
+}
+
+.auth-role-book__cover,
+.auth-role-book__page {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.4rem;
+  transform-origin: left center;
+}
+
+.auth-role-book__cover {
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.92), rgba(15, 139, 141, 0.84));
+  box-shadow: 0 26px 40px rgba(15, 23, 42, 0.24);
+}
+
+.auth-role-book__page {
+  left: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 241, 234, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.auth-role-book__page--one {
+  animation: auth-page-flip 2.3s ease-in-out infinite;
+}
+
+.auth-role-book__page--two {
+  animation: auth-page-flip 2.3s ease-in-out infinite 0.24s;
+}
+
+.auth-role-book__page--three {
+  animation: auth-page-flip 2.3s ease-in-out infinite 0.48s;
+}
+
+.auth-role-chip {
+  position: absolute;
+  bottom: 44px;
+  right: 38px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 0.9rem;
+}
+
+.auth-role-sheet {
+  width: 238px;
+  padding: 1.2rem;
+  border-radius: 1.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, 0.12);
+  transform: rotate(-5deg);
+  animation: auth-student-sheet-float 4.6s ease-in-out infinite;
+}
+
+.auth-role-sheet__line {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 139, 141, 0.18), rgba(15, 23, 42, 0.08));
+  margin-bottom: 0.7rem;
+}
+
+.auth-role-choice {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.auth-role-choice span {
+  display: block;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.9);
+}
+
+.auth-role-choice__active {
+  width: 82%;
+  background: linear-gradient(90deg, rgba(255, 107, 53, 0.84), rgba(15, 139, 141, 0.78)) !important;
+  animation: auth-progress-slide 2.4s ease-in-out infinite;
+}
+
+.auth-role-cursor {
+  position: absolute;
+  right: 70px;
+  bottom: 78px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #0f8b8d;
+  box-shadow: 0 0 0 8px rgba(15, 139, 141, 0.15);
+  animation: auth-cursor-tap 2.4s ease-in-out infinite;
+}
+
+.auth-role-trend {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: end;
+  gap: 0.8rem;
+  height: 128px;
+  margin-top: 1.3rem;
+}
+
+.auth-role-trend span {
+  display: block;
+  border-radius: 1rem 1rem 0.5rem 0.5rem;
+  background: linear-gradient(180deg, rgba(255, 107, 53, 0.7), rgba(15, 139, 141, 0.86));
+  animation: auth-trend-rise 3.1s ease-in-out infinite;
+}
+
+.auth-role-trend span:nth-child(1) {
+  height: 38%;
+}
+
+.auth-role-trend span:nth-child(2) {
+  height: 52%;
+  animation-delay: 0.16s;
+}
+
+.auth-role-trend span:nth-child(3) {
+  height: 76%;
+  animation-delay: 0.3s;
+}
+
+.auth-role-trend span:nth-child(4) {
+  height: 94%;
+  animation-delay: 0.44s;
+}
+
+.auth-role-pulse {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 107, 53, 0.26);
+  animation: auth-pulse-ring 2.8s ease-out infinite;
+}
+
+.auth-role-pulse--one {
+  width: 92px;
+  height: 92px;
+  top: 44px;
+  right: 48px;
+}
+
+.auth-role-pulse--two {
+  width: 54px;
+  height: 54px;
+  bottom: 52px;
+  left: 56px;
+  animation-delay: 0.9s;
+}
+
+@keyframes auth-aurora-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(8px, -10px, 0) scale(1.03); }
+}
+
+@keyframes auth-school-card-float {
+  0%, 100% { transform: translateY(0) rotate(-7deg); }
+  50% { transform: translateY(-10px) rotate(-5deg); }
+}
+
+@keyframes auth-parent-card-float {
+  0%, 100% { transform: translateY(0) rotate(5deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+
+@keyframes auth-student-sheet-float {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-8px) rotate(-3deg); }
+}
+
+@keyframes auth-bar-wave {
+  0%, 100% { transform: scaleY(0.94); }
+  50% { transform: scaleY(1.08); }
+}
+
+@keyframes auth-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes auth-book-tilt {
+  0%, 100% { transform: perspective(900px) rotateX(18deg) rotateZ(-9deg) translateY(0); }
+  50% { transform: perspective(900px) rotateX(18deg) rotateZ(-7deg) translateY(-8px); }
+}
+
+@keyframes auth-page-flip {
+  0%, 100% { transform: perspective(900px) rotateY(0deg); opacity: 0.92; }
+  50% { transform: perspective(900px) rotateY(-132deg); opacity: 0.72; }
+}
+
+@keyframes auth-progress-slide {
+  0%, 100% { transform: scaleX(0.72); transform-origin: left; }
+  50% { transform: scaleX(1); transform-origin: left; }
+}
+
+@keyframes auth-cursor-tap {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  45% { transform: translate3d(-12px, -10px, 0) scale(1); }
+  55% { transform: translate3d(-12px, -10px, 0) scale(0.86); }
+}
+
+@keyframes auth-trend-rise {
+  0%, 100% { transform: scaleY(0.94); transform-origin: bottom; }
+  50% { transform: scaleY(1.08); transform-origin: bottom; }
+}
+
+@keyframes auth-pulse-ring {
+  0% { transform: scale(0.88); opacity: 0.9; }
+  100% { transform: scale(1.34); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-role-motion *,
+  .auth-role-motion {
+    animation: none !important;
+    transition: none !important;
+  }
+}

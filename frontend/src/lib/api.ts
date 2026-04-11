@@ -760,14 +760,19 @@ export async function generateExam(token: string, input: GenerateExamInput) {
   return response;
 }
 
-export async function publishExam(token: string, examId: string, assignedClassId: string) {
+export async function publishExam(token: string, examId: string, classSectionIds: string[]) {
   const response = await apiFetch<{
     id: string;
     status: string;
     assignedClassId: string | null;
     assignedClassLevel: number | null;
+    assignedSectionIds?: string[];
     publishedAt?: string | null;
-  }>(`/exams/${examId}/publish`, { method: "POST", body: JSON.stringify({ assignedClassId }) }, token);
+  }>(
+    `/exams/${examId}/publish`,
+    { method: "POST", body: JSON.stringify({ classSectionIds }) },
+    token
+  );
   invalidateApiCache("/exams?");
   invalidateApiCache("/exams/student/exams");
   return response;
@@ -1154,7 +1159,13 @@ export async function submitTypedAnswers(
   examId: string,
   answers: Array<{ questionNumber: number; answer: string }>
 ) {
-  return apiFetch<{ submissionId: string }>(
+  const response = await apiFetch<{
+    message?: string;
+    submissionId: string;
+    evaluationId: string;
+    status: string;
+    score?: number;
+  }>(
     "/submit",
     {
       method: "POST",
@@ -1162,6 +1173,9 @@ export async function submitTypedAnswers(
     },
     token
   );
+  invalidateApiCache("/exams/student/exams");
+  invalidateApiCache("/analytics/student");
+  return response;
 }
 
 /* =======================

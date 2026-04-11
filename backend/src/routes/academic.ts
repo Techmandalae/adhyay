@@ -29,9 +29,6 @@ export const catalogRouter = Router();
 router.use(requireAuth);
 router.use(requireTeacherOrAdmin);
 
-catalogRouter.use(requireAuth);
-catalogRouter.use(requireTeacherOrAdmin);
-
 const STREAM_SUBJECTS: Record<string, string[]> = {
   Science: ["Physics", "Chemistry", "Mathematics", "Biology"],
   Commerce: ["Accountancy", "Business Studies", "Economics"],
@@ -459,7 +456,7 @@ router.get(
   }
 );
 
-catalogRouter.get("/teacher/catalog", async (req: Request, res: Response, next: NextFunction) => {
+catalogRouter.get("/teacher/catalog", requireAuth, requireTeacherOrAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user) {
