@@ -37,6 +37,7 @@ import {
   reviewEvaluation
 } from "@/lib/api";
 import {
+  getCatalogLookupClassId,
   getPublishableClassOptions,
   getFallbackClassIdFromOption,
   isValidAcademicSubject,
@@ -191,6 +192,10 @@ export default function TeacherDashboard() {
   const isTeacher = user?.role === "TEACHER";
   const canCallApi = Boolean(token);
   const canPublishExams = Boolean(user?.canPublish ?? true);
+  const selectedClassOption = classOptions.find(
+    (item) => item.sectionId === examForm.sectionId || item.classId === examForm.classId
+  );
+  const lookupClassId = getCatalogLookupClassId(selectedClassOption);
 
   useEffect(() => {
     if (!isGenerating) {
@@ -269,7 +274,7 @@ export default function TeacherDashboard() {
       try {
         const response = await getAcademicBooksBySubjectId(
           token,
-          examForm.classId ?? "",
+          lookupClassId ?? examForm.classId ?? "",
           examForm.subjectId ?? ""
         );
 
@@ -304,7 +309,7 @@ export default function TeacherDashboard() {
     return () => {
       isActive = false;
     };
-  }, [token, examForm.classId, examForm.subjectId, classSubjects]);
+  }, [token, examForm.classId, examForm.sectionId, examForm.subjectId, classSubjects, lookupClassId]);
 
   useEffect(() => {
     if (
@@ -324,7 +329,12 @@ export default function TeacherDashboard() {
       try {
         const responses = await Promise.all(
           examForm.ncertBookIds.map((bookId) =>
-            getAcademicChapters(token, bookId, examForm.classId ?? "", examForm.subjectId ?? "")
+            getAcademicChapters(
+              token,
+              bookId,
+              lookupClassId ?? examForm.classId ?? "",
+              examForm.subjectId ?? ""
+            )
           )
         );
         if (!isActive) {
@@ -364,10 +374,12 @@ export default function TeacherDashboard() {
   }, [
     token,
     examForm.classId,
+    examForm.sectionId,
     examForm.subjectId,
     classSubjects,
     examForm.mode,
-    examForm.ncertBookIds
+    examForm.ncertBookIds,
+    lookupClassId
   ]);
 
   useEffect(() => {
@@ -436,6 +448,7 @@ export default function TeacherDashboard() {
   const handleClassChange = async (sectionId: string) => {
     const selectedOption = classOptions.find((item) => item.id === sectionId);
     const fallbackClassId = getFallbackClassIdFromOption(selectedOption);
+    const nextLookupClassId = getCatalogLookupClassId(selectedOption);
     setExamForm((current) => ({
       ...current,
       classId: selectedOption?.classId ?? "",
@@ -464,7 +477,10 @@ export default function TeacherDashboard() {
     }
 
     try {
-      const response = await getSubjects(token, selectedOption.classId);
+      const response = await getSubjects(
+        token,
+        nextLookupClassId ?? selectedOption.classId
+      );
       setClassSubjects(normalizeSubjectsResponse(response, fallbackClassId ?? undefined));
     } catch {
       setClassSubjects([]);

@@ -23,6 +23,7 @@ import {
   getTemplates
 } from "@/lib/api";
 import {
+  getCatalogLookupClassId,
   getFallbackClassIdFromOption,
   isValidAcademicSubject,
   normalizeSubjectsResponse,
@@ -69,6 +70,10 @@ export default function NewExamPage() {
     message?: string;
   }>({ state: "idle" });
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const selectedClassOption = classOptions.find(
+    (item) => item.sectionId === examForm.sectionId || item.classId === examForm.classId
+  );
+  const lookupClassId = getCatalogLookupClassId(selectedClassOption);
 
   useEffect(() => {
     if (!token) {
@@ -121,7 +126,7 @@ export default function NewExamPage() {
       try {
         const response = await getAcademicBooksBySubjectId(
           token,
-          examForm.classId ?? "",
+          lookupClassId ?? examForm.classId ?? "",
           examForm.subjectId ?? ""
         );
 
@@ -156,7 +161,7 @@ export default function NewExamPage() {
     return () => {
       isActive = false;
     };
-  }, [token, examForm.classId, examForm.subjectId, classSubjects]);
+  }, [token, examForm.classId, examForm.sectionId, examForm.subjectId, classSubjects, lookupClassId]);
 
   useEffect(() => {
     if (
@@ -176,7 +181,12 @@ export default function NewExamPage() {
       try {
         const responses = await Promise.all(
           examForm.ncertBookIds.map((bookId) =>
-            getAcademicChapters(token, bookId, examForm.classId ?? "", examForm.subjectId ?? "")
+            getAcademicChapters(
+              token,
+              bookId,
+              lookupClassId ?? examForm.classId ?? "",
+              examForm.subjectId ?? ""
+            )
           )
         );
 
@@ -211,15 +221,18 @@ export default function NewExamPage() {
   }, [
     token,
     examForm.classId,
+    examForm.sectionId,
     examForm.subjectId,
     classSubjects,
     examForm.mode,
-    examForm.ncertBookIds
+    examForm.ncertBookIds,
+    lookupClassId
   ]);
 
   const handleClassChange = async (optionId: string) => {
     const selectedOption = classOptions.find((item) => item.id === optionId);
     const fallbackClassId = getFallbackClassIdFromOption(selectedOption);
+    const nextLookupClassId = getCatalogLookupClassId(selectedOption);
     setExamForm((current) => ({
       ...current,
       classId: selectedOption?.classId ?? "",
@@ -243,7 +256,10 @@ export default function NewExamPage() {
     }
 
     try {
-      const response = await getSubjects(token, selectedOption.classId);
+      const response = await getSubjects(
+        token,
+        nextLookupClassId ?? selectedOption.classId
+      );
       setClassSubjects(normalizeSubjectsResponse(response, fallbackClassId ?? undefined));
     } catch {
       setClassSubjects([]);
@@ -305,6 +321,10 @@ export default function NewExamPage() {
     }
     if (!isValidAcademicSubject(classSubjects, examForm.subjectId)) {
       setStatus({ state: "error", message: "Please select a valid subject." });
+      return;
+    }
+    if (examForm.mode !== "REFERENCE_ONLY" && selectedChapters.length === 0) {
+      setStatus({ state: "error", message: "Please select at least one chapter." });
       return;
     }
 

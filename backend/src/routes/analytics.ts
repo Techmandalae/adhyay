@@ -271,7 +271,12 @@ analyticsRouter.get("/admin", requireAdmin, async (req, res, next) => {
     const analytics = await buildAdminAnalytics({
       schoolId: user.schoolId,
       ...(parsed.data.startDate ? { startDate: parsed.data.startDate } : {}),
-      ...(parsed.data.endDate ? { endDate: parsed.data.endDate } : {})
+      ...(parsed.data.endDate ? { endDate: parsed.data.endDate } : {}),
+      ...(parsed.data.subject ? { subject: parsed.data.subject } : {}),
+      ...(parsed.data.classLevel !== undefined
+        ? { classLevel: parsed.data.classLevel }
+        : {}),
+      ...(parsed.data.difficulty ? { difficulty: parsed.data.difficulty } : {})
     });
 
     return res.status(200).json(analytics);

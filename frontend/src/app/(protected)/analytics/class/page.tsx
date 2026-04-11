@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { RequireRole } from "@/components/auth/RequireRole";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { BarChart } from "@/components/analytics/BarChart";
 import { DataTable } from "@/components/analytics/DataTable";
+import { DonutBreakdownChart } from "@/components/analytics/DonutBreakdownChart";
 import { MetricGrid } from "@/components/analytics/MetricGrid";
+import { SubjectVolumeChart } from "@/components/analytics/SubjectVolumeChart";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -15,15 +16,31 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
+  getAcademicClasses,
+  getAcademicSubjects,
   getAdminAnalytics,
   getStudentAnalytics,
   getTeacherAnalytics
 } from "@/lib/api";
+import type { AcademicClass, AcademicSubject } from "@/types/academic";
 import type {
   AdminAnalyticsResponse,
   StudentAnalyticsResponse,
   TeacherAnalyticsResponse
 } from "@/types/analytics";
+
+type AnalyticsClassOption = {
+  classId: string;
+  classLevel: number;
+  label: string;
+};
+
+function compareClassOptions(left: AnalyticsClassOption, right: AnalyticsClassOption) {
+  if (left.classLevel !== right.classLevel) {
+    return left.classLevel - right.classLevel;
+  }
+  return left.label.localeCompare(right.label);
+}
 
 export default function ClassAnalyticsPage() {
   const { token, user } = useAuth();
@@ -35,12 +52,97 @@ export default function ClassAnalyticsPage() {
     startDate: "",
     endDate: "",
     subject: "",
-    difficulty: "",
-    classLevel: ""
+    classId: ""
   });
   const [teacherData, setTeacherData] = useState<TeacherAnalyticsResponse | null>(null);
   const [studentData, setStudentData] = useState<StudentAnalyticsResponse | null>(null);
   const [adminData, setAdminData] = useState<AdminAnalyticsResponse | null>(null);
+  const [classOptions, setClassOptions] = useState<AnalyticsClassOption[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<AcademicSubject[]>([]);
+
+  const selectedClassOption = useMemo(
+    () => classOptions.find((option) => option.classId === filters.classId) ?? null,
+    [classOptions, filters.classId]
+  );
+
+  useEffect(() => {
+    if (!token || !user || user.role === "STUDENT") {
+      return;
+    }
+
+    let isActive = true;
+    const loadClasses = async () => {
+      try {
+        const response = await getAcademicClasses(token);
+        if (!isActive) {
+          return;
+        }
+
+        const deduped = new Map<string, AnalyticsClassOption>();
+        response.items.forEach((item: AcademicClass) => {
+          if (!item.classId || deduped.has(item.classId)) {
+            return;
+          }
+          deduped.set(item.classId, {
+            classId: item.classId,
+            classLevel: item.classLevel,
+            label: item.className || item.label
+          });
+        });
+
+        setClassOptions(Array.from(deduped.values()).sort(compareClassOptions));
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setClassOptions([]);
+      }
+    };
+
+    void loadClasses();
+    return () => {
+      isActive = false;
+    };
+  }, [token, user]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    let isActive = true;
+    const loadSubjects = async () => {
+      try {
+        const classId =
+          user.role === "STUDENT"
+            ? user.classId ?? ""
+            : filters.classId;
+
+        if (!classId) {
+          if (isActive) {
+            setSubjectOptions([]);
+          }
+          return;
+        }
+
+        const response = await getAcademicSubjects(token, classId);
+        if (!isActive) {
+          return;
+        }
+        setSubjectOptions(response.items);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setSubjectOptions([]);
+      }
+    };
+
+    void loadSubjects();
+    return () => {
+      isActive = false;
+    };
+  }, [token, user, filters.classId]);
 
   const handleLoad = async () => {
     if (!token || !user) {
@@ -54,8 +156,7 @@ export default function ClassAnalyticsPage() {
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
           subject: filters.subject || undefined,
-          difficulty: filters.difficulty || undefined,
-          classLevel: filters.classLevel ? Number(filters.classLevel) : undefined
+          classLevel: selectedClassOption?.classLevel
         });
         setTeacherData(response);
         setStudentData(null);
@@ -64,8 +165,7 @@ export default function ClassAnalyticsPage() {
         const response = await getStudentAnalytics(token, {
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
-          subject: filters.subject || undefined,
-          difficulty: filters.difficulty || undefined
+          subject: filters.subject || undefined
         });
         setStudentData(response);
         setTeacherData(null);
@@ -73,7 +173,9 @@ export default function ClassAnalyticsPage() {
       } else {
         const response = await getAdminAnalytics(token, {
           startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined
+          endDate: filters.endDate || undefined,
+          subject: filters.subject || undefined,
+          classLevel: selectedClassOption?.classLevel
         });
         setAdminData(response);
         setTeacherData(null);
@@ -94,11 +196,11 @@ export default function ClassAnalyticsPage() {
         <div className="mx-auto grid max-w-6xl gap-8">
           <SectionHeader
             eyebrow="Class analytics"
-            title="Role-aware performance overview"
-            subtitle="Teachers, students, and admins all land on the same route, but each role gets the analytics that match its scope."
+            title="Visual performance overview"
+            subtitle="Use focused filters and charts to spot volume, submissions, and score trends quickly."
           />
           <Card className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Start date"
                 type="date"
@@ -111,30 +213,39 @@ export default function ClassAnalyticsPage() {
                 value={filters.endDate}
                 onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
               />
-              <Input
+              {user?.role !== "STUDENT" ? (
+                <Select
+                  label="Class"
+                  value={filters.classId}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      classId: event.target.value,
+                      subject: ""
+                    }))
+                  }
+                >
+                  <option value="">All classes</option>
+                  {classOptions.map((option) => (
+                    <option key={option.classId} value={option.classId}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              ) : null}
+              <Select
                 label="Subject"
                 value={filters.subject}
                 onChange={(event) => setFilters((current) => ({ ...current, subject: event.target.value }))}
-              />
-              <Select
-                label="Difficulty"
-                value={filters.difficulty}
-                onChange={(event) => setFilters((current) => ({ ...current, difficulty: event.target.value }))}
+                disabled={user?.role !== "STUDENT" && !filters.classId}
               >
-                <option value="">All</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="">All subjects</option>
+                {subjectOptions.map((subject) => (
+                  <option key={subject.id} value={subject.name}>
+                    {subject.name}
+                  </option>
+                ))}
               </Select>
-              <Input
-                label="Class level"
-                type="number"
-                min={1}
-                max={12}
-                value={filters.classLevel}
-                onChange={(event) => setFilters((current) => ({ ...current, classLevel: event.target.value }))}
-                disabled={user?.role !== "TEACHER"}
-              />
             </div>
             <Button onClick={handleLoad} disabled={!token || status.state === "loading"}>
               {status.state === "loading" ? "Loading..." : "Refresh analytics"}
@@ -146,6 +257,40 @@ export default function ClassAnalyticsPage() {
 
           {teacherData ? (
             <>
+              <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+                <Card className="space-y-4">
+                  <SectionHeader eyebrow="Overview" title="Performance mix" />
+                  <DonutBreakdownChart
+                    data={[
+                      {
+                        label: "Submissions",
+                        value: teacherData.summary.totalEvaluations,
+                        color: "#ff6b35"
+                      },
+                      {
+                        label: "Students",
+                        value: teacherData.summary.uniqueStudents,
+                        color: "#1e90ff"
+                      },
+                      {
+                        label: "Average %",
+                        value: Math.round(teacherData.summary.averagePercentage),
+                        suffix: "%",
+                        color: "#f4b942"
+                      }
+                    ]}
+                  />
+                </Card>
+                <Card className="space-y-4">
+                  <SectionHeader eyebrow="Volume" title="Exam volume by subject" />
+                  <SubjectVolumeChart
+                    data={teacherData.subjectPerformance.map((item) => ({
+                      label: item.subject,
+                      value: item.exams
+                    }))}
+                  />
+                </Card>
+              </div>
               <MetricGrid
                 metrics={[
                   { label: "Approved evaluations", value: teacherData.summary.totalEvaluations, tone: "accent" },
@@ -153,61 +298,84 @@ export default function ClassAnalyticsPage() {
                   { label: "Average %", value: teacherData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
-              <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            </>
+          ) : null}
+
+          {studentData ? (
+            <>
+              <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
                 <Card className="space-y-4">
-                  <SectionHeader eyebrow="Subjects" title="Subject performance" />
-                  <BarChart
-                    data={teacherData.subjectPerformance.map((item, index) => ({
-                      label: item.subject,
-                      value: item.averagePercentage,
-                      suffix: "%",
-                      tone: index % 3 === 0 ? "accent" : index % 3 === 1 ? "cool" : "warm"
-                    }))}
-                    maxValue={100}
+                  <SectionHeader eyebrow="Overview" title="Performance mix" />
+                  <DonutBreakdownChart
+                    data={[
+                      {
+                        label: "Evaluations",
+                        value: studentData.summary.totalEvaluations,
+                        color: "#ff6b35"
+                      },
+                      {
+                        label: "Avg score",
+                        value: Math.round(studentData.summary.averageScore),
+                        color: "#1e90ff"
+                      },
+                      {
+                        label: "Average %",
+                        value: Math.round(studentData.summary.averagePercentage),
+                        suffix: "%",
+                        color: "#f4b942"
+                      }
+                    ]}
                   />
                 </Card>
                 <Card className="space-y-4">
-                  <SectionHeader eyebrow="Difficulty" title="Difficulty effectiveness" />
-                  <BarChart
-                    data={teacherData.difficultyEffectiveness.map((item, index) => ({
-                      label: item.difficulty,
-                      value: item.averagePercentage,
-                      suffix: "%",
-                      tone: index % 2 === 0 ? "cool" : "warm"
+                  <SectionHeader eyebrow="Volume" title="Exam volume by subject" />
+                  <SubjectVolumeChart
+                    data={studentData.subjectPerformance.map((item) => ({
+                      label: item.subject,
+                      value: item.exams
                     }))}
-                    maxValue={100}
                   />
                 </Card>
               </div>
             </>
           ) : null}
 
-          {studentData ? (
-            <>
-              <MetricGrid
-                metrics={[
-                  { label: "Approved evaluations", value: studentData.summary.totalEvaluations, tone: "accent" },
-                  { label: "Average score", value: studentData.summary.averageScore },
-                  { label: "Average %", value: studentData.summary.averagePercentage, tone: "cool" }
-                ]}
-              />
-              <Card className="space-y-4">
-                <SectionHeader eyebrow="Subjects" title="Subject-wise performance" />
-                <BarChart
-                  data={studentData.subjectPerformance.map((item, index) => ({
-                    label: item.subject,
-                    value: item.averagePercentage,
-                    suffix: "%",
-                    tone: index % 3 === 0 ? "accent" : index % 3 === 1 ? "cool" : "warm"
-                  }))}
-                  maxValue={100}
-                />
-              </Card>
-            </>
-          ) : null}
-
           {adminData ? (
             <>
+              <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+                <Card className="space-y-4">
+                  <SectionHeader eyebrow="Overview" title="Performance mix" />
+                  <DonutBreakdownChart
+                    data={[
+                      {
+                        label: "Total Exams",
+                        value: adminData.summary.totalExams,
+                        color: "#ff6b35"
+                      },
+                      {
+                        label: "Submissions",
+                        value: adminData.summary.totalSubmissions,
+                        color: "#1e90ff"
+                      },
+                      {
+                        label: "Average %",
+                        value: Math.round(adminData.summary.averagePercentage),
+                        suffix: "%",
+                        color: "#f4b942"
+                      }
+                    ]}
+                  />
+                </Card>
+                <Card className="space-y-4">
+                  <SectionHeader eyebrow="Volume" title="Exam volume by subject" />
+                  <SubjectVolumeChart
+                    data={adminData.examVolume.bySubject.map((item) => ({
+                      label: item.topic,
+                      value: item.count
+                    }))}
+                  />
+                </Card>
+              </div>
               <MetricGrid
                 metrics={[
                   { label: "Total exams", value: adminData.summary.totalExams, tone: "accent" },
@@ -215,17 +383,7 @@ export default function ClassAnalyticsPage() {
                   { label: "Average %", value: adminData.summary.averagePercentage, tone: "cool" }
                 ]}
               />
-              <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-                <Card className="space-y-4">
-                  <SectionHeader eyebrow="Volume" title="Exam volume by subject" />
-                  <BarChart
-                    data={adminData.examVolume.bySubject.map((item, index) => ({
-                      label: item.topic,
-                      value: item.count,
-                      tone: index % 3 === 0 ? "accent" : index % 3 === 1 ? "cool" : "warm"
-                    }))}
-                  />
-                </Card>
+              <div className="grid gap-8 lg:grid-cols-[1fr]">
                 <Card className="space-y-4">
                   <SectionHeader eyebrow="Teacher activity" title="Teacher output" />
                   <DataTable

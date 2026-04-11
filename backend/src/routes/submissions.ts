@@ -160,7 +160,7 @@ const upload = multer({
 
 const answerUpload = multer({
   storage,
-  limits: { fileSize: MAX_ANSWER_UPLOAD_BYTES, files: 5 },
+  limits: { fileSize: MAX_ANSWER_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
     if (!allowedAnswerMimeTypes.has(file.mimetype)) {
       return cb(new HttpError(400, "Only PDF or images allowed"));
@@ -277,6 +277,18 @@ function parseRawTextAnswers(rawText: string) {
     }
   }
   return answers;
+}
+
+async function resolveEvaluationOrNull(
+  label: string,
+  task: () => Promise<EvaluationResult>
+) {
+  try {
+    return await task();
+  } catch (error) {
+    console.error(`[submissions] ${label} failed; saving submission without AI evaluation`, error);
+    return null;
+  }
 }
 
 async function createSubmissionEvaluation(params: {
@@ -451,9 +463,13 @@ submissionsRouter.post(
 
       let evaluation: EvaluationResult | null = null;
       if (file) {
-        evaluation = await evaluateAnswerSheet(file.path, file.mimetype, questions);
+        evaluation = await resolveEvaluationOrNull("file_evaluation", () =>
+          evaluateAnswerSheet(file.path, file.mimetype, questions)
+        );
       } else if (structuredAnswers) {
-        evaluation = await evaluateStructuredAnswers(structuredAnswers, questions);
+        evaluation = await resolveEvaluationOrNull("structured_evaluation", () =>
+          evaluateStructuredAnswers(structuredAnswers, questions)
+        );
       }
 
       const [submission, savedEvaluation] = await createSubmissionEvaluation({
@@ -609,7 +625,9 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
         ? structuredAnswers
         : typedAnswers || extractedText;
 
-    const evaluation = await evaluateAnswers(parsed.data.examId, evaluationSource);
+    const evaluation = await resolveEvaluationOrNull("submit_evaluation", () =>
+      evaluateAnswers(parsed.data.examId, evaluationSource)
+    );
     const [submission, savedEvaluation] = await createSubmissionEvaluation({
       examId: parsed.data.examId,
       schoolId: exam.schoolId,
@@ -622,11 +640,11 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
     });
 
     res.json({
-      message: "Submission evaluated",
+      message: evaluation ? "Submission evaluated" : "Submission received",
       submissionId: submission.id,
       evaluationId: savedEvaluation.id,
       status: savedEvaluation.status,
-      score: evaluation.overallScore
+      ...(evaluation ? { score: evaluation.overallScore } : {})
     });
   } catch (error) {
     next(error);
@@ -637,7 +655,7 @@ submissionsRouter.post(
   "/submit-answer",
   requireAuth,
   requireStudent,
-  answerUpload.array("answers", 5),
+  answerUpload.single("answer"),
   async (req, res, next) => {
     const parsed = z
       .object({
@@ -661,10 +679,10 @@ submissionsRouter.post(
       }
 
       const typedReq = req as UploadRequest;
-      const files = typedReq.files ?? [];
-      console.log(files);
+      const file = typedReq.file;
+      console.log(file ?? null);
 
-      if (files.length === 0) {
+      if (!file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
@@ -700,36 +718,29 @@ submissionsRouter.post(
         return next(new HttpError(403, "Exam is not published for your class"));
       }
 
-      const extractedChunks: string[] = [];
-      for (const file of files) {
-        extractedChunks.push(await extractSubmissionText(file));
-      }
-      const extractedText = extractedChunks
-        .map((chunk) => chunk.trim())
-        .filter((chunk) => chunk.length > 0)
-        .join("\n\n");
-      const evaluation = await evaluateAnswers(parsed.data.examId, extractedText);
-      const primaryFile = files[0];
-      const fileUrl = buildSubmissionFileUrl(primaryFile.path);
+      const extractedText = await extractSubmissionText(file);
+      const evaluation = await resolveEvaluationOrNull("answer_upload_evaluation", () =>
+        evaluateAnswers(parsed.data.examId, extractedText)
+      );
+      const fileUrl = buildSubmissionFileUrl(file.path);
 
       const [submission, savedEvaluation] = await createSubmissionEvaluation({
         examId: parsed.data.examId,
         schoolId: exam.schoolId,
         studentId,
-        file: primaryFile,
+        file,
         filePathOverride: fileUrl,
         extractedText,
         evaluation
       });
 
       res.json({
-        message: files.length > 1 ? "Answer sheets uploaded" : "Answer sheet uploaded",
+        message: evaluation ? "Answer sheet uploaded" : "Answer sheet uploaded and queued for review",
         submissionId: submission.id,
         evaluationId: savedEvaluation.id,
         status: savedEvaluation.status,
-        score: evaluation.overallScore,
-        fileUrl,
-        fileUrls: files.map((file) => buildSubmissionFileUrl(file.path))
+        ...(evaluation ? { score: evaluation.overallScore } : {}),
+        fileUrl
       });
     } catch (error) {
       next(error);

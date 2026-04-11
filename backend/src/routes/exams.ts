@@ -936,6 +936,10 @@ examsRouter.post("/generate", requireTeacher, async (req, res, next) => {
       (user.role === "TEACHER" && !isDefaultClass && Boolean(normalizedBaseClassId));
     const fallbackCatalogClassId = isDefaultClass ? payload.classId : normalizedBaseClassId;
 
+    if (payload.mode !== "REFERENCE_ONLY" && (payload.chapterIds?.length ?? 0) === 0) {
+      return next(new HttpError(400, "Please select at least one chapter."));
+    }
+
     const requestedSubjectIds =
       payload.subjectIds && payload.subjectIds.length > 0
         ? payload.subjectIds

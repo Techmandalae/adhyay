@@ -5,8 +5,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const MAX_ANSWER_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_ANSWER_FILES = 5;
-const MAX_TOTAL_ANSWER_SIZE_BYTES = MAX_ANSWER_SIZE_BYTES * MAX_ANSWER_FILES;
 const ALLOWED_ANSWER_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -59,7 +57,6 @@ async function parseJsonSafely(response: Response) {
       status?: string;
       score?: number;
       fileUrl?: string;
-      fileUrls?: string[];
     };
   } catch {
     return null;
@@ -68,7 +65,6 @@ async function parseJsonSafely(response: Response) {
 
 function parseUploadSize(request: NextRequest) {
   const rawSize =
-    request.headers.get("x-answer-total-size") ??
     request.headers.get("x-answer-size") ??
     request.headers.get("x-file-size") ??
     request.headers.get("content-length");
@@ -83,28 +79,12 @@ function parseUploadSize(request: NextRequest) {
 
 function parseUploadType(request: NextRequest) {
   return (
-    request.headers.get("x-answer-types") ??
     request.headers.get("x-answer-type") ??
     request.headers.get("x-file-type") ??
     ""
-  );
-}
-
-function parseUploadCount(request: NextRequest) {
-  const rawCount = request.headers.get("x-answer-count");
-  if (!rawCount) {
-    return null;
-  }
-
-  const count = Number(rawCount);
-  return Number.isInteger(count) && count >= 0 ? count : null;
-}
-
-function normalizeUploadTypes(rawTypes: string) {
-  return rawTypes
-    .split(",")
-    .map((type) => type.trim().toLowerCase())
-    .filter((type) => type.length > 0);
+  )
+    .trim()
+    .toLowerCase();
 }
 
 export async function POST(request: NextRequest) {
@@ -121,23 +101,12 @@ export async function POST(request: NextRequest) {
     if (uploadSize === null) {
       return NextResponse.json({ error: "Missing file size" }, { status: 400 });
     }
-    if (uploadSize > MAX_TOTAL_ANSWER_SIZE_BYTES) {
-      return NextResponse.json({ error: "Total upload too large (max 25MB)" }, { status: 400 });
+    if (uploadSize > MAX_ANSWER_SIZE_BYTES) {
+      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     }
 
-    const uploadCount = parseUploadCount(request);
-    if (uploadCount === null || uploadCount === 0) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
-    if (uploadCount > MAX_ANSWER_FILES) {
-      return NextResponse.json({ error: "Maximum 5 files allowed" }, { status: 400 });
-    }
-
-    const uploadTypes = normalizeUploadTypes(parseUploadType(request));
-    if (uploadTypes.length !== uploadCount) {
-      return NextResponse.json({ error: "Missing file type metadata" }, { status: 400 });
-    }
-    if (uploadTypes.some((type) => !ALLOWED_ANSWER_TYPES.has(type))) {
+    const uploadType = parseUploadType(request);
+    if (!ALLOWED_ANSWER_TYPES.has(uploadType)) {
       return NextResponse.json({ error: "Only PDF or images allowed" }, { status: 400 });
     }
 
@@ -180,8 +149,7 @@ export async function POST(request: NextRequest) {
       evaluationId: payload?.evaluationId ?? null,
       status: payload?.status ?? null,
       score: payload?.score,
-      fileUrl: payload?.fileUrl ?? null,
-      fileUrls: Array.isArray(payload?.fileUrls) ? payload.fileUrls : []
+      fileUrl: payload?.fileUrl ?? null
     });
   } catch (error) {
     console.error("Student answer upload failed", error);

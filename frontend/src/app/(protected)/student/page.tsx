@@ -39,11 +39,6 @@ type AsyncState<T> = {
   error?: string;
 };
 
-type SelectedAnswerFile = {
-  file: File;
-  previewUrl: string | null;
-};
-
 export default function StudentDashboard() {
   const { token, user } = useAuth();
   const [examId, setExamId] = useState("");
@@ -55,7 +50,8 @@ export default function StudentDashboard() {
     status: "idle",
     data: null
   });
-  const [selectedFiles, setSelectedFiles] = useState<SelectedAnswerFile[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [rawAnswerText, setRawAnswerText] = useState("");
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<
@@ -64,7 +60,6 @@ export default function StudentDashboard() {
       score?: number;
       notifications?: NotificationDispatchSummary[];
       fileUrl?: string | null;
-      fileUrls?: string[];
     }>
   >({
     status: "idle",
@@ -148,13 +143,11 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     return () => {
-      for (const selectedFile of selectedFiles) {
-        if (selectedFile.previewUrl) {
-          URL.revokeObjectURL(selectedFile.previewUrl);
-        }
+      if (filePreviewUrl) {
+        URL.revokeObjectURL(filePreviewUrl);
       }
     };
-  }, [selectedFiles]);
+  }, [filePreviewUrl]);
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob);
@@ -180,19 +173,16 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleFileChange = (nextFiles: FileList | null) => {
-    setSelectedFiles((currentFiles) => {
-      for (const selectedFile of currentFiles) {
-        if (selectedFile.previewUrl) {
-          URL.revokeObjectURL(selectedFile.previewUrl);
-        }
+  const handleFileChange = (nextFile: File | null) => {
+    setFilePreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
       }
-
-      return Array.from(nextFiles ?? []).map((file) => ({
-        file,
-        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null
-      }));
+      return nextFile && nextFile.type.startsWith("image/")
+        ? URL.createObjectURL(nextFile)
+        : null;
     });
+    setFile(nextFile);
   };
 
   const handleDownloadPdf = async () => {
@@ -213,7 +203,7 @@ export default function StudentDashboard() {
     event.preventDefault();
     if (!token || !examId.trim()) return;
 
-    if (selectedFiles.length === 0 && rawAnswerText.trim().length === 0) {
+    if (!file && rawAnswerText.trim().length === 0) {
       setAnswerError("Upload a file or type your answers.");
       return;
     }
@@ -224,7 +214,7 @@ export default function StudentDashboard() {
       const response = await uploadSubmission(
         token,
         examId.trim(),
-        selectedFiles.map((selectedFile) => selectedFile.file),
+        file,
         rawAnswerText.trim()
       );
       setUploadState({
@@ -233,8 +223,7 @@ export default function StudentDashboard() {
           submissionId: response.submissionId,
           score: response.score,
           notifications: response.notifications,
-          fileUrl: response.fileUrl ?? null,
-          fileUrls: response.fileUrls ?? []
+          fileUrl: response.fileUrl ?? null
         }
       });
       const stored: StoredSubmission = {
@@ -392,54 +381,37 @@ export default function StudentDashboard() {
                 ))}
               </Select>
               <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium text-foreground">Answer sheet files</span>
+                <span className="font-medium text-foreground">Answer sheet file</span>
                 <input
                   className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm"
                   type="file"
-                  multiple
                   accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(event) => handleFileChange(event.target.files)}
+                  onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
                 />
-                {selectedFiles.length > 0 ? (
+                {file ? (
                   <div className="space-y-3">
-                    <span className="text-xs text-ink-soft">
-                      {selectedFiles.length} file{selectedFiles.length === 1 ? "" : "s"} selected
-                    </span>
-                    <div className="flex flex-wrap gap-3">
-                      {selectedFiles.map((selectedFile) =>
-                        selectedFile.previewUrl ? (
-                          <div
-                            key={`${selectedFile.file.name}-${selectedFile.file.lastModified}`}
-                            className="inline-flex flex-col gap-2 rounded-2xl border border-border bg-white p-2"
-                          >
-                            <Image
-                              src={selectedFile.previewUrl}
-                              alt={`Preview of ${selectedFile.file.name}`}
-                              unoptimized
-                              width={112}
-                              height={112}
-                              className="h-28 w-28 rounded-xl object-cover"
-                            />
-                            <span className="max-w-28 text-xs text-ink-soft">
-                              {selectedFile.file.name}
-                            </span>
-                          </div>
-                        ) : (
-                          <div
-                            key={`${selectedFile.file.name}-${selectedFile.file.lastModified}`}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-ink-soft"
-                          >
-                            <span className="text-base font-semibold leading-none">PDF</span>
-                            <span>{selectedFile.file.name}</span>
-                          </div>
-                        )
-                      )}
-                    </div>
+                    <span className="text-xs text-ink-soft">{file.name}</span>
+                    {filePreviewUrl ? (
+                      <div className="inline-flex flex-col gap-2 rounded-2xl border border-border bg-white p-2">
+                        <Image
+                          src={filePreviewUrl}
+                          alt={`Preview of ${file.name}`}
+                          unoptimized
+                          width={112}
+                          height={112}
+                          className="h-28 w-28 rounded-xl object-cover"
+                        />
+                        <span className="max-w-28 text-xs text-ink-soft">{file.name}</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs text-ink-soft">
+                        <span className="text-base font-semibold leading-none">PDF</span>
+                        <span>{file.name}</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <span className="text-xs text-ink-soft">
-                    PDF, JPG, or PNG. Up to 5 files, 5MB each.
-                  </span>
+                  <span className="text-xs text-ink-soft">PDF, JPG, or PNG up to 5MB.</span>
                 )}
               </label>
               <label className="flex flex-col gap-2 text-sm">
@@ -465,11 +437,7 @@ export default function StudentDashboard() {
                 description={
                   [
                     `Submission ID: ${uploadState.data?.submissionId}`,
-                    uploadState.data?.fileUrls?.length
-                      ? `${uploadState.data.fileUrls.length} file${uploadState.data.fileUrls.length === 1 ? "" : "s"} uploaded successfully.`
-                      : uploadState.data?.fileUrl
-                        ? "Answer sheet uploaded successfully."
-                        : null,
+                    uploadState.data?.fileUrl ? "Answer sheet uploaded successfully." : null,
                     uploadState.data?.score !== undefined
                       ? `AI score: ${uploadState.data.score}`
                       : null,

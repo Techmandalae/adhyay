@@ -899,14 +899,14 @@ export async function saveAcademicSetup(
 }
 
 export async function uploadSchoolLogo(token: string, file: File) {
-  const allowedTypes = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
+  const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 
   if (file.size > 2 * 1024 * 1024) {
     throw new ApiError("Max 2MB", 400);
   }
 
   if (!allowedTypes.has(file.type)) {
-    throw new ApiError("Only PNG, JPEG, and SVG logos are allowed", 400);
+    throw new ApiError("Only PNG, JPEG, and WEBP logos are allowed", 400);
   }
 
   const formData = new FormData();
@@ -946,7 +946,12 @@ export async function uploadSchoolLogo(token: string, file: File) {
     );
   }
 
-  const result = payload as { logoUrl?: string | null; url?: string | null; path?: string | null };
+  const result = payload as {
+    success?: boolean;
+    logoUrl?: string | null;
+    url?: string | null;
+    path?: string | null;
+  };
   return {
     logoUrl: result.logoUrl ?? result.url ?? "",
     url: result.url ?? result.logoUrl ?? null,
@@ -1117,47 +1122,33 @@ type UploadSubmissionResponse = {
   score?: number;
   notifications?: NotificationDispatchSummary[];
   fileUrl?: string | null;
-  fileUrls?: string[];
 };
 
 export async function uploadSubmission(
   token: string,
   examId: string,
-  files: File[],
+  file: File | null,
   typedAnswers?: string
 ): Promise<UploadSubmissionResponse> {
-  if (files.length > 0) {
+  if (file) {
     const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
-    if (files.length > 5) {
-      throw new ApiError("Maximum 5 files allowed", 400);
+    if (!allowedTypes.has(file.type)) {
+      throw new ApiError("Only PDF or images allowed", 400);
     }
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    if (totalSize > 25 * 1024 * 1024) {
-      throw new ApiError("Total upload too large (max 25MB)", 400);
-    }
-
-    for (const file of files) {
-      if (!allowedTypes.has(file.type)) {
-        throw new ApiError("Only PDF or images allowed", 400);
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        throw new ApiError(`"${file.name}" is too large (max 5MB)`, 400);
-      }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new ApiError("File too large (max 5MB)", 400);
     }
 
     const formData = new FormData();
     formData.append("examId", examId);
-    for (const file of files) {
-      formData.append("answers", file, file.name);
-    }
+    formData.append("answer", file, file.name);
 
     const response = await fetch("/api/submit-answer", {
       method: "POST",
       headers: {
         ...getAuthHeaders(token),
-        "x-answer-count": String(files.length),
-        "x-answer-total-size": String(totalSize),
-        "x-answer-types": files.map((file) => file.type).join(",")
+        "x-answer-size": String(file.size),
+        "x-answer-type": file.type
       },
       body: formData
     });

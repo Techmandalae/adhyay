@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: "Smart exam generation",
   icons: {
-    icon: "/favicon-v2.ico",
-    shortcut: "/favicon-v2.ico",
-    apple: "/logo-icon.png"
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/icon.png"
   },
   openGraph: {
     images: ["/logo-full.png"]
@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon-v2.ico" />
+        <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${displayFont.variable} ${bodyFont.variable} flex min-h-screen flex-col antialiased`}>
         <Providers>

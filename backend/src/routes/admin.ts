@@ -55,36 +55,15 @@ const linkSchema = z
   })
   .strict();
 
-const logoStorage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    const uploadRoot = path.resolve(process.cwd(), env.UPLOAD_DIR);
-    const targetDir = path.join(uploadRoot, "logos");
-    await fs.promises.mkdir(targetDir, { recursive: true });
-    cb(null, targetDir);
-  },
-  filename: (_req, file, cb) => {
-    const ext =
-      ({
-        "image/png": ".png",
-        "image/jpeg": ".jpg",
-        "image/svg+xml": ".svg"
-      }[file.mimetype] ??
-        path.extname(file.originalname || "").toLowerCase()) ||
-      ".png";
-    const safeName = `school-logo-${Date.now()}${ext}`;
-    cb(null, safeName);
-  }
-});
-
 const uploadLogo = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_LOGO_TYPES.has(file.mimetype)) {
       cb(null, true);
       return;
     }
 
-    cb(new HttpError(400, "Only PNG, JPEG, and SVG logos are allowed"));
+    cb(new HttpError(400, "Only PNG, JPEG, and WEBP logos are allowed"));
   },
   limits: {
     fileSize: Math.min(env.UPLOAD_MAX_BYTES, 2 * 1024 * 1024)
@@ -151,7 +130,19 @@ const STREAM_SUBJECTS: Record<string, string[]> = {
 };
 
 const COMMON_SUBJECTS = ["Mathematics", "Science", "Social Science", "English", "Hindi"];
-const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
+const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+function getLogoExtension(mimeType: string, originalName: string) {
+  return (
+    {
+      "image/png": ".png",
+      "image/jpeg": ".jpg",
+      "image/webp": ".webp"
+    }[mimeType] ??
+    path.extname(originalName || "").toLowerCase() ??
+    ".png"
+  );
+}
 
 function getClassLevel(name: string): number | null {
   const match = name.match(/(\d+)/);
@@ -1341,21 +1332,45 @@ adminRouter.post(
       const admin = req.user!;
       const file = (
         req as unknown as {
-          file?: { filename: string; fieldname?: string; mimetype?: string; size?: number };
+          file?: {
+            originalname: string;
+            fieldname?: string;
+            mimetype?: string;
+            size?: number;
+            buffer?: Buffer;
+          };
         }
       ).file;
       console.log(file ?? null);
       if (!file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
+      if (!file.buffer || !file.mimetype || !ALLOWED_LOGO_TYPES.has(file.mimetype)) {
+        return res.status(400).json({ error: "Only PNG, JPEG, and WEBP logos are allowed" });
+      }
 
-      const relativePath = path.join(env.UPLOAD_DIR, "logos", file.filename);
+      const uploadRoot = path.resolve(process.cwd(), env.UPLOAD_DIR);
+      const logoDir = path.join(uploadRoot, "logos");
+      await fs.promises.mkdir(logoDir, { recursive: true });
+
+      const filename = `school-logo-${Date.now()}-${crypto.randomUUID()}${getLogoExtension(
+        file.mimetype,
+        file.originalname
+      )}`;
+      const absolutePath = path.join(logoDir, filename);
+      await fs.promises.writeFile(absolutePath, file.buffer);
+
+      const relativePath = path.join(env.UPLOAD_DIR, "logos", filename);
       const updated = await prisma.school.update({
         where: { id: admin.schoolId },
         data: { logoUrl: relativePath }
       });
 
-      res.json({ logoUrl: updated.logoUrl });
+      res.json({
+        success: true,
+        url: updated.logoUrl,
+        logoUrl: updated.logoUrl
+      });
     } catch (error) {
       next(error);
     }

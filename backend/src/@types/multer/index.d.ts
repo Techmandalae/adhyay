@@ -68,6 +68,7 @@ declare module "multer" {
   function multer(options?: MulterOptions): Multer;
   namespace multer {
     function diskStorage(options: DiskStorageOptions): StorageEngine;
+    function memoryStorage(): StorageEngine;
   }
 
   export = multer;

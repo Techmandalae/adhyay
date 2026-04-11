@@ -128,6 +128,23 @@ export function getFallbackClassIdFromOption(
   return level ? `default-${level}` : null;
 }
 
+export function getBaseClassName(value: string) {
+  return value.replace(/\s*[A-Z]$/, "").trim();
+}
+
+export function getCatalogLookupClassId(
+  option?: Pick<AcademicClass, "classId" | "classLevel" | "className" | "label"> | null
+) {
+  return getFallbackClassIdFromOption(
+    option
+      ? {
+          ...option,
+          className: getBaseClassName(option.className ?? option.label ?? "")
+        }
+      : option
+  ) ?? option?.classId ?? null;
+}
+
 export function isValidAcademicSubject(
   subjects: AcademicSubject[],
   subjectId: string | null | undefined

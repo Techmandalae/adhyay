@@ -8,7 +8,7 @@ const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = new Set([
   "image/png",
   "image/jpeg",
-  "image/svg+xml"
+  "image/webp"
 ]);
 
 const API_BASE = (
@@ -64,6 +64,8 @@ async function parseJsonSafely(response: Response) {
     return JSON.parse(text) as {
       error?: { message?: string };
       message?: string;
+      success?: boolean;
+      url?: string | null;
       logoUrl?: string | null;
     };
   } catch {
@@ -115,13 +117,13 @@ export async function POST(request: NextRequest) {
     const uploadType = parseUploadType(request);
     if (!uploadType || !ALLOWED_LOGO_TYPES.has(uploadType)) {
       return NextResponse.json(
-        { error: "Only PNG, JPEG, and SVG logos are allowed" },
+        { error: "Only PNG, JPEG, and WEBP logos are allowed" },
         { status: 400 }
       );
     }
 
     if (!request.body) {
-      return NextResponse.json({ error: "No file" }, { status: 400 });
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
     const controller = new AbortController();
@@ -145,7 +147,8 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = await parseJsonSafely(response);
-    const publicUrl = toPublicUrl(payload?.logoUrl);
+    const relativeUrl = payload?.url ?? payload?.logoUrl ?? null;
+    const publicUrl = toPublicUrl(relativeUrl);
 
     if (!response.ok) {
       return NextResponse.json(
@@ -157,8 +160,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      success: true,
       logoUrl: publicUrl,
-      path: payload?.logoUrl ?? null,
+      path: relativeUrl,
       url: publicUrl
     });
   } catch (error) {

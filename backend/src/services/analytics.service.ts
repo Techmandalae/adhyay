@@ -29,7 +29,7 @@ export type TeacherAnalyticsParams = AnalyticsFilters & {
   teacherId?: string;
 };
 
-export type AdminAnalyticsParams = AnalyticsDateRange & {
+export type AdminAnalyticsParams = AnalyticsFilters & {
   schoolId: string;
 };
 
@@ -727,8 +727,7 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
 }
 
 export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
-  const [exams, submissionsCount, evaluationStatus, reviewCounts, approvedEvaluations] =
-    await Promise.all([
+  const [exams, approvedEvaluations] = await Promise.all([
     prisma.exam.findMany({
       where: {
         createdAt: {
@@ -739,50 +738,87 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
       },
       select: { id: true, createdAt: true, meta: true, teacherId: true }
     }),
-    prisma.examSubmission.count({
-      where: {
-        submittedAt: {
-          ...(params.startDate ? { gte: params.startDate } : null),
-          ...(params.endDate ? { lte: params.endDate } : null)
-        },
-        schoolId: params.schoolId
-      }
-    }),
-    prisma.examEvaluation.groupBy({
-      by: ["status"],
-      where: {
-        createdAt: {
-          ...(params.startDate ? { gte: params.startDate } : null),
-          ...(params.endDate ? { lte: params.endDate } : null)
-        },
-        schoolId: params.schoolId
-      },
-      _count: { status: true }
-    }),
-    prisma.examEvaluation.groupBy({
-      by: ["reviewedBy"],
-      where: {
-        status: "APPROVED",
-        reviewedBy: { not: null },
-        createdAt: {
-          ...(params.startDate ? { gte: params.startDate } : null),
-          ...(params.endDate ? { lte: params.endDate } : null)
-        },
-        schoolId: params.schoolId
-      },
-      _count: { reviewedBy: true }
-    }),
     fetchApprovedEvaluations(params.schoolId, {
       ...(params.startDate ? { startDate: params.startDate } : {}),
       ...(params.endDate ? { endDate: params.endDate } : {})
     })
   ]);
 
+  const filteredExams = exams.filter((exam) => {
+    const meta = parseExamMeta(exam.meta);
+    return withinFilters(
+      {
+        evaluationId: "",
+        examId: exam.id,
+        studentId: "",
+        evaluatedAt: exam.createdAt,
+        score: null,
+        maxScore: null,
+        percentage: null,
+        subject: meta.subject ?? "Unknown",
+        classLevel: meta.classLevel ?? null,
+        difficulty: meta.difficulty ?? "unknown",
+        ncertChapters: meta.ncertChapters ?? [],
+        teacherId: exam.teacherId ?? null,
+        hasTeacherOverride: false,
+        scoreDelta: null,
+        strengths: [],
+        weaknesses: []
+      },
+      params
+    );
+  });
+
+  const filteredExamIds = filteredExams.map((exam) => exam.id);
+  const filteredApprovedEvaluations = approvedEvaluations.filter((row) => withinFilters(row, params));
+
+  const [submissionsCount, evaluationStatus, reviewCounts] =
+    filteredExamIds.length > 0
+      ? await Promise.all([
+          prisma.examSubmission.count({
+            where: {
+              schoolId: params.schoolId,
+              examId: { in: filteredExamIds },
+              submittedAt: {
+                ...(params.startDate ? { gte: params.startDate } : null),
+                ...(params.endDate ? { lte: params.endDate } : null)
+              }
+            }
+          }),
+          prisma.examEvaluation.groupBy({
+            by: ["status"],
+            where: {
+              schoolId: params.schoolId,
+              examId: { in: filteredExamIds },
+              createdAt: {
+                ...(params.startDate ? { gte: params.startDate } : null),
+                ...(params.endDate ? { lte: params.endDate } : null)
+              }
+            },
+            _count: { status: true }
+          }),
+          prisma.examEvaluation.groupBy({
+            by: ["reviewedBy"],
+            where: {
+              schoolId: params.schoolId,
+              examId: { in: filteredExamIds },
+              status: "APPROVED",
+              reviewedBy: { not: null },
+              createdAt: {
+                ...(params.startDate ? { gte: params.startDate } : null),
+                ...(params.endDate ? { lte: params.endDate } : null)
+              }
+            },
+            _count: { reviewedBy: true }
+          })
+        ])
+      : [0, [], []];
+
   const subjectMap = new Map<string, number>();
   const difficultyMap = new Map<string, number>();
   const teacherExamMap = new Map<string, number>();
 
-  exams.forEach((exam) => {
+  filteredExams.forEach((exam) => {
     const meta = parseExamMeta(exam.meta);
     const subject = meta.subject ?? "Unknown";
     const difficulty = meta.difficulty ?? "unknown";
@@ -802,31 +838,31 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
 
   const evaluationQuality = {
     averagePercentage:
-      approvedEvaluations.length > 0
+      filteredApprovedEvaluations.length > 0
         ? Number(
             (
-              approvedEvaluations.reduce(
+              filteredApprovedEvaluations.reduce(
                 (sum, row) => sum + (row.percentage ?? 0),
                 0
-              ) / approvedEvaluations.length
+              ) / filteredApprovedEvaluations.length
             ).toFixed(2)
           )
         : 0,
     overrideRate:
-      approvedEvaluations.length > 0
+      filteredApprovedEvaluations.length > 0
         ? Number(
             (
-              approvedEvaluations.filter((row) => row.hasTeacherOverride).length /
-              approvedEvaluations.length
+              filteredApprovedEvaluations.filter((row) => row.hasTeacherOverride).length /
+              filteredApprovedEvaluations.length
             ).toFixed(2)
           )
         : 0,
     averageScoreDelta:
-      approvedEvaluations.filter((row) => row.scoreDelta !== null).length > 0
+      filteredApprovedEvaluations.filter((row) => row.scoreDelta !== null).length > 0
         ? Number(
             (
-              approvedEvaluations.reduce((sum, row) => sum + (row.scoreDelta ?? 0), 0) /
-              approvedEvaluations.filter((row) => row.scoreDelta !== null).length
+              filteredApprovedEvaluations.reduce((sum, row) => sum + (row.scoreDelta ?? 0), 0) /
+              filteredApprovedEvaluations.filter((row) => row.scoreDelta !== null).length
             ).toFixed(2)
           )
         : 0
@@ -856,9 +892,9 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
       endDate: params.endDate?.toISOString() ?? null
     },
     summary: {
-      totalExams: exams.length,
+      totalExams: filteredExams.length,
       totalSubmissions: submissionsCount,
-      approvedEvaluations: approvedEvaluations.length,
+      approvedEvaluations: filteredApprovedEvaluations.length,
       averagePercentage: evaluationQuality.averagePercentage,
       activeTeachers: teacherActivity.length
     },
@@ -878,7 +914,10 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
       generatedAt,
       filters: {
         startDate: params.startDate?.toISOString() ?? null,
-        endDate: params.endDate?.toISOString() ?? null
+        endDate: params.endDate?.toISOString() ?? null,
+        subject: params.subject ?? null,
+        classLevel: params.classLevel ?? null,
+        difficulty: params.difficulty ?? null
       },
       sections: [
         {
@@ -886,9 +925,9 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
           title: "Usage snapshot",
           type: "metrics",
           metrics: [
-            { label: "Total exams", value: exams.length },
+            { label: "Total exams", value: filteredExams.length },
             { label: "Total submissions", value: submissionsCount },
-            { label: "Approved evaluations", value: approvedEvaluations.length },
+            { label: "Approved evaluations", value: filteredApprovedEvaluations.length },
             { label: "Average %", value: evaluationQuality.averagePercentage }
           ]
         },
