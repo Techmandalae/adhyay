@@ -27,6 +27,7 @@ const envSchema = z
   UPLOAD_DIR: z.string().default("uploads"),
   UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
   OPENAI_API_KEY: z.string().min(1),
+  CLOUDINARY_URL: optionalString,
   AWS_REGION: optionalString,
   AWS_ACCESS_KEY_ID: optionalString,
   AWS_SECRET_ACCESS_KEY: optionalString,

@@ -1,10 +1,8 @@
 import { Router } from "express";
 import crypto from "crypto";
-import fs from "fs";
 import path from "path";
 import multer from "multer";
 import bcrypt from "bcrypt";
-import AWS from "aws-sdk";
 import { Readable } from "stream";
 import XLSX from "xlsx";
 import { z } from "zod";
@@ -132,58 +130,47 @@ const STREAM_SUBJECTS: Record<string, string[]> = {
 
 const COMMON_SUBJECTS = ["Mathematics", "Science", "Social Science", "English", "Hindi"];
 const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const cloudinary = require("cloudinary").v2 as {
+  config: (options: { cloudinary_url: string }) => void;
+  uploader: {
+    upload_stream: (
+      options: { folder: string; resource_type: "image"; public_id?: string },
+      callback: (error: unknown, result?: { secure_url?: string }) => void
+    ) => NodeJS.WritableStream;
+  };
+};
 
-function getLogoExtension(mimeType: string, originalName: string) {
-  return (
-    {
-      "image/png": ".png",
-      "image/jpeg": ".jpg",
-      "image/webp": ".webp"
-    }[mimeType] ??
-    path.extname(originalName || "").toLowerCase() ??
-    ".png"
-  );
-}
-
-function buildLogoS3Client() {
-  if (!env.AWS_REGION || !env.AWS_S3_BUCKET) {
+async function uploadLogoBuffer(file: { buffer: Buffer }) {
+  if (!env.CLOUDINARY_URL) {
     throw new HttpError(500, "Logo storage is not configured");
   }
 
-  return new AWS.S3({
-    region: env.AWS_REGION,
-    ...(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
-      ? {
-          credentials: {
-            accessKeyId: env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: env.AWS_SECRET_ACCESS_KEY
-          }
+  cloudinary.config({ cloudinary_url: env.CLOUDINARY_URL });
+
+  return new Promise<string>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "logos",
+        resource_type: "image",
+        public_id: `school-logo-${Date.now()}-${crypto.randomUUID()}`
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
         }
-      : {})
+
+        if (!result?.secure_url) {
+          reject(new HttpError(500, "Logo upload failed"));
+          return;
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    stream.end(file.buffer);
   });
-}
-
-async function uploadLogoBuffer(
-  file: { buffer: Buffer; mimetype: string; originalname: string }
-) {
-  const s3 = buildLogoS3Client();
-  const keyPrefix = env.AWS_S3_LOGO_PREFIX?.trim().replace(/^\/+|\/+$/g, "") || "logos";
-  const key = `${keyPrefix}/school-logo-${Date.now()}-${crypto.randomUUID()}${getLogoExtension(
-    file.mimetype,
-    file.originalname
-  )}`;
-
-  const result = await s3
-    .upload({
-      Bucket: env.AWS_S3_BUCKET!,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-      CacheControl: "public, max-age=31536000, immutable"
-    })
-    .promise();
-
-  return result.Location;
 }
 
 function getClassLevel(name: string): number | null {
@@ -1391,9 +1378,7 @@ adminRouter.post(
         return res.status(400).json({ error: "Only PNG, JPEG, and WEBP logos are allowed" });
       }
       const uploadedUrl = await uploadLogoBuffer({
-        buffer: file.buffer,
-        mimetype: file.mimetype,
-        originalname: file.originalname
+        buffer: file.buffer
       });
       const updated = await prisma.school.update({
         where: { id: admin.schoolId },

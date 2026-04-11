@@ -43,7 +43,8 @@ import {
   getFallbackClassIdFromOption,
   isValidAcademicSubject,
   normalizeSubjectsResponse,
-  normalizeTeacherCatalog
+  normalizeTeacherCatalog,
+  sortAcademicClassOptions
 } from "@/lib/catalog";
 import { buildTeacherOverrideResult, getEvaluationBreakdown } from "@/lib/evaluation";
 import { summarizeNotifications } from "@/lib/notifications";
@@ -61,6 +62,7 @@ import type {
   ExamTemplateSection
 } from "@/types/exam";
 import type { EvaluationDetail, EvaluationResult, EvaluationSummary } from "@/types/evaluation";
+import type { EvaluationBreakdownItem } from "@/types/evaluation";
 
 type AsyncState<T> = {
   status: "idle" | "loading" | "error" | "success";
@@ -115,6 +117,7 @@ export default function TeacherDashboard() {
   });
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewScore, setReviewScore] = useState<string>("");
+  const [reviewBreakdownState, setReviewBreakdownState] = useState<EvaluationBreakdownItem[]>([]);
   const [reviewStatus, setReviewStatus] = useState<AsyncState<EvaluationDetail>>({
     status: "idle",
     data: null
@@ -244,7 +247,7 @@ export default function TeacherDashboard() {
         if (user?.schoolId && !user.isIndependentTeacher) {
           const response = await getAcademicClasses(token);
           if (!isActive) return;
-          setClassOptions(response.items);
+          setClassOptions(sortAcademicClassOptions(response.items));
         } else {
           const response = await getTeacherCatalog(token);
           if (!isActive) return;
@@ -709,6 +712,7 @@ export default function TeacherDashboard() {
       setSelectedEvaluation({ status: "success", data: detail });
       setReviewNotes(detail.result?.summary ?? "");
       setReviewScore(detail.score !== null ? String(detail.score) : "");
+      setReviewBreakdownState(getEvaluationBreakdown(detail.teacherResult ?? detail.result));
     } catch (error) {
       setSelectedEvaluation({
         status: "error",
@@ -719,13 +723,21 @@ export default function TeacherDashboard() {
   };
 
   const reviewedResult = useMemo<EvaluationResult | undefined>(() => {
-    return buildTeacherOverrideResult(selectedEvaluation.data?.result, reviewScore, reviewNotes);
-  }, [reviewNotes, reviewScore, selectedEvaluation.data?.result]);
+    return buildTeacherOverrideResult(
+      selectedEvaluation.data?.teacherResult ?? selectedEvaluation.data?.result,
+      reviewScore,
+      reviewNotes,
+      reviewBreakdownState
+    );
+  }, [
+    reviewNotes,
+    reviewScore,
+    reviewBreakdownState,
+    selectedEvaluation.data?.result,
+    selectedEvaluation.data?.teacherResult
+  ]);
 
-  const reviewBreakdown = useMemo(
-    () => getEvaluationBreakdown(selectedEvaluation.data?.result),
-    [selectedEvaluation.data?.result]
-  );
+  const reviewBreakdown = reviewBreakdownState;
 
   const handleReview = async (status: "APPROVED" | "REJECTED") => {
     if (!token || !selectedEvaluation.data) return;
@@ -747,6 +759,20 @@ export default function TeacherDashboard() {
         error: error instanceof Error ? error.message : "Failed to update evaluation"
       });
     }
+  };
+
+  const handleReviewBreakdownScoreChange = (questionNumber: number, value: string) => {
+    const nextScore = Number(value);
+    setReviewBreakdownState((current) =>
+      current.map((item) =>
+        item.questionNumber === questionNumber
+          ? {
+              ...item,
+              score: Number.isFinite(nextScore) ? nextScore : item.score
+            }
+          : item
+      )
+    );
   };
 
   const handleLoadAnalytics = async () => {
@@ -1264,12 +1290,23 @@ export default function TeacherDashboard() {
                         <p className="font-medium">Q{item.questionNumber}</p>
                         <p className="mt-1 text-xs text-foreground">{item.question}</p>
                         <p className="mt-1 text-xs text-ink-soft">
+                          Student answer: {item.studentAnswer}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Correct answer: {item.correctAnswer}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-soft">
                           Score: {item.score} / {item.maxScore}
                         </p>
                         <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
-                        <p className="mt-1 text-xs text-ink-soft">
-                          Detected answer: {item.detectedAnswer}
-                        </p>
+                        <Input
+                          label={`Teacher score for Q${item.questionNumber}`}
+                          type="number"
+                          value={String(item.score)}
+                          onChange={(event) =>
+                            handleReviewBreakdownScoreChange(item.questionNumber, event.target.value)
+                          }
+                        />
                       </div>
                     ))}
                     {reviewBreakdown.length === 0 ? (

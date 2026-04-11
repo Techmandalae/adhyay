@@ -118,13 +118,16 @@ export default function StudentResultsPage() {
                       <div key={item.questionNumber} className="rounded-2xl border border-border p-3">
                         <p className="font-medium">Q{item.questionNumber}</p>
                         <p className="mt-1 text-xs text-foreground">{item.question}</p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Your answer: {item.studentAnswer}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Expected answer: {item.correctAnswer}
+                        </p>
                         <p className="text-xs text-ink-soft">
                           Score: {item.score} / {item.maxScore}
                         </p>
                         <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
-                        <p className="mt-1 text-xs text-ink-soft">
-                          Detected answer: {item.detectedAnswer}
-                        </p>
                       </div>
                     ))}
                     {feedbackBreakdown.length === 0 ? (

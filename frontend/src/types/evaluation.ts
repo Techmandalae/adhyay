@@ -11,6 +11,8 @@ export interface EvaluationAuthFlags {
 export interface EvaluationQuestionFeedback {
   questionNumber: number;
   question?: string;
+  studentAnswer?: string;
+  correctAnswer?: string;
   score: number;
   maxScore: number;
   reason?: string;
@@ -21,6 +23,8 @@ export interface EvaluationQuestionFeedback {
 export interface EvaluationBreakdownItem {
   questionNumber: number;
   question: string;
+  studentAnswer: string;
+  correctAnswer: string;
   score: number;
   maxScore: number;
   reason: string;

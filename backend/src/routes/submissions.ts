@@ -17,8 +17,8 @@ import {
 } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
 import {
-  evaluateAnswerSheet,
   evaluateStructuredAnswers,
+  evaluateRawTextAnswers,
   evaluationResultSchema,
   normalizeEvaluation
 } from "../services/ai.evaluation.service";
@@ -290,6 +290,37 @@ function parseExamQuestions(payload: unknown): ExamQuestion[] {
   return parsedQuestions.success ? (parsedQuestions.data as ExamQuestion[]) : [];
 }
 
+function getCorrectAnswer(question: ExamQuestion) {
+  if (typeof question.answerIndex === "number" && question.choices[question.answerIndex]) {
+    return question.choices[question.answerIndex];
+  }
+  if (typeof question.explanation === "string" && question.explanation.trim().length > 0) {
+    return question.explanation.trim();
+  }
+  return "Not available";
+}
+
+function buildStudentAnswerMap(params: {
+  questions: ExamQuestion[];
+  structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
+  rawTextAnswer?: string;
+}) {
+  const structuredMap = new Map(
+    (params.structuredAnswers ?? []).map((entry) => [entry.questionNumber, entry.answer.trim()] as const)
+  );
+  const parsedRawAnswers = params.rawTextAnswer ? parseRawTextAnswers(params.rawTextAnswer) : [];
+  const rawMap = new Map(parsedRawAnswers.map((entry) => [entry.questionNumber, entry.answer] as const));
+
+  return new Map(
+    params.questions.map((question) => [
+      question.number,
+      structuredMap.get(question.number) ??
+        rawMap.get(question.number) ??
+        "Not clearly extracted"
+    ] as const)
+  );
+}
+
 function buildManualReviewTemplate(questions: ExamQuestion[]): EvaluationResult | null {
   if (questions.length === 0) {
     return null;
@@ -309,6 +340,8 @@ function buildManualReviewTemplate(questions: ExamQuestion[]): EvaluationResult 
       breakdown: questions.map((question) => ({
         questionNumber: question.number,
         question: question.prompt,
+        studentAnswer: "Not clearly extracted",
+        correctAnswer: getCorrectAnswer(question),
         score: 0,
         maxScore: 1,
         reason: "Manual review pending.",
@@ -317,6 +350,8 @@ function buildManualReviewTemplate(questions: ExamQuestion[]): EvaluationResult 
       perQuestion: questions.map((question) => ({
         questionNumber: question.number,
         question: question.prompt,
+        studentAnswer: "Not clearly extracted",
+        correctAnswer: getCorrectAnswer(question),
         score: 0,
         maxScore: 1,
         reason: "Manual review pending.",
@@ -332,15 +367,91 @@ function buildManualReviewTemplate(questions: ExamQuestion[]): EvaluationResult 
   );
 }
 
-async function resolveEvaluationOrNull(
+function buildAiUnavailableEvaluation(params: {
+  questions: ExamQuestion[];
+  structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
+  rawTextAnswer?: string;
+  reason: string;
+}) {
+  const studentAnswerMap = buildStudentAnswerMap({
+    questions: params.questions,
+    ...(params.structuredAnswers ? { structuredAnswers: params.structuredAnswers } : {}),
+    ...(params.rawTextAnswer ? { rawTextAnswer: params.rawTextAnswer } : {})
+  });
+
+  return normalizeEvaluation(
+    {
+      totalScore: 0,
+      overallScore: 0,
+      maxScore: params.questions.length,
+      summary: "AI unavailable. Teacher review required.",
+      authenticity: {
+        handwritingLikely: false,
+        aiGeneratedLikelihood: 0,
+        notes: params.reason
+      },
+      breakdown: params.questions.map((question) => ({
+        questionNumber: question.number,
+        question: question.prompt,
+        studentAnswer: studentAnswerMap.get(question.number) ?? "Not clearly extracted",
+        correctAnswer: getCorrectAnswer(question),
+        score: 0,
+        maxScore: 1,
+        reason: "AI unavailable. Teacher review required.",
+        detectedAnswer: studentAnswerMap.get(question.number) ?? "Not clearly extracted"
+      })),
+      perQuestion: params.questions.map((question) => ({
+        questionNumber: question.number,
+        question: question.prompt,
+        studentAnswer: studentAnswerMap.get(question.number) ?? "Not clearly extracted",
+        correctAnswer: getCorrectAnswer(question),
+        score: 0,
+        maxScore: 1,
+        reason: "AI unavailable. Teacher review required.",
+        remarks: "AI unavailable. Teacher review required.",
+        detectedAnswer: studentAnswerMap.get(question.number) ?? "Not clearly extracted"
+      })),
+      topicAnalysis: {
+        strengths: [],
+        weaknesses: ["AI unavailable"]
+      }
+    },
+    params.questions
+  );
+}
+
+function isAiUnavailableEvaluation(result: EvaluationResult | null | undefined) {
+  return Boolean(
+    result &&
+      (result.summary.toLowerCase().includes("ai unavailable") ||
+        result.authenticity.notes.toLowerCase().includes("ai unavailable"))
+  );
+}
+
+async function resolveEvaluationResult(
   label: string,
-  task: () => Promise<EvaluationResult>
+  task: () => Promise<EvaluationResult>,
+  fallbackParams: {
+    questions: ExamQuestion[];
+    structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
+    rawTextAnswer?: string;
+  }
 ) {
   try {
-    return await task();
+    return {
+      evaluation: await task(),
+      aiAvailable: true
+    } as const;
   } catch (error) {
-    console.error(`[submissions] ${label} failed; saving submission without AI evaluation`, error);
-    return null;
+    const reason = error instanceof Error ? error.message : "AI evaluation failed";
+    console.error(`[submissions] ${label} failed; saving submission with explicit AI unavailable state`, error);
+    return {
+      evaluation: buildAiUnavailableEvaluation({
+        ...fallbackParams,
+        reason
+      }),
+      aiAvailable: false
+    } as const;
   }
 }
 
@@ -354,7 +465,8 @@ async function createSubmissionEvaluation(params: {
   rawTextAnswer?: string;
   extractedText?: string;
   timeTakenSeconds?: number;
-  evaluation: EvaluationResult | null;
+  evaluation: EvaluationResult;
+  aiAvailable: boolean;
 }) {
   const createdSubmission = await prisma.examSubmission.create({
     data: {
@@ -389,13 +501,9 @@ async function createSubmissionEvaluation(params: {
         studentId: params.studentId,
         schoolId: params.schoolId,
         status: "PENDING",
-        ...(params.evaluation
-          ? {
-              aiScore: params.evaluation.totalScore,
-              aiResult: toPrismaJson(params.evaluation),
-              aiFlags: toPrismaJson(params.evaluation.authenticity)
-            }
-          : {})
+        ...(params.aiAvailable ? { aiScore: params.evaluation.totalScore } : {}),
+        aiResult: toPrismaJson(params.evaluation),
+        aiFlags: toPrismaJson(params.evaluation.authenticity)
       }
     });
 
@@ -514,14 +622,40 @@ submissionsRouter.post(
         }
       }
 
-      let evaluation: EvaluationResult | null = null;
+      let extractedText: string | undefined;
+      let evaluationResult:
+        | {
+            evaluation: EvaluationResult;
+            aiAvailable: boolean;
+          }
+        | undefined;
       if (file) {
-        evaluation = await resolveEvaluationOrNull("file_evaluation", () =>
-          evaluateAnswerSheet(file.path, file.mimetype, questions)
+        extractedText = await extractSubmissionText(file);
+        evaluationResult = await resolveEvaluationResult(
+          "file_evaluation",
+          () => evaluateRawTextAnswers(extractedText ?? "", questions),
+          {
+            questions,
+            rawTextAnswer: extractedText
+          }
         );
       } else if (structuredAnswers) {
-        evaluation = await resolveEvaluationOrNull("structured_evaluation", () =>
-          evaluateStructuredAnswers(structuredAnswers, questions)
+        evaluationResult = await resolveEvaluationResult(
+          "structured_evaluation",
+          () => evaluateStructuredAnswers(structuredAnswers, questions),
+          {
+            questions,
+            structuredAnswers
+          }
+        );
+      } else if (rawTextAnswer) {
+        evaluationResult = await resolveEvaluationResult(
+          "raw_text_evaluation",
+          () => evaluateRawTextAnswers(rawTextAnswer, questions),
+          {
+            questions,
+            rawTextAnswer
+          }
         );
       }
 
@@ -532,10 +666,12 @@ submissionsRouter.post(
         ...(file ? { file } : {}),
         ...(structuredAnswers ? { structuredAnswers } : {}),
         ...(rawTextAnswer ? { rawTextAnswer } : {}),
+        ...(extractedText ? { extractedText } : {}),
         ...(parsed.data.timeTakenSeconds !== undefined
           ? { timeTakenSeconds: parsed.data.timeTakenSeconds }
           : {}),
-        evaluation
+        evaluation: evaluationResult?.evaluation ?? buildManualReviewTemplate(questions)!,
+        aiAvailable: evaluationResult?.aiAvailable ?? false
       });
 
       const meta = (exam.meta ?? {}) as Record<string, unknown>;
@@ -678,8 +814,18 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
         ? structuredAnswers
         : typedAnswers || extractedText;
 
-    const evaluation = await resolveEvaluationOrNull("submit_evaluation", () =>
-      evaluateAnswers(parsed.data.examId, evaluationSource)
+    const questions = parseExamQuestions((await prisma.exam.findUnique({
+      where: { id: parsed.data.examId },
+      select: { examPaper: { select: { payload: true } } }
+    }))?.examPaper?.payload);
+    const evaluationResult = await resolveEvaluationResult(
+      "submit_evaluation",
+      () => evaluateAnswers(parsed.data.examId, evaluationSource),
+      {
+        questions,
+        ...(structuredAnswers ? { structuredAnswers } : {}),
+        ...((typedAnswers || extractedText) ? { rawTextAnswer: typedAnswers || extractedText } : {})
+      }
     );
     const [submission, savedEvaluation] = await createSubmissionEvaluation({
       examId: parsed.data.examId,
@@ -689,15 +835,16 @@ submissionsRouter.post("/submit", requireAuth, requireStudent, upload.single("fi
       ...(structuredAnswers ? { structuredAnswers } : {}),
       ...(typedAnswers ? { rawTextAnswer: typedAnswers } : {}),
       ...(extractedText ? { extractedText } : {}),
-      evaluation
+      evaluation: evaluationResult.evaluation,
+      aiAvailable: evaluationResult.aiAvailable
     });
 
     res.json({
-      message: evaluation ? "Submission evaluated" : "Submission received",
+      message: evaluationResult.aiAvailable ? "Submission evaluated" : "Submission received",
       submissionId: submission.id,
       evaluationId: savedEvaluation.id,
       status: savedEvaluation.status,
-      ...(evaluation ? { score: evaluation.totalScore } : {})
+      ...(evaluationResult.aiAvailable ? { score: evaluationResult.evaluation.totalScore } : {})
     });
   } catch (error) {
     next(error);
@@ -772,8 +919,17 @@ submissionsRouter.post(
       }
 
       const extractedText = await extractSubmissionText(file);
-      const evaluation = await resolveEvaluationOrNull("answer_upload_evaluation", () =>
-        evaluateAnswers(parsed.data.examId, extractedText)
+      const questions = parseExamQuestions((await prisma.exam.findUnique({
+        where: { id: parsed.data.examId },
+        select: { examPaper: { select: { payload: true } } }
+      }))?.examPaper?.payload);
+      const evaluationResult = await resolveEvaluationResult(
+        "answer_upload_evaluation",
+        () => evaluateAnswers(parsed.data.examId, extractedText),
+        {
+          questions,
+          rawTextAnswer: extractedText
+        }
       );
       const fileUrl = buildSubmissionFileUrl(file.path);
 
@@ -784,16 +940,17 @@ submissionsRouter.post(
         file,
         filePathOverride: fileUrl,
         extractedText,
-        evaluation
+        evaluation: evaluationResult.evaluation,
+        aiAvailable: evaluationResult.aiAvailable
       });
 
       res.json({
         success: true,
-        message: evaluation ? "Answer sheet uploaded" : "Answer sheet uploaded and queued for review",
+        message: evaluationResult.aiAvailable ? "Answer sheet uploaded" : "Answer sheet uploaded and queued for review",
         submissionId: submission.id,
         evaluationId: savedEvaluation.id,
         status: savedEvaluation.status,
-        ...(evaluation ? { score: evaluation.totalScore } : {}),
+        ...(evaluationResult.aiAvailable ? { score: evaluationResult.evaluation.totalScore } : {}),
         fileUrl
       });
     } catch (error) {
@@ -855,7 +1012,10 @@ submissionsRouter.get(
             submissionId: evaluation.submissionId,
             status: evaluation.status,
             aiScore: evaluation.aiScore,
-            reviewMode: evaluation.aiResult ? "AI_ASSISTED" : "MANUAL",
+            reviewMode:
+              evaluation.aiResult && !isAiUnavailableEvaluation(evaluation.aiResult as unknown as EvaluationResult)
+                ? "AI_ASSISTED"
+                : "MANUAL",
             studentName: evaluation.student.fullName || null,
             examName: typeof meta.subject === "string" ? meta.subject : "Exam",
             createdAt: evaluation.createdAt,
@@ -1010,6 +1170,8 @@ submissionsRouter.get(
         ? buildManualReviewTemplate(questions)
         : null;
       const result = normalizedTeacherResult ?? normalizedAiResult ?? manualTemplate;
+      const manualReviewRequired =
+        !normalizedAiResult || isAiUnavailableEvaluation(normalizedAiResult);
 
       return res.status(200).json({
         id: evaluation.id,
@@ -1031,8 +1193,8 @@ submissionsRouter.get(
         teacherResult: normalizedTeacherResult,
         answerFileName: evaluation.submission.fileName,
         extractedText: evaluation.submission.extractedText ?? evaluation.submission.rawTextAnswer,
-        manualReviewRequired: !normalizedAiResult,
-        reviewMode: normalizedAiResult ? "AI_ASSISTED" : "MANUAL",
+        manualReviewRequired,
+        reviewMode: manualReviewRequired ? "MANUAL" : "AI_ASSISTED",
         reviewedBy: evaluation.reviewedBy,
         reviewedAt: evaluation.reviewedAt,
         rejectionReason: evaluation.rejectionReason,

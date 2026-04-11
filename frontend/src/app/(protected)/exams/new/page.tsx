@@ -28,7 +28,8 @@ import {
   getFallbackClassIdFromOption,
   isValidAcademicSubject,
   normalizeSubjectsResponse,
-  normalizeTeacherCatalog
+  normalizeTeacherCatalog,
+  sortAcademicClassOptions
 } from "@/lib/catalog";
 import type { AcademicBook, AcademicChapter, AcademicClass, AcademicSubject } from "@/types/academic";
 import type { GenerateExamInput } from "@/types/exam";
@@ -96,7 +97,7 @@ export default function NewExamPage() {
           if (!isActive) {
             return;
           }
-          setClassOptions(catalogResponse.items);
+          setClassOptions(sortAcademicClassOptions(catalogResponse.items));
         } else {
           const catalogResponse = await getTeacherCatalog(token);
           if (!isActive) {

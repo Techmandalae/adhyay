@@ -101,6 +101,8 @@ const LOW_QUALITY_QUESTION_PATTERNS = [
   "define the concept"
 ];
 
+const INVALID_QUESTION_TERMS = ["concept", "example", "application"];
+
 function buildSectionPlan(templateSections: ExamTemplateSection[]) {
   const sections: SectionPlan[] = [];
   let questionNumber = 1;
@@ -515,9 +517,9 @@ export function buildExamPrompt(input: {
       : "No additional NCERT exercise guidance provided.";
 
   return `
-You are an expert CBSE paper setter.
+You are an expert school exam paper setter.
 
-Generate a HIGH-QUALITY exam paper strictly following NCERT patterns.
+Generate real exam questions, not templates or placeholders.
 
 Class: ${className}
 Subject: ${input.subject}
@@ -548,7 +550,7 @@ ${classLevelGuidance}
 Rules
 
 1. Ensure questions strictly belong to the provided chapter titles.
-2. Follow CBSE exam style.
+2. Follow CBSE exam style and use real academic content from the selected class, subject, and chapters.
 3. Match difficulty to the class level.
 4. Use the exact section order and exact question count from the exam structure.
 5. Use the additional chapter context when it is available, but do not invent facts outside the listed chapters.
@@ -557,23 +559,24 @@ Rules
    - "लेखक ने क्या कहा है"
    - "इस अध्याय में क्या बताया गया है"
 7. Questions must test understanding, not vague summary recall.
-8. For MCQ sections, provide exactly ${DEFAULT_CHOICES_PER_QUESTION} options and set correctAnswer to one of those option texts.
-9. For fill_in_the_blanks sections, write real blanks using "____", set options to [], and provide the exact fill word or phrase in correctAnswer.
-10. For non-MCQ and non-fill_in_the_blanks sections, set options to [] and give a concise model answer in correctAnswer.
-11. Do not create fill in the blanks unless the section plan explicitly includes a fill_in_the_blanks section.
-12. Set chapter to one of the provided chapter titles exactly.
-13. Keep marks aligned with the requested section marks.
-14. Do NOT repeat questions.
-15. Do NOT mention chapter names inside the question body unless academically necessary.
-16. Do NOT generate generic placeholders, template fillers, or vague prompts about "concepts".
-17. Questions must look like real CBSE or strong school-exam questions based on NCERT exercise patterns.
-18. Include variety across MCQ, short answer, long answer, case-based, assertion-reason, grammar, or comprehension as relevant to the subject and section plan.
-19. Keep formatting clean and readable.
-20. Return only valid UTF-8 plain text characters.
-21. Ensure MCQ options A, B, C, and D are plain text without bullets or special symbols.
-22. Avoid malformed characters, encoding artifacts, decorative characters, or broken punctuation.
-23. Ensure logical progression from easy to moderate to challenging within the paper.
-24. Return valid JSON only. Do not add markdown fences or commentary.
+8. Include a realistic mix of MCQ, short-answer, and long-answer questions whenever the section plan allows it.
+9. For MCQ sections, provide exactly ${DEFAULT_CHOICES_PER_QUESTION} options and set correctAnswer to one of those option texts.
+10. For fill_in_the_blanks sections, write real blanks using "____", set options to [], and provide the exact fill word or phrase in correctAnswer.
+11. For non-MCQ and non-fill_in_the_blanks sections, set options to [] and give a concise model answer in correctAnswer.
+12. Do not create fill in the blanks unless the section plan explicitly includes a fill_in_the_blanks section.
+13. Set chapter to one of the provided chapter titles exactly.
+14. Keep marks aligned with the requested section marks.
+15. Do NOT repeat questions.
+16. Do NOT mention chapter names inside the question body unless academically necessary.
+17. Do NOT output placeholders or filler wording like "concept", "example", "application", or "write about the chapter".
+18. Questions must look like real CBSE or strong school-exam questions based on NCERT exercise patterns.
+19. Include variety across MCQ, short answer, long answer, case-based, assertion-reason, grammar, or comprehension as relevant to the subject and section plan.
+20. Keep formatting clean and readable.
+21. Return only valid UTF-8 plain text characters.
+22. Ensure MCQ options A, B, C, and D are plain text without bullets or special symbols.
+23. Avoid malformed characters, encoding artifacts, decorative characters, or broken punctuation.
+24. Ensure logical progression from easy to moderate to challenging within the paper.
+25. Return valid JSON only. Do not add markdown fences or commentary.
 
 Return valid JSON only:
 
@@ -706,6 +709,26 @@ function hasLowQualityQuestionText(questions: Array<{ question?: string; prompt?
     }
 
     return LOW_QUALITY_QUESTION_PATTERNS.some((pattern) => normalized.includes(pattern));
+  });
+}
+
+function hasInvalidQuestionTerms(questions: Array<{ question?: string; prompt?: string }>) {
+  return questions.some((question) => {
+    const text =
+      typeof question.question === "string"
+        ? question.question
+        : typeof question.prompt === "string"
+          ? question.prompt
+          : "";
+
+    const normalized = text.trim().toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+
+    return INVALID_QUESTION_TERMS.some((term) =>
+      new RegExp(`\\b${term}\\b`, "i").test(normalized)
+    );
   });
 }
 
@@ -862,10 +885,10 @@ function createFallbackQuestion(
 ): ExamQuestion {
   if (section.type === "mcq") {
     const choices = [
-      `${chapter} concept`,
-      `${chapter} example`,
-      `${subject} application`,
-      `${difficulty} reasoning`
+      "The statement that best matches the NCERT explanation",
+      "The statement that contradicts the taught idea",
+      "The statement based on an incorrect interpretation",
+      "The statement unrelated to the topic"
     ];
 
     return {
@@ -874,7 +897,7 @@ function createFallbackQuestion(
       sectionNumber: section.sectionNumber,
       chapter,
       type: "mcq",
-      prompt: `Which statement best explains a key idea from ${chapter} in ${subject}?`,
+      prompt: `Which statement is most accurate for the topic taught in ${subject}?`,
       choices,
       ...(includeAnswerKey
         ? {
@@ -886,9 +909,9 @@ function createFallbackQuestion(
   }
 
   const promptByType: Record<string, string> = {
-    very_short: `Define one important concept from ${chapter} and give one relevant example.`,
-    short: `Explain the main ideas from ${chapter} in ${subject} with a clear example.`,
-    long: `Write a detailed answer on ${chapter} in ${subject}, including explanation, reasoning, and examples.`,
+    very_short: `Write a brief answer based on one important point from ${chapter} in ${subject}.`,
+    short: `Explain an important idea from ${chapter} in ${subject} with proper detail.`,
+    long: `Write a detailed answer from ${chapter} in ${subject} with clear reasoning and supporting points.`,
     fill_in_the_blanks: `Complete the statement using the correct term from ${chapter}.`
   };
 
@@ -902,7 +925,7 @@ function createFallbackQuestion(
     choices: [],
     ...(includeAnswerKey
       ? {
-          explanation: `Model answer should cover the main concept, supporting explanation, and an example from ${chapter}.`
+          explanation: `Model answer should cover the key point, supporting explanation, and relevant details from ${chapter}.`
         }
       : {})
   };
@@ -1045,15 +1068,14 @@ export async function generateExam(
       throw new Error("OpenAI response did not match the expected exam schema.");
     }
 
-    if (content.includes("Chapter") || content.toLowerCase().includes("concept")) {
-      console.warn("Low-quality markers detected in AI response; continuing without regeneration");
-    }
-
     const containsBannedQuestion = schemaParsed.data.sections.some(
       (section) => validateQuestions(section.questions).length !== section.questions.length
     );
 
     if (containsBannedQuestion) {
+      if (attempt === 0) {
+        return attemptGeneration(1);
+      }
       throw new Error("OpenAI response contained low-quality meta questions.");
     }
 
@@ -1062,7 +1084,21 @@ export async function generateExam(
     );
 
     if (containsLowQualityQuestionText) {
-      console.warn("Generic low-quality question text detected; continuing without regeneration");
+      if (attempt === 0) {
+        return attemptGeneration(1);
+      }
+      throw new Error("OpenAI response contained low-quality question text.");
+    }
+
+    const containsInvalidQuestionTerms = schemaParsed.data.sections.some((section) =>
+      hasInvalidQuestionTerms(section.questions)
+    );
+
+    if (containsInvalidQuestionTerms) {
+      if (attempt === 0) {
+        return attemptGeneration(1);
+      }
+      throw new Error("OpenAI response contained placeholder question text.");
     }
 
     const usage = toUsage(response);

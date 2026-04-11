@@ -10,6 +10,8 @@ function normalizeBreakdownItem(
   return {
     questionNumber: item.questionNumber,
     question: item.question?.trim() || `Question ${item.questionNumber}`,
+    studentAnswer: item.studentAnswer?.trim() || "Not extracted",
+    correctAnswer: item.correctAnswer?.trim() || "Not available",
     score: typeof item.score === "number" ? item.score : 0,
     maxScore: typeof item.maxScore === "number" ? item.maxScore : 1,
     reason: item.reason?.trim() || "No reasoning available.",
@@ -21,6 +23,8 @@ function perQuestionToBreakdown(item: EvaluationQuestionFeedback): EvaluationBre
   return normalizeBreakdownItem({
     questionNumber: item.questionNumber,
     question: item.question,
+    studentAnswer: item.studentAnswer ?? item.detectedAnswer,
+    correctAnswer: item.correctAnswer,
     score: item.score,
     maxScore: item.maxScore,
     reason: item.reason ?? item.remarks,
@@ -47,18 +51,23 @@ export function getEvaluationBreakdown(result?: EvaluationResult | null): Evalua
 export function buildTeacherOverrideResult(
   base: EvaluationResult | null | undefined,
   teacherScoreText: string,
-  summaryText: string
+  summaryText: string,
+  overrideBreakdown?: EvaluationBreakdownItem[]
 ): EvaluationResult | undefined {
   if (!base) {
     return undefined;
   }
 
-  const breakdown = getEvaluationBreakdown(base);
+  const breakdown = (overrideBreakdown && overrideBreakdown.length > 0
+    ? overrideBreakdown
+    : getEvaluationBreakdown(base)
+  ).map(normalizeBreakdownItem);
   const overrideValue = Number(teacherScoreText);
+  const computedScore = breakdown.reduce((sum, item) => sum + item.score, 0);
   const totalScore =
     teacherScoreText.trim().length > 0 && Number.isFinite(overrideValue)
       ? overrideValue
-      : base.totalScore ?? base.overallScore;
+      : computedScore;
   const summary = summaryText.trim() || base.summary;
 
   return {
@@ -70,6 +79,8 @@ export function buildTeacherOverrideResult(
     perQuestion: breakdown.map((item) => ({
       questionNumber: item.questionNumber,
       question: item.question,
+      studentAnswer: item.studentAnswer,
+      correctAnswer: item.correctAnswer,
       score: item.score,
       maxScore: item.maxScore,
       reason: item.reason,

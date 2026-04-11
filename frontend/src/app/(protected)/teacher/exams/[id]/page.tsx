@@ -17,7 +17,7 @@ import {
   publishExam,
   updateAnswerKeyRelease
 } from "@/lib/api";
-import { getPublishableClassOptions } from "@/lib/catalog";
+import { getPublishableClassOptions, sortAcademicClassOptions } from "@/lib/catalog";
 import type { ExamDetailResponse } from "@/types/exam";
 import type { AcademicClass } from "@/types/academic";
 
@@ -96,11 +96,11 @@ export default function TeacherExamPreviewPage() {
     if (!token) return;
     let isActive = true;
     const loadClasses = async () => {
-      try {
-        const response = await getAcademicClasses(token);
-        if (!isActive) return;
-        setClasses(response.items);
-      } catch {
+        try {
+          const response = await getAcademicClasses(token);
+          if (!isActive) return;
+          setClasses(sortAcademicClassOptions(response.items));
+        } catch {
         if (!isActive) return;
         setClasses([]);
       }

@@ -17,12 +17,12 @@ import { Select } from "@/components/ui/Select";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import {
   getAcademicClasses,
-  getAcademicSubjects,
   getAdminAnalytics,
   getStudentAnalytics,
   getTeacherAnalytics
 } from "@/lib/api";
-import type { AcademicClass, AcademicSubject } from "@/types/academic";
+import { sortAcademicClassOptions } from "@/lib/catalog";
+import type { AcademicClass } from "@/types/academic";
 import type {
   AdminAnalyticsResponse,
   StudentAnalyticsResponse,
@@ -42,22 +42,6 @@ function compareClassOptions(left: AnalyticsClassOption, right: AnalyticsClassOp
   return left.label.localeCompare(right.label);
 }
 
-function dedupeSubjectOptions(subjects: AcademicSubject[]) {
-  const deduped = new Map<string, AcademicSubject>();
-
-  subjects.forEach((subject) => {
-    const key = subject.name.trim().toLowerCase();
-    if (!key || deduped.has(key)) {
-      return;
-    }
-    deduped.set(key, subject);
-  });
-
-  return Array.from(deduped.values()).sort((left, right) =>
-    left.name.localeCompare(right.name)
-  );
-}
-
 export default function ClassAnalyticsPage() {
   const { token, user } = useAuth();
   const [status, setStatus] = useState<{
@@ -67,14 +51,12 @@ export default function ClassAnalyticsPage() {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    subject: "",
     classId: ""
   });
   const [teacherData, setTeacherData] = useState<TeacherAnalyticsResponse | null>(null);
   const [studentData, setStudentData] = useState<StudentAnalyticsResponse | null>(null);
   const [adminData, setAdminData] = useState<AdminAnalyticsResponse | null>(null);
   const [classOptions, setClassOptions] = useState<AnalyticsClassOption[]>([]);
-  const [subjectOptions, setSubjectOptions] = useState<AcademicSubject[]>([]);
 
   const selectedClassOption = useMemo(
     () => classOptions.find((option) => option.classId === filters.classId) ?? null,
@@ -95,7 +77,7 @@ export default function ClassAnalyticsPage() {
         }
 
         const deduped = new Map<string, AnalyticsClassOption>();
-        response.items.forEach((item: AcademicClass) => {
+        sortAcademicClassOptions(response.items).forEach((item: AcademicClass) => {
           if (!item.classId || deduped.has(item.classId)) {
             return;
           }
@@ -121,52 +103,6 @@ export default function ClassAnalyticsPage() {
     };
   }, [token, user]);
 
-  useEffect(() => {
-    if (!token || !user) {
-      return;
-    }
-
-    let isActive = true;
-    const loadSubjects = async () => {
-      try {
-        const classId =
-          user.role === "STUDENT"
-            ? user.classId ?? ""
-            : filters.classId;
-
-        if (!classId) {
-          if (isActive) {
-            setSubjectOptions([]);
-          }
-          return;
-        }
-
-        const response = await getAcademicSubjects(token, classId);
-        if (!isActive) {
-          return;
-        }
-        const nextSubjects = dedupeSubjectOptions(response.items);
-        setSubjectOptions(nextSubjects);
-        setFilters((current) =>
-          current.subject && !nextSubjects.some((subject) => subject.name === current.subject)
-            ? { ...current, subject: "" }
-            : current
-        );
-      } catch {
-        if (!isActive) {
-          return;
-        }
-        setSubjectOptions([]);
-        setFilters((current) => (current.subject ? { ...current, subject: "" } : current));
-      }
-    };
-
-    void loadSubjects();
-    return () => {
-      isActive = false;
-    };
-  }, [token, user, filters.classId]);
-
   const handleLoad = async () => {
     if (!token || !user) {
       return;
@@ -178,7 +114,6 @@ export default function ClassAnalyticsPage() {
         const response = await getTeacherAnalytics(token, {
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
-          subject: filters.subject || undefined,
           classLevel: selectedClassOption?.classLevel
         });
         setTeacherData(response);
@@ -187,8 +122,7 @@ export default function ClassAnalyticsPage() {
       } else if (user.role === "STUDENT") {
         const response = await getStudentAnalytics(token, {
           startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined,
-          subject: filters.subject || undefined
+          endDate: filters.endDate || undefined
         });
         setStudentData(response);
         setTeacherData(null);
@@ -197,7 +131,6 @@ export default function ClassAnalyticsPage() {
         const response = await getAdminAnalytics(token, {
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
-          subject: filters.subject || undefined,
           classLevel: selectedClassOption?.classLevel
         });
         setAdminData(response);
@@ -220,10 +153,10 @@ export default function ClassAnalyticsPage() {
           <SectionHeader
             eyebrow="Class analytics"
             title="Visual performance overview"
-            subtitle="Use start date, end date, class, and an optional clean subject filter to spot volume and score trends quickly."
+            subtitle="Use start date, end date, and class to track exam volume and performance quickly."
           />
           <Card className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Input
                 label="Start date"
                 type="date"
@@ -243,8 +176,7 @@ export default function ClassAnalyticsPage() {
                   onChange={(event) =>
                     setFilters((current) => ({
                       ...current,
-                      classId: event.target.value,
-                      subject: ""
+                      classId: event.target.value
                     }))
                   }
                 >
@@ -256,19 +188,6 @@ export default function ClassAnalyticsPage() {
                   ))}
                 </Select>
               ) : null}
-              <Select
-                label="Subject"
-                value={filters.subject}
-                onChange={(event) => setFilters((current) => ({ ...current, subject: event.target.value }))}
-                disabled={user?.role !== "STUDENT" && !filters.classId}
-              >
-                <option value="">All subjects</option>
-                {subjectOptions.map((subject) => (
-                  <option key={subject.id} value={subject.name}>
-                    {subject.name}
-                  </option>
-                ))}
-              </Select>
             </div>
             <Button onClick={handleLoad} disabled={!token || status.state === "loading"}>
               {status.state === "loading" ? "Loading..." : "Refresh analytics"}

@@ -38,8 +38,35 @@ function compareClassNames(left: string, right: string) {
   return left.localeCompare(right);
 }
 
+function compareSectionNames(left: string, right: string) {
+  const normalizedLeft = left.trim();
+  const normalizedRight = right.trim();
+
+  if (/^[A-Z]$/i.test(normalizedLeft) && /^[A-Z]$/i.test(normalizedRight)) {
+    return normalizedLeft.localeCompare(normalizedRight);
+  }
+
+  return normalizedLeft.localeCompare(normalizedRight);
+}
+
+export function sortAcademicClassOptions(options: AcademicClass[]) {
+  return [...options].sort((left, right) => {
+    if (left.classLevel !== right.classLevel) {
+      return left.classLevel - right.classLevel;
+    }
+
+    const classNameComparison = compareClassNames(left.className, right.className);
+    if (classNameComparison !== 0) {
+      return classNameComparison;
+    }
+
+    return compareSectionNames(left.sectionName, right.sectionName);
+  });
+}
+
 export function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): AcademicClass[] {
-  return [...catalog]
+  return sortAcademicClassOptions(
+    [...catalog]
     .sort(
       (left, right) =>
         (left.classLevel ?? Number.MAX_SAFE_INTEGER) - (right.classLevel ?? Number.MAX_SAFE_INTEGER) ||
@@ -76,7 +103,8 @@ export function buildCatalogClassOptions(catalog: AcademicCatalogClass[]): Acade
         className: item.className
       };
     });
-  });
+  })
+  );
 }
 
 export function normalizeTeacherCatalog(

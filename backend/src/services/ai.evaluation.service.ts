@@ -1,4 +1,3 @@
-import fs from "fs/promises";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -7,7 +6,7 @@ import type { ExamQuestion } from "../types/exam";
 
 const MODEL_NAME = "gpt-4o-2024-11-20";
 const OPENAI_TIMEOUT_MS = 30000;
-const OPENAI_MAX_RETRIES = 2;
+const OPENAI_MAX_RETRIES = 1;
 const OPENAI_RETRY_BASE_MS = 500;
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
@@ -18,6 +17,24 @@ if (!OPENAI_KEY) {
 const openai = new OpenAI({
   apiKey: OPENAI_KEY,
   maxRetries: 0
+});
+
+const aiEvaluationResponseSchema = z.object({
+  totalScore: z.number().nonnegative(),
+  maxScore: z.number().positive(),
+  summary: z.string().min(1),
+  breakdown: z
+    .array(
+      z.object({
+        questionNumber: z.number().int().positive(),
+        question: z.string().min(1),
+        studentAnswer: z.string().min(1),
+        correctAnswer: z.string().min(1),
+        score: z.number().nonnegative(),
+        reason: z.string().min(1)
+      })
+    )
+    .min(1)
 });
 
 export const evaluationResultSchema = z.object({
@@ -35,6 +52,8 @@ export const evaluationResultSchema = z.object({
       z.object({
         questionNumber: z.number().int().positive(),
         question: z.string().min(1),
+        studentAnswer: z.string().min(1),
+        correctAnswer: z.string().min(1),
         score: z.number().nonnegative(),
         maxScore: z.number().positive(),
         reason: z.string().min(1),
@@ -47,6 +66,8 @@ export const evaluationResultSchema = z.object({
       z.object({
         questionNumber: z.number().int().positive(),
         question: z.string().min(1),
+        studentAnswer: z.string().min(1),
+        correctAnswer: z.string().min(1),
         score: z.number().nonnegative(),
         maxScore: z.number().positive(),
         reason: z.string().min(1),
@@ -71,57 +92,11 @@ function buildResponseSchema() {
   return {
     type: "object",
     additionalProperties: false,
-    required: [
-      "totalScore",
-      "overallScore",
-      "maxScore",
-      "summary",
-      "authenticity",
-      "breakdown",
-      "perQuestion",
-      "topicAnalysis"
-    ],
+    required: ["totalScore", "maxScore", "summary", "breakdown"],
     properties: {
       totalScore: { type: "number" },
-      overallScore: { type: "number" },
       maxScore: { type: "number" },
       summary: { type: "string" },
-      authenticity: {
-        type: "object",
-        additionalProperties: false,
-        required: ["handwritingLikely", "aiGeneratedLikelihood", "notes"],
-        properties: {
-          handwritingLikely: { type: "boolean" },
-          aiGeneratedLikelihood: { type: "number" },
-          notes: { type: "string" }
-        }
-      },
-      perQuestion: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: [
-            "questionNumber",
-            "question",
-            "score",
-            "maxScore",
-            "reason",
-            "remarks",
-            "detectedAnswer"
-          ],
-          properties: {
-            questionNumber: { type: "integer" },
-            question: { type: "string" },
-            score: { type: "number" },
-            maxScore: { type: "number" },
-            reason: { type: "string" },
-            remarks: { type: "string" },
-            detectedAnswer: { type: "string" }
-          }
-        }
-      },
       breakdown: {
         type: "array",
         minItems: 1,
@@ -131,122 +106,126 @@ function buildResponseSchema() {
           required: [
             "questionNumber",
             "question",
+            "studentAnswer",
+            "correctAnswer",
             "score",
-            "maxScore",
-            "reason",
-            "detectedAnswer"
+            "reason"
           ],
           properties: {
             questionNumber: { type: "integer" },
             question: { type: "string" },
+            studentAnswer: { type: "string" },
+            correctAnswer: { type: "string" },
             score: { type: "number" },
-            maxScore: { type: "number" },
-            reason: { type: "string" },
-            detectedAnswer: { type: "string" }
+            reason: { type: "string" }
           }
-        }
-      },
-      topicAnalysis: {
-        type: "object",
-        additionalProperties: false,
-        required: ["strengths", "weaknesses"],
-        properties: {
-          strengths: { type: "array", items: { type: "string" } },
-          weaknesses: { type: "array", items: { type: "string" } }
         }
       }
     }
   };
 }
 
-function buildSystemPrompt() {
-  return [
-    "You are an exam evaluator for handwritten student answer sheets.",
-    "Analyze handwriting authenticity, detect AI-generated content, and grade answers question-wise.",
-    "If handwriting is unclear, note uncertainty but still provide a best-effort evaluation.",
-    "Return JSON only that matches the provided schema. No markdown or extra text."
-  ].join(" ");
-}
-
 function buildStructuredSystemPrompt() {
   return [
-    "You are an exam evaluator for structured student answers.",
-    "Grade answers question-wise using the provided responses.",
-    "If an answer is missing or unclear, assign zero and note it in remarks.",
+    "You are a strict but fair school teacher evaluating structured student answers.",
+    "Grade each answer against the expected correct answer.",
+    "If an answer is missing or unclear, assign zero and explain why.",
     "Return JSON only that matches the provided schema. No markdown or extra text."
   ].join(" ");
 }
 
 function buildRawTextSystemPrompt() {
   return [
-    "You are a CBSE exam evaluator for typed or OCR-extracted student answers.",
-    "Grade answers question-wise using the extracted answer text.",
-    "If OCR is noisy or incomplete, make a conservative best-effort judgment and note uncertainty in remarks.",
+    "You are a strict but fair school teacher evaluating OCR-extracted or typed student answers.",
+    "Grade each answer against the expected correct answer.",
+    "If OCR is noisy or incomplete, make a conservative best-effort judgment and explain any uncertainty.",
     "Return JSON only that matches the provided schema. No markdown or extra text."
   ].join(" ");
 }
 
-function buildUserPrompt(questions: ExamQuestion[]) {
-  const questionLines = questions.map((q) => `Q${q.number}: ${q.prompt}`).join("\n");
-  return [
-    "Evaluate the student's answers to the following questions.",
-    "Each question is worth 1 mark unless the answer is missing/incorrect.",
-    "Set maxScore to the number of questions.",
-    "Return totalScore and overallScore as the same value.",
-    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer (use 'unreadable' if unclear).",
-    "Provide matching perQuestion remarks for every question.",
-    "Provide topic-wise strengths/weaknesses inferred from answers.",
-    "Questions:",
-    questionLines
-  ].join("\n");
+function getCorrectAnswer(question: ExamQuestion) {
+  if (typeof question.answerIndex === "number" && question.choices[question.answerIndex]) {
+    return question.choices[question.answerIndex];
+  }
+  if (typeof question.explanation === "string" && question.explanation.trim().length > 0) {
+    return question.explanation.trim();
+  }
+  return "Not available";
 }
 
-function buildStructuredUserPrompt(
+function parseRawTextAnswers(answerText: string) {
+  const answers = new Map<number, string>();
+  answerText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .forEach((line) => {
+      const match = line.match(/^(\d+)[\.\)]\s*(.+)$/);
+      if (!match) {
+        return;
+      }
+      const questionNumber = Number(match[1]);
+      const answer = match[2]?.trim();
+      if (Number.isFinite(questionNumber) && answer) {
+        answers.set(questionNumber, answer);
+      }
+    });
+
+  return answers;
+}
+
+function buildQuestionContextLines(
   questions: ExamQuestion[],
-  answers: Array<{ questionNumber: number; answer: string }>
+  options?: {
+    structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
+    rawAnswerText?: string;
+  }
 ) {
-  const questionLines = questions.map((q) => `Q${q.number}: ${q.prompt}`).join("\n");
-  const answerLines = answers
-    .map((entry) => `Q${entry.questionNumber}: ${entry.answer}`)
-    .join("\n");
-  return [
-    "Evaluate the student's answers to the following questions.",
-    "Each question is worth 1 mark unless the answer is missing/incorrect.",
-    "Set maxScore to the number of questions.",
-    "Return totalScore and overallScore as the same value.",
-    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer.",
-    "Provide matching perQuestion remarks for every question.",
-    "Provide topic-wise strengths/weaknesses inferred from answers.",
-    "Questions:",
-    questionLines,
-    "",
-    "Student answers:",
-    answerLines
-  ].join("\n");
+  const structuredAnswerMap = new Map(
+    (options?.structuredAnswers ?? []).map((entry) => [entry.questionNumber, entry.answer] as const)
+  );
+  const parsedRawAnswers =
+    options?.rawAnswerText && options.rawAnswerText.trim().length > 0
+      ? parseRawTextAnswers(options.rawAnswerText)
+      : new Map<number, string>();
+
+  return questions
+    .map((question) => {
+      const studentAnswer =
+        structuredAnswerMap.get(question.number)?.trim() ||
+        parsedRawAnswers.get(question.number)?.trim() ||
+        "Not clearly extracted";
+      return [
+        `Question Number: ${question.number}`,
+        `Question: ${question.prompt}`,
+        `Student Answer: ${studentAnswer}`,
+        `Correct Answer: ${getCorrectAnswer(question)}`,
+        "Max Score: 1"
+      ].join("\n");
+    })
+    .join("\n\n");
 }
 
-function buildRawTextUserPrompt(questions: ExamQuestion[], answerText: string) {
-  const questionLines = questions.map((q) => `Q${q.number}: ${q.prompt}`).join("\n");
+function buildUserPrompt(
+  questions: ExamQuestion[],
+  options?: {
+    structuredAnswers?: Array<{ questionNumber: number; answer: string }>;
+    rawAnswerText?: string;
+  }
+) {
+  const questionLines = buildQuestionContextLines(questions, options);
   return [
-    "Evaluate the student's answers to the following questions.",
-    "The student answers may come from OCR or typed text and can contain noise.",
-    "Each question is worth 1 mark unless the answer is missing or incorrect.",
-    "Set maxScore to the number of questions.",
-    "Return totalScore and overallScore as the same value.",
-    "Provide a breakdown entry for every question with question text, score, reason, and detectedAnswer.",
-    "Provide matching perQuestion remarks for every question.",
-    "Questions:",
+    "Evaluate the student answers like a real teacher.",
+    "Score each question out of 1 mark.",
+    "If the answer is missing or cannot be extracted, give 0 and explain why.",
+    "Return totalScore as the sum of question scores.",
+    "Set maxScore to the total number of questions.",
+    "Use the provided question numbers in the breakdown.",
+    "Question contexts:",
     questionLines,
-    "",
-    "Student answer text:",
-    answerText
+    ...(options?.rawAnswerText
+      ? ["", "Full extracted answer text:", options.rawAnswerText]
+      : [])
   ].join("\n");
-}
-
-async function fileToDataUrl(filePath: string, mimeType: string) {
-  const data = await fs.readFile(filePath);
-  const base64 = data.toString("base64");
-  return `data:${mimeType};base64,${base64}`;
 }
 
 function safeJsonParse(payload: string): unknown {
@@ -330,6 +309,15 @@ export function normalizeEvaluation(
     const breakdownEntry = breakdownMap.get(question.number);
     const rawScore = breakdownEntry?.score ?? entry?.score ?? 0;
     const score = Math.max(0, Math.min(1, rawScore));
+    const correctAnswer =
+      breakdownEntry?.correctAnswer?.trim() ||
+      entry?.correctAnswer?.trim() ||
+      getCorrectAnswer(question);
+    const studentAnswer =
+      breakdownEntry?.studentAnswer?.trim() ||
+      entry?.studentAnswer?.trim() ||
+      entry?.detectedAnswer?.trim() ||
+      "Not clearly extracted";
     const reason =
       breakdownEntry?.reason?.trim() ||
       entry?.reason?.trim() ||
@@ -342,17 +330,21 @@ export function normalizeEvaluation(
     return {
       questionNumber: question.number,
       question: breakdownEntry?.question?.trim() || entry?.question?.trim() || question.prompt,
+      studentAnswer,
+      correctAnswer,
       score,
       maxScore: 1,
       reason,
       remarks: entry?.remarks?.trim() || reason,
-      detectedAnswer
+      detectedAnswer: studentAnswer
     };
   });
 
   const normalizedBreakdown = normalizedPerQuestion.map((item) => ({
     questionNumber: item.questionNumber,
     question: item.question ?? `Q${item.questionNumber}`,
+    studentAnswer: item.studentAnswer ?? "Not clearly extracted",
+    correctAnswer: item.correctAnswer ?? "Not available",
     score: item.score,
     maxScore: item.maxScore,
     reason: item.reason ?? item.remarks,
@@ -389,75 +381,9 @@ export async function evaluateAnswerSheet(
   mimeType: string,
   questions: ExamQuestion[]
 ): Promise<EvaluationResult> {
-  if (mimeType === "application/pdf") {
-    throw new Error("PDF AI evaluation is unavailable.");
-  }
-
-  if (mimeType !== "image/jpeg" && mimeType !== "image/png") {
-    throw new Error("Unsupported image type for AI evaluation.");
-  }
-
-  ensureApiKey();
-
-  const schema = buildResponseSchema();
-  const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(questions);
-  const dataUrl = await fileToDataUrl(filePath, mimeType);
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const completion = await callWithRetry("evaluation_file", (signal) =>
-      openai.chat.completions.create(
-        {
-        model: MODEL_NAME,
-        temperature: 0,
-        stream: false,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "answer_sheet_evaluation",
-            strict: true,
-            schema
-          }
-        },
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              { type: "image_url", image_url: { url: dataUrl } }
-            ]
-          }
-        ],
-        },
-        { signal }
-      )
-    );
-
-    logTokenUsage("evaluation_file", completion.usage);
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      if (attempt === 0) {
-        continue;
-      }
-      throw new Error("OpenAI response was empty.");
-    }
-
-    const parsed = safeJsonParse(content);
-
-    const validated = evaluationResultSchema.safeParse(parsed);
-    if (!validated.success) {
-      if (attempt === 0) {
-        continue;
-      }
-      throw new Error("OpenAI response did not match evaluation schema.");
-    }
-
-    return normalizeEvaluation(validated.data, questions);
-  }
-
-  throw new Error("OpenAI response did not match evaluation schema.");
+  void filePath;
+  void mimeType;
+  throw new Error("Use OCR extraction before AI evaluation.");
 }
 
 export async function evaluateStructuredAnswers(
@@ -468,7 +394,7 @@ export async function evaluateStructuredAnswers(
 
   const schema = buildResponseSchema();
   const systemPrompt = buildStructuredSystemPrompt();
-  const userPrompt = buildStructuredUserPrompt(questions, answers);
+  const userPrompt = buildUserPrompt(questions, { structuredAnswers: answers });
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const completion = await callWithRetry("evaluation_structured", (signal) =>
@@ -506,7 +432,7 @@ export async function evaluateStructuredAnswers(
 
     const parsed = safeJsonParse(content);
 
-    const validated = evaluationResultSchema.safeParse(parsed);
+    const validated = aiEvaluationResponseSchema.safeParse(parsed);
     if (!validated.success) {
       if (attempt === 0) {
         continue;
@@ -514,7 +440,17 @@ export async function evaluateStructuredAnswers(
       throw new Error("OpenAI response did not match evaluation schema.");
     }
 
-    return normalizeEvaluation(validated.data, questions);
+    return normalizeEvaluation(
+      {
+        ...validated.data,
+        breakdown: validated.data.breakdown.map((item) => ({
+          ...item,
+          maxScore: 1,
+          detectedAnswer: item.studentAnswer
+        }))
+      },
+      questions
+    );
   }
 
   throw new Error("OpenAI response did not match evaluation schema.");
@@ -528,7 +464,7 @@ export async function evaluateRawTextAnswers(
 
   const schema = buildResponseSchema();
   const systemPrompt = buildRawTextSystemPrompt();
-  const userPrompt = buildRawTextUserPrompt(questions, answerText);
+  const userPrompt = buildUserPrompt(questions, { rawAnswerText: answerText });
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const completion = await callWithRetry("evaluation_raw_text", (signal) =>
@@ -565,7 +501,7 @@ export async function evaluateRawTextAnswers(
     }
 
     const parsed = safeJsonParse(content);
-    const validated = evaluationResultSchema.safeParse(parsed);
+    const validated = aiEvaluationResponseSchema.safeParse(parsed);
     if (!validated.success) {
       if (attempt === 0) {
         continue;
@@ -573,7 +509,17 @@ export async function evaluateRawTextAnswers(
       throw new Error("OpenAI response did not match evaluation schema.");
     }
 
-    return normalizeEvaluation(validated.data, questions);
+    return normalizeEvaluation(
+      {
+        ...validated.data,
+        breakdown: validated.data.breakdown.map((item) => ({
+          ...item,
+          maxScore: 1,
+          detectedAnswer: item.studentAnswer
+        }))
+      },
+      questions
+    );
   }
 
   throw new Error("OpenAI response did not match evaluation schema.");

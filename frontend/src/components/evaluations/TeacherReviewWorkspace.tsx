@@ -10,7 +10,11 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusBlock } from "@/components/ui/StatusBlock";
 import { approveSubmission, getEvaluation, getPendingEvaluations } from "@/lib/api";
 import { buildTeacherOverrideResult, getEvaluationBreakdown } from "@/lib/evaluation";
-import type { EvaluationDetail, EvaluationSummary } from "@/types/evaluation";
+import type {
+  EvaluationBreakdownItem,
+  EvaluationDetail,
+  EvaluationSummary
+} from "@/types/evaluation";
 
 type AsyncState<T> = {
   status: "idle" | "loading" | "error" | "success";
@@ -30,6 +34,7 @@ export function TeacherReviewWorkspace() {
   });
   const [teacherScore, setTeacherScore] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
+  const [editableBreakdown, setEditableBreakdown] = useState<EvaluationBreakdownItem[]>([]);
   const [actionState, setActionState] = useState<AsyncState<{ status: string }>>({
     status: "idle",
     data: null
@@ -96,6 +101,7 @@ export function TeacherReviewWorkspace() {
             : ""
       );
       setReviewNotes(detail.teacherResult?.summary ?? detail.result?.summary ?? "");
+      setEditableBreakdown(getEvaluationBreakdown(detail.teacherResult ?? detail.result));
       setDetailState({ status: "success", data: detail });
     } catch (error) {
       setDetailState({
@@ -111,9 +117,10 @@ export function TeacherReviewWorkspace() {
     setActionState({ status: "loading", data: null });
     try {
       const teacherResult = buildTeacherOverrideResult(
-        detailState.data.result,
+        detailState.data.teacherResult ?? detailState.data.result,
         teacherScore,
-        reviewNotes
+        reviewNotes,
+        editableBreakdown
       );
       const response = await approveSubmission(token, {
         submissionId: detailState.data.submissionId,
@@ -132,7 +139,21 @@ export function TeacherReviewWorkspace() {
     }
   };
 
-  const breakdown = getEvaluationBreakdown(detailState.data?.result);
+  const breakdown = editableBreakdown;
+
+  const handleBreakdownScoreChange = (questionNumber: number, value: string) => {
+    const nextScore = Number(value);
+    setEditableBreakdown((current) =>
+      current.map((item) =>
+        item.questionNumber === questionNumber
+          ? {
+              ...item,
+              score: Number.isFinite(nextScore) ? nextScore : item.score
+            }
+          : item
+      )
+    );
+  };
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -216,13 +237,24 @@ export function TeacherReviewWorkspace() {
                   <div key={item.questionNumber} className="rounded-2xl border border-border p-3">
                     <p className="font-medium">Q{item.questionNumber}</p>
                     <p className="mt-1 text-xs text-foreground">{item.question}</p>
+                    <p className="mt-1 text-xs text-ink-soft">
+                      Student answer: {item.studentAnswer}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-soft">
+                      Correct answer: {item.correctAnswer}
+                    </p>
                     <p className="text-xs text-ink-soft">
                       Marks: {item.score} / {item.maxScore}
                     </p>
                     <p className="mt-1 text-xs text-ink-soft">{item.reason}</p>
-                    <p className="mt-1 text-xs text-ink-soft">
-                      Detected answer: {item.detectedAnswer}
-                    </p>
+                    <Input
+                      label={`Teacher score for Q${item.questionNumber}`}
+                      type="number"
+                      value={String(item.score)}
+                      onChange={(event) =>
+                        handleBreakdownScoreChange(item.questionNumber, event.target.value)
+                      }
+                    />
                   </div>
                 ))}
                 {breakdown.length === 0 ? (

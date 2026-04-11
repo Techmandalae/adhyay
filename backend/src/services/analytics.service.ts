@@ -668,9 +668,7 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
       select: { id: true, createdAt: true, meta: true, teacherId: true }
     }),
     fetchApprovedEvaluations(params.schoolId, {
-      ...(params.teacherId ? { teacherId: params.teacherId } : {}),
-      ...(params.startDate ? { startDate: params.startDate } : {}),
-      ...(params.endDate ? { endDate: params.endDate } : {})
+      ...(params.teacherId ? { teacherId: params.teacherId } : {})
     })
   ]);
 
@@ -714,8 +712,8 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
   });
 
   const overrideCount = filtered.filter((row) => row.hasTeacherOverride).length;
-  const evaluatedCount = filtered.length;
-  const aiOnlyCount = evaluatedCount - overrideCount;
+  const approvedEvaluatedCount = filtered.length;
+  const aiOnlyCount = approvedEvaluatedCount - overrideCount;
   const deltaRows = filtered.filter((row) => row.scoreDelta !== null).length;
   const averageScoreDelta =
     deltaRows > 0
@@ -725,19 +723,23 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
           ).toFixed(2)
         )
       : 0;
-  const submissions = filteredExamIds.size
-    ? await prisma.examSubmission.findMany({
-        where: {
-          schoolId: params.schoolId,
-          examId: { in: Array.from(filteredExamIds) },
-          submittedAt: {
-            ...(params.startDate ? { gte: params.startDate } : null),
-            ...(params.endDate ? { lte: params.endDate } : null)
+  const [submissions, evaluatedCount] = filteredExamIds.size
+    ? await Promise.all([
+        prisma.examSubmission.findMany({
+          where: {
+            schoolId: params.schoolId,
+            examId: { in: Array.from(filteredExamIds) }
+          },
+          select: { studentId: true }
+        }),
+        prisma.examEvaluation.count({
+          where: {
+            schoolId: params.schoolId,
+            examId: { in: Array.from(filteredExamIds) }
           }
-        },
-        select: { studentId: true }
-      })
-    : [];
+        })
+      ])
+    : [[], 0];
   const totalSubmissions = submissions.length;
   const averagePercentage =
     totalSubmissions > 0
@@ -765,7 +767,8 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
     teacherId: params.teacherId ?? null,
     examsCount: filteredExams.length,
     submissionsCount: totalSubmissions,
-    evaluatedCount
+    evaluatedCount,
+    approvedEvaluatedCount
   });
 
   return {
@@ -791,10 +794,13 @@ export async function buildTeacherAnalytics(params: TeacherAnalyticsParams) {
     topicDistribution: clampTopTopics(topicMap),
     difficultyEffectiveness: difficultyPerformance,
     overrideStats: {
-      totalEvaluations: evaluatedCount,
+      totalEvaluations: approvedEvaluatedCount,
       overrideCount,
       aiOnlyCount,
-      overrideRate: evaluatedCount > 0 ? Number((overrideCount / evaluatedCount).toFixed(2)) : 0,
+      overrideRate:
+        approvedEvaluatedCount > 0
+          ? Number((overrideCount / approvedEvaluatedCount).toFixed(2))
+          : 0,
       averageScoreDelta
     },
     recentEvaluations,
@@ -852,8 +858,6 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
       select: { id: true, createdAt: true, meta: true, teacherId: true }
     }),
     fetchApprovedEvaluations(params.schoolId, {
-      ...(params.startDate ? { startDate: params.startDate } : {}),
-      ...(params.endDate ? { endDate: params.endDate } : {})
     })
   ]);
 
@@ -888,28 +892,26 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
     (row) => filteredExamIdSet.has(row.examId) && withinFilters(row, params)
   );
 
-  const [submissionsCount, evaluationStatus, reviewCounts] =
+  const [submissionsCount, evaluatedCount, evaluationStatus, reviewCounts] =
     filteredExamIds.length > 0
       ? await Promise.all([
           prisma.examSubmission.count({
             where: {
               schoolId: params.schoolId,
-              examId: { in: filteredExamIds },
-              submittedAt: {
-                ...(params.startDate ? { gte: params.startDate } : null),
-                ...(params.endDate ? { lte: params.endDate } : null)
-              }
+              examId: { in: filteredExamIds }
+            }
+          }),
+          prisma.examEvaluation.count({
+            where: {
+              schoolId: params.schoolId,
+              examId: { in: filteredExamIds }
             }
           }),
           prisma.examEvaluation.groupBy({
             by: ["status"],
             where: {
               schoolId: params.schoolId,
-              examId: { in: filteredExamIds },
-              createdAt: {
-                ...(params.startDate ? { gte: params.startDate } : null),
-                ...(params.endDate ? { lte: params.endDate } : null)
-              }
+              examId: { in: filteredExamIds }
             },
             _count: { status: true }
           }),
@@ -919,16 +921,12 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
               schoolId: params.schoolId,
               examId: { in: filteredExamIds },
               status: "APPROVED",
-              reviewedBy: { not: null },
-              createdAt: {
-                ...(params.startDate ? { gte: params.startDate } : null),
-                ...(params.endDate ? { lte: params.endDate } : null)
-              }
+              reviewedBy: { not: null }
             },
             _count: { reviewedBy: true }
           })
         ])
-      : [0, [], []];
+      : [0, 0, [], []];
 
   const subjectMap = new Map<string, number>();
   const difficultyMap = new Map<string, number>();
@@ -955,7 +953,7 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
   const evaluationQuality = {
     averagePercentage:
       submissionsCount > 0
-        ? Number(((filteredApprovedEvaluations.length / submissionsCount) * 100).toFixed(2))
+        ? Number(((evaluatedCount / submissionsCount) * 100).toFixed(2))
         : 0,
     overrideRate:
       filteredApprovedEvaluations.length > 0
@@ -999,7 +997,8 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
     schoolId: params.schoolId,
     examsCount: filteredExams.length,
     submissionsCount,
-    evaluatedCount: filteredApprovedEvaluations.length
+    evaluatedCount,
+    approvedEvaluatedCount: filteredApprovedEvaluations.length
   });
 
   return {
@@ -1010,7 +1009,7 @@ export async function buildAdminAnalytics(params: AdminAnalyticsParams) {
     summary: {
       totalExams: filteredExams.length,
       totalSubmissions: submissionsCount,
-      evaluatedCount: filteredApprovedEvaluations.length,
+      evaluatedCount,
       approvedEvaluations: filteredApprovedEvaluations.length,
       averagePercentage: evaluationQuality.averagePercentage,
       activeTeachers: teacherActivity.length
